@@ -182,8 +182,17 @@ class CRMController extends Controller
                 $prospecto->maps = $request->Maps;
                 $prospecto->fecha = $request->Fecha . ' ' . $request->Hora;
                 $prospecto->empresa_id = $request->IdEmpresa;
-                // Estatus por defecto: Prospecto
-                $prospecto->estatus_id = DB::table('estatus')->where('nombre', 'Prospecto')->value('estatus_id');
+                
+                // Verificar si es Solferino Home para asignar estatus Cliente
+                $nombreEmpresa = DB::table('empresas')->where('empresa_id', $request->IdEmpresa)->value('nombre');
+                $esSolferino = false;
+                if ($nombreEmpresa && stripos($nombreEmpresa, 'Solferino') !== false) {
+                    $prospecto->estatus_id = DB::table('estatus')->where('nombre', 'Cliente')->value('estatus_id');
+                    $esSolferino = true;
+                } else {
+                    $prospecto->estatus_id = DB::table('estatus')->where('nombre', 'Prospecto')->value('estatus_id');
+                }
+
                 $prospecto->interaccion_id = $request->IdInteraccion;
                 $prospecto->enfoque_id = $request->IdEnfoque;
                 $prospecto->canal_id = $request->IdCanalDistribuccion;
@@ -191,15 +200,29 @@ class CRMController extends Controller
                 $prospecto->descripcion = $request->Descripcion;
                 $prospecto->save();
 
+                // Si es Solferino, guardar también en la tabla Clientes
+                $clienteId = null;
+                if ($esSolferino) {
+                    $clienteId = DB::table('Clientes')->insertGetId([
+                        'prospecto_id' => $prospecto->prospecto_id
+                    ]);
+                }
+
                 // Crear proyecto
-                $proyectoId = DB::table('Proyectos')->insertGetId([
+                $proyectoData = [
                     'prospecto_id' => $prospecto->prospecto_id,
                     'nombre' => $prospecto->proyecto,
                     'estatus' => null
-                ]);
+                ];
+
+                if ($clienteId) {
+                    $proyectoData['cliente_id'] = $clienteId;
+                }
+
+                $proyectoId = DB::table('Proyectos')->insertGetId($proyectoData);
 
                 // Guardar detalles del proyecto
-                DB::table('proyecto_detalles')->insert([
+                $detallesData = [
                     'detalles_id' => $proyectoId,
                     'prospecto_id' => $prospecto->prospecto_id,
                     'empresa_id' => $prospecto->empresa_id,
@@ -208,7 +231,13 @@ class CRMController extends Controller
                     'enfoque_id' => $prospecto->enfoque_id,
                     'canal_id' => $prospecto->canal_id,
                     'direccion_entrega' => $prospecto->direccion_entrega,
-                ]);
+                ];
+
+                if ($clienteId) {
+                    $detallesData['cliente_id'] = $clienteId;
+                }
+
+                DB::table('proyecto_detalles')->insert($detallesData);
 
                 DB::commit();
                 return redirect()->route('altaProspectos')->with('mensaje', 'Prospecto guardado correctamente');
@@ -223,7 +252,11 @@ class CRMController extends Controller
           $estatusId = $request->input('estatus_id');
           
           $query = DB::table('prospectos as p')
-              ->leftJoin('Proyectos as pr', 'p.prospecto_id', '=', 'pr.prospecto_id')
+              ->leftJoin('Clientes as c', 'p.prospecto_id', '=', 'c.prospecto_id')
+              ->leftJoin('Proyectos as pr', function($join) {
+                  $join->on('p.prospecto_id', '=', 'pr.prospecto_id')
+                       ->orOn('c.cliente_id', '=', 'pr.cliente_id');
+              })
               ->leftJoin('estatus as e', 'p.estatus_id', '=', 'e.estatus_id')
               ->select(
                   'p.prospecto_id',
@@ -308,7 +341,7 @@ class CRMController extends Controller
     public function clientes()
     {
         // Página de gestión de clientes - listado y posibilidad de agregar proyectos
-        $clientes = DB::select("SELECT c.cliente_id AS id, c.prospecto_id, p.nombre, p.apellido_paterno, p.apellido_materno, p.empresa_id, COALESCE(em.nombre,'') AS empresa_nombre, CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo FROM Clientes c LEFT JOIN prospectos p ON c.prospecto_id = p.prospecto_id LEFT JOIN empresas em ON p.empresa_id = em.empresa_id ORDER BY c.cliente_id DESC");
+        $clientes = DB::select("SELECT c.cliente_id AS id, c.prospecto_id, p.nombre, p.apellido_paterno, p.apellido_materno, p.empresa_id, p.maps, p.enfoque_id, p.canal_id, p.calle, p.municipio, p.estado_id, COALESCE(em.nombre,'') AS empresa_nombre, CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo FROM Clientes c LEFT JOIN prospectos p ON c.prospecto_id = p.prospecto_id LEFT JOIN empresas em ON p.empresa_id = em.empresa_id ORDER BY c.cliente_id DESC");
         $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
         $estados = DB::select("SELECT estado_id, nombre FROM estados ORDER BY nombre ASC");
         $enfoques = DB::select("SELECT enfoque_id, nombre FROM enfoques ORDER BY nombre ASC");
@@ -501,10 +534,13 @@ class CRMController extends Controller
       public function obtenerProyectosProspecto($id)
       {
           try {
-              $proyectos = DB::table('Proyectos')
+              // Buscar si este prospecto tiene un cliente_id asociado
+              $cliente = DB::table('Clientes')->where('prospecto_id', $id)->first();
+              $clienteId = $cliente ? $cliente->cliente_id : null;
+
+              $query = DB::table('Proyectos')
                   ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
                   ->leftJoin('empresas', 'proyecto_detalles.empresa_id', '=', 'empresas.empresa_id')
-                  ->where('Proyectos.prospecto_id', $id)
                   ->select(
                       'Proyectos.proyecto_id',
                       'Proyectos.nombre',
@@ -512,9 +548,18 @@ class CRMController extends Controller
                       'proyecto_detalles.descripcion',
                       'proyecto_detalles.maps',
                       'empresas.nombre as empresa'
-                  )
-                  ->orderBy('Proyectos.proyecto_id', 'desc')
-                  ->get();
+                  );
+
+              if ($clienteId) {
+                  $query->where(function($q) use ($id, $clienteId) {
+                      $q->where('Proyectos.prospecto_id', $id)
+                        ->orWhere('Proyectos.cliente_id', $clienteId);
+                  });
+              } else {
+                  $query->where('Proyectos.prospecto_id', $id);
+              }
+
+              $proyectos = $query->orderBy('Proyectos.proyecto_id', 'desc')->get();
 
               return response()->json($proyectos);
           } catch (\Exception $e) {

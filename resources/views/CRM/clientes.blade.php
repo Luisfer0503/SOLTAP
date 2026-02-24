@@ -54,30 +54,10 @@
                     <div class="mb-3 p-3 bg-green-100 text-green-700 rounded" x-text="mensaje"></div>
                 </template>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-600">Estado</label>
-                        <select x-model="estadoEntrega" @change="generarPrefijo()" class="w-full rounded border px-2 py-2">
-                            <option value="">Seleccionar...</option>
-                            <template x-for="est in estados" :key="est.estado_id">
-                                <option :value="est.estado_id" x-text="est.nombre" :data-nombre="est.nombre"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600">Municipio</label>
-                        <input x-model="municipioEntrega" @input="generarPrefijo()" class="w-full rounded border px-2 py-2">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600">Calle</label>
-                        <input x-model="calleEntrega" @input="generarPrefijo()" class="w-full rounded border px-2 py-2">
-                    </div>
-                </div>
-
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs text-gray-600">Empresa</label>
-                        <select x-model="empresaSeleccionada" class="w-full rounded border px-2 py-2">
+                        <select x-model="empresaSeleccionada" @change="generarPrefijo()" class="w-full rounded border px-2 py-2">
                             <option value="">Seleccionar empresa...</option>
                             <template x-for="emp in empresas" :key="emp.empresa_id">
                                 <option :value="emp.empresa_id" x-text="emp.nombre"></option>
@@ -86,7 +66,27 @@
                     </div>
                     <div>
                         <label class="block text-xs text-gray-600">Google Maps</label>
-                        <input type="text" x-model="mapsUrl" readonly class="w-full rounded border px-2 py-2 bg-gray-100" />
+                        <input type="text" x-model="mapsUrl" class="w-full rounded border px-2 py-2" />
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-600">Estado</label>
+                        <select x-model="estadoEntrega" @change="generarMapsEntrega()" class="w-full rounded border px-2 py-2">
+                            <option value="">Seleccionar...</option>
+                            <template x-for="est in estados" :key="est.estado_id">
+                                <option :value="est.estado_id" x-text="est.nombre"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600">Municipio</label>
+                        <input x-model="municipioEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600">Calle</label>
+                        <input x-model="calleEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2">
                     </div>
                 </div>
 
@@ -102,6 +102,15 @@
                             <option value="">Seleccionar enfoque...</option>
                             <template x-for="enf in enfoques" :key="enf.enfoque_id">
                                 <option :value="enf.enfoque_id" x-text="enf.nombre"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600">Canal</label>
+                        <select x-model="canalSeleccionado" class="w-full rounded border px-2 py-2">
+                            <option value="">Seleccionar canal...</option>
+                            <template x-for="can in canales" :key="can.canal_id">
+                                <option :value="can.canal_id" x-text="can.nombre"></option>
                             </template>
                         </select>
                     </div>
@@ -218,9 +227,12 @@ function clientesModule(){
             // inicializar campos adicionales
             this.empresaSeleccionada = cliente.empresa_id || null;
             this.descripcion = '';
-            this.enfoqueSeleccionado = null;
-            this.canalSeleccionado = null;
-            this.mapsUrl = '';
+            this.enfoqueSeleccionado = cliente.enfoque_id || null;
+            this.canalSeleccionado = cliente.canal_id || null;
+            this.mapsUrl = cliente.maps || '';
+            this.calleEntrega = cliente.calle || '';
+            this.municipioEntrega = cliente.municipio || '';
+            this.estadoEntrega = cliente.estado_id || '';
         },
 
         cerrarModal(){
@@ -240,24 +252,18 @@ function clientesModule(){
 
         generarPrefijoFromClient(cliente){
             try{
-                const nombre = (cliente.nombre||'').toString();
-                const apellidoPat = (cliente.apellido_paterno||'').toString();
-                const apellidoMat = (cliente.apellido_materno||'').toString();
                 const empresaId = cliente.empresa_id || null;
-                const dosNombre = nombre.substring(0,2).toUpperCase();
-                const dosPat = apellidoPat.substring(0,2).toUpperCase();
-                const dosMat = apellidoMat.substring(0,2).toUpperCase();
                 let codigoEmpresa = '';
                 if (empresaId) {
                     const emp = this.empresas.find(e => e.empresa_id == empresaId);
                     if (emp) {
                         const ename = (emp.nombre||'').toLowerCase();
                         if (ename.includes('casa tapier')) codigoEmpresa = 'CT';
-                        else if (ename.includes('solferino')) codigoEmpresa = 'SF';
+                        else if (ename.includes('solferino')) codigoEmpresa = 'SH';
                         else codigoEmpresa = emp.nombre.substring(0,2).toUpperCase();
                     }
                 }
-                this.prefijoProyecto = `${dosNombre}${dosPat}${dosMat}-${codigoEmpresa}-`;
+                this.prefijoProyecto = `${codigoEmpresa}-`;
                 this.nombreProyectoCompleto = this.prefijoProyecto + (this.partePersonalizada||'');
             }catch(e){console.error(e)}
         },
@@ -274,6 +280,20 @@ function clientesModule(){
         },
 
         generarPrefijo(){
+            let codigoEmpresa = '';
+            if (this.empresaSeleccionada) {
+                const emp = this.empresas.find(e => e.empresa_id == this.empresaSeleccionada);
+                if (emp) {
+                    const ename = (emp.nombre||'').toLowerCase();
+                    if (ename.includes('casa tapier')) codigoEmpresa = 'CT';
+                    else if (ename.includes('solferino')) {
+                        codigoEmpresa = 'SH';
+                        this.enfoqueSeleccionado = 3; // Auto-select Enfoque 3 for Solferino
+                    }
+                    else codigoEmpresa = emp.nombre.substring(0,2).toUpperCase();
+                }
+            }
+            this.prefijoProyecto = `${codigoEmpresa}-`;
             // prefijo de proyecto a partir del cliente
             this.nombreProyectoCompleto = this.prefijoProyecto + (this.partePersonalizada||'');
             // generar URL de Maps si hay dirección de entrega

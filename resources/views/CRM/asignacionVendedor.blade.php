@@ -68,7 +68,7 @@
                                         <div class="relative">
                                             <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
                                             <div class="relative">
-                                                <input type="text" name="IdProspectoSearch" placeholder="Buscar por nombre..." x-model="searchTerm" @input="open = true" @click="open = true" @focus="open = true" class="w-full pl-10 rounded-lg border-gray-300 bg-white border px-3 py-2.5 focus:ring-blue-500 focus:border-blue-500">
+                                                <input type="text" name="IdProspectoSearch" placeholder="Buscar por nombre..." x-model="searchTerm" @input="limpiarSeleccion(); open = true" @click="open = true" @focus="open = true" class="w-full pl-10 rounded-lg border-gray-300 bg-white border px-3 py-2.5 focus:ring-blue-500 focus:border-blue-500">
                                                 <input type="hidden" name="IdProspecto" x-model="selectedProspectoId">
                                                 <div class="pointer-events-none absolute left-3 top-3 text-gray-400">
                                                     <i class="ph ph-magnifying-glass"></i>
@@ -331,6 +331,12 @@
             getProyectoSeleccionado() {
                 if (!this.selectedProyectoId) return null;
                 return this.proyectos.find(p => p.proyecto_id == this.selectedProyectoId);
+            },
+
+            limpiarSeleccion() {
+                this.selectedProspectoId = '';
+                this.selectedProyectoId = '';
+                this.proyectos = [];
             },
 
             generarNombreProyecto() {

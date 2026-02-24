@@ -428,6 +428,7 @@
                         empresaSelect.addEventListener('change', (e) => {
                             this.empresaId = e.target.value;
                             this.generarNombreProyecto();
+                            this.verificarSolferino();
                         });
                     }
 
@@ -471,6 +472,14 @@
                     
                     // Combinar prefijo + parte personalizada
                     this.nombreProyectoCompleto = prefijoAutomatico + (this.partePersonalizada || '');
+                },
+
+                verificarSolferino() {
+                    const empresa = this.empresas.find(e => e.empresa_id == this.empresaId);
+                    if (empresa && empresa.nombre.toLowerCase().includes('solferino')) {
+                        const enfoqueSelect = document.querySelector('select[name="IdEnfoque"]');
+                        if (enfoqueSelect) enfoqueSelect.value = 3;
+                    }
                 }
             }
         }
