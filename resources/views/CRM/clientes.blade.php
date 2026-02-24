@@ -105,15 +105,6 @@
                             </template>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs text-gray-600">Canal</label>
-                        <select x-model="canalSeleccionado" class="w-full rounded border px-2 py-2">
-                            <option value="">Seleccionar canal...</option>
-                            <template x-for="can in canales" :key="can.canal_id">
-                                <option :value="can.canal_id" x-text="can.nombre"></option>
-                            </template>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="mt-4">

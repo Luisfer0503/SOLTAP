@@ -242,6 +242,15 @@
                     <h3 class="text-lg font-bold text-gray-800">Asignaciones Realizadas</h3>
                     <button @click="mostrarModalAsignaciones = false" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
+                <div class="px-6 py-3 bg-white border-b flex items-center gap-2">
+                    <label class="text-sm font-medium text-gray-700">Filtrar por Vendedor:</label>
+                    <select x-model="filtroVendedor" class="rounded-lg border-gray-300 text-sm py-1 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Todos</option>
+                        @foreach($vendedores as $v)
+                            <option value="{{ $v->vendedor_id }}">{{ $v->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="p-0 overflow-auto flex-1">
                     <div x-show="cargandoLista" class="p-8 text-center text-gray-500">
                         <i class="ph ph-spinner animate-spin text-2xl"></i> Cargando...
@@ -256,7 +265,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <template x-for="asig in listaAsignaciones" :key="asig.cliente_id + '-' + asig.proyecto_id">
+                            <template x-for="asig in filteredAsignaciones()" :key="asig.proyecto_id">
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 font-medium text-gray-900" x-text="asig.prospecto"></td>
                                     <td class="px-4 py-3 text-gray-600" x-text="asig.proyecto"></td>
@@ -264,7 +273,7 @@
                                     <td class="px-4 py-3 text-gray-500" x-text="asig.tiempo"></td>
                                 </tr>
                             </template>
-                            <template x-if="!cargandoLista && listaAsignaciones.length === 0">
+                            <template x-if="!cargandoLista && filteredAsignaciones().length === 0">
                                 <tr>
                                     <td colspan="4" class="px-4 py-8 text-center text-gray-500">No hay asignaciones registradas.</td>
                                 </tr>
@@ -287,6 +296,7 @@
             selectedProyectoId: '',
             searchTerm: '',
             open: false,
+            filtroVendedor: '',
             tiempoDiseno: '',
             mostrarModalAsignaciones: false,
             listaAsignaciones: [],
@@ -331,6 +341,11 @@
             getProyectoSeleccionado() {
                 if (!this.selectedProyectoId) return null;
                 return this.proyectos.find(p => p.proyecto_id == this.selectedProyectoId);
+            },
+
+            filteredAsignaciones() {
+                if (!this.filtroVendedor) return this.listaAsignaciones;
+                return this.listaAsignaciones.filter(a => a.vendedor_id == this.filtroVendedor);
             },
 
             limpiarSeleccion() {

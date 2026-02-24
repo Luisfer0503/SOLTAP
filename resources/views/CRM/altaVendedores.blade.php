@@ -4,7 +4,7 @@
 
 <script src="//unpkg.com/alpinejs" defer></script>
 
-<div class="flex-1 overflow-y-auto p-8" x-data="{ showVendedores:false }">
+<div class="flex-1 overflow-y-auto p-8" x-data="vendedoresForm()">
     <div class="max-w-4xl mx-auto">
         
         @if(session('mensaje'))
@@ -59,7 +59,7 @@
                                             <td class="px-3 py-2 align-top">{{ $v->nombre }} {{ $v->apellido_paterno }} {{ $v->apellido_materno }}</td>
                                             <td class="px-3 py-2 align-top">{{ $v->correo }}</td>
                                             <td class="px-3 py-2 align-top text-right">
-                                                <a href="{{ route('editarVendedor', $v->vendedor_id) }}" class="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mr-2">Editar</a>
+                                                <button type="button" @click="editar({{ json_encode($v) }})" class="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mr-2">Editar</button>
                                                 <form action="{{ route('eliminarVendedor', $v->vendedor_id) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Eliminar este vendedor?');">
                                                     @csrf
                                                     <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded text-xs">Eliminar</button>
@@ -75,7 +75,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('guardarVendedor') }}" method="POST" enctype="multipart/form-data" class="p-8">
+            <form :action="formAction" method="POST" enctype="multipart/form-data" class="p-8">
                 @csrf 
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -158,9 +158,9 @@
                 </div>
 
                 <div class="mt-8 pt-6 border-t border-gray-100 flex justify-end space-x-3">
-                    <button type="button" class="px-4 py-2 bg-white border rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</button>
+                    <button type="button" @click="cancelar()" class="px-4 py-2 bg-white border rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</button>
                     <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">
-                        Guardar Vendedor
+                        <span x-text="isEditing ? 'Actualizar Vendedor' : 'Guardar Vendedor'"></span>
                     </button>
                 </div>
 
@@ -170,6 +170,48 @@
 </div>
 
 <script>
+    function vendedoresForm() {
+        return {
+            showVendedores: false,
+            isEditing: false,
+            formAction: '{{ route('guardarVendedor') }}',
+            
+            editar(v) {
+                this.isEditing = true;
+                this.showVendedores = false;
+                this.formAction = '{{ url('crm/vendedor/actualizar') }}/' + v.vendedor_id;
+                
+                // Llenar campos
+                document.querySelector('input[name="vendedor_id"]').value = v.vendedor_id;
+                document.querySelector('input[name="nombre"]').value = v.nombre;
+                document.querySelector('input[name="apellido_paterno"]').value = v.apellido_paterno;
+                document.querySelector('input[name="apellido_materno"]').value = v.apellido_materno;
+                document.querySelector('input[name="correo"]').value = v.correo;
+                document.querySelector('input[name="telefono"]').value = v.telefono;
+                
+                // Seleccionar empresa
+                const radio = document.querySelector(`input[name="empresa"][value="${v.empresa_id}"]`);
+                if(radio) radio.checked = true;
+                
+                // Cargar imagen
+                const preview = document.getElementById('preview-img');
+                if(v.foto) {
+                    preview.src = '{{ asset("storage") }}/' + v.foto;
+                } else {
+                    preview.src = 'https://via.placeholder.com/150?text=Sin+Foto';
+                }
+            },
+            
+            cancelar() {
+                this.isEditing = false;
+                this.formAction = '{{ route('guardarVendedor') }}';
+                document.querySelector('form').reset();
+                document.getElementById('preview-img').src = 'https://via.placeholder.com/150?text=Sin+Foto';
+                document.querySelector('input[name="vendedor_id"]').value = '{{ $sigue }}';
+            }
+        }
+    }
+
     function previewImage(event) {
         const input = event.target;
         const preview = document.getElementById('preview-img');

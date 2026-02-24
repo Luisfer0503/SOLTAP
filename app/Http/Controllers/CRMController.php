@@ -27,7 +27,7 @@ class CRMController extends Controller
        // Obtener empresas de la base de datos
             $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
         // Obtener lista de vendedores para mostrar en la vista
-        $vendedores = DB::select("SELECT vendedor_id, nombre, apellido_paterno, apellido_materno, correo FROM vendedores ORDER BY vendedor_id DESC");
+        $vendedores = DB::select("SELECT * FROM vendedores ORDER BY vendedor_id DESC");
             
         return view('CRM.altaVendedores')
                 ->with('sigue', $sigue)
@@ -511,14 +511,17 @@ class CRMController extends Controller
             try {
                 $asignaciones = DB::select("
                     SELECT 
-                        p.prospecto_id AS cliente_id,
+                        COALESCE(p.prospecto_id, c.prospecto_id) AS cliente_id,
                         pr.proyecto_id,
-                        CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS prospecto,
+                        CONCAT(COALESCE(p.nombre, p2.nombre, ''), ' ', COALESCE(p.apellido_paterno, p2.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, p2.apellido_materno, '')) AS prospecto,
                         CONCAT(COALESCE(v.nombre,''), ' ', COALESCE(v.apellido_paterno,''), ' ', COALESCE(v.apellido_materno,'')) AS vendedor,
+                        v.vendedor_id,
                         COALESCE(pr.nombre, 'Sin Proyecto') as proyecto,
                         COALESCE(t.nombre, 'N/A') as tiempo
                     FROM Proyectos pr
-                    JOIN prospectos p ON pr.prospecto_id = p.prospecto_id
+                    LEFT JOIN prospectos p ON pr.prospecto_id = p.prospecto_id
+                    LEFT JOIN Clientes c ON pr.cliente_id = c.cliente_id
+                    LEFT JOIN prospectos p2 ON c.prospecto_id = p2.prospecto_id
                     JOIN proyecto_detalles pd ON pr.proyecto_id = pd.detalles_id
                     LEFT JOIN vendedores v ON pd.vendedor_id = v.vendedor_id
                     LEFT JOIN tiempo_disenno t ON pd.tiempo_id = t.tiempo_id
