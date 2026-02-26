@@ -20,34 +20,18 @@ class ERPController extends Controller
 
       public function altaArticulos()
       {     
-             $proyectos = [
-        (object)['id' => 1, 'nombre' => 'Casa Lomas - Cocina'],
-        (object)['id' => 2, 'nombre' => 'Oficinas Centro - Escritorios'],
-    ];
-      
-              $materiales = [
-        (object)['id' => 1, 'nombre' => 'Madera de Pino'],
-        (object)['id' => 2, 'nombre' => 'Melamina Blanca'],
-        (object)['id' => 3, 'nombre' => 'Tela Gris Oxford'],
-    ];
-            return view('ERP.gestionArticulos', compact('proyectos', 'materiales')); // Lógica para mostrar el formulario de alta de artículos
+            $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
+            $materiales = DB::table('materiales')->select('material_id', 'nombre')->orderBy('nombre')->get();
+            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'material_id')->orderBy('nombre')->get();
+            return view('ERP.gestionArticulos', compact('proyectos', 'materiales', 'articulos'));
       }
 
       public function gestionArticulos()
       {
-    // Simulamos datos (en tu código real usarás Material::all() y Proyecto::all())
-    $materiales = [
-        (object)['id' => 1, 'nombre' => 'Madera de Pino'],
-        (object)['id' => 2, 'nombre' => 'Melamina Blanca'],
-        (object)['id' => 3, 'nombre' => 'Tela Gris Oxford'],
-    ];
-
-    $proyectos = [
-        (object)['id' => 1, 'nombre' => 'Casa Lomas - Cocina'],
-        (object)['id' => 2, 'nombre' => 'Oficinas Centro - Escritorios'],
-    ];
-
-    return view('ERP.gestionArticulos', compact('materiales', 'proyectos'));
+            $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
+            $materiales = DB::table('materiales')->select('material_id', 'nombre')->orderBy('nombre')->get();
+            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'material_id')->orderBy('nombre')->get();
+            return view('ERP.gestionArticulos', compact('proyectos', 'materiales', 'articulos'));
       }
 
 
