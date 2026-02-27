@@ -21,17 +21,31 @@ class ERPController extends Controller
       public function altaArticulos()
       {     
             $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
-            $materiales = DB::table('materiales')->select('material_id', 'nombre')->orderBy('nombre')->get();
-            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'material_id')->orderBy('nombre')->get();
-            return view('ERP.gestionArticulos', compact('proyectos', 'materiales', 'articulos'));
+            $categorias = DB::table('categorias_articulos')->select('categoria_id', 'nombre')->orderBy('nombre')->get();
+            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'categoria_id')->orderBy('nombre')->get();
+            
+            // Datos para materiales dinámicos
+            $materiales = DB::table('materiales')->orderBy('nombre')->get();
+            $submateriales = DB::table('submateriales')->orderBy('nombre')->get();
+            $chapas = DB::table('chapas')->orderBy('nombre')->get();
+            $proveedores = DB::table('proveedores')->orderBy('nombre')->get();
+
+            return view('ERP.gestionArticulos', compact('proyectos', 'categorias', 'articulos', 'materiales', 'submateriales', 'chapas', 'proveedores'));
       }
 
       public function gestionArticulos()
       {
             $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
-            $materiales = DB::table('materiales')->select('material_id', 'nombre')->orderBy('nombre')->get();
-            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'material_id')->orderBy('nombre')->get();
-            return view('ERP.gestionArticulos', compact('proyectos', 'materiales', 'articulos'));
+            $categorias = DB::table('categorias_articulos')->select('categoria_articulo_id', 'nombre')->orderBy('nombre')->get();
+            $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'categoria_articulo')->orderBy('nombre')->get();
+            
+            // Datos para materiales dinámicos
+            $materiales = DB::table('materiales')->orderBy('nombre')->get();
+            $submateriales = DB::table('submateriales')->orderBy('nombre')->get();
+            $chapas = DB::table('chapas')->orderBy('nombre')->get();
+            $proveedores = DB::table('proveedores')->orderBy('nombre')->get();
+
+            return view('ERP.gestionArticulos', compact('proyectos', 'categorias', 'articulos', 'materiales', 'submateriales', 'chapas', 'proveedores'));
       }
 
 
