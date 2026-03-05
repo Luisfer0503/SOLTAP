@@ -14,17 +14,20 @@
             <span class="mx-4 text-gray-300">|</span>
             <div class="flex items-center">
                 <span class="text-sm text-gray-500 mr-2">Proyecto:</span>
-                <select x-model="proyecto_id" class="text-sm border-none bg-gray-50 rounded-lg focus:ring-0 font-bold text-blue-700 cursor-pointer">
+                <select :value="proyecto_id" @change="confirmarCambioProyecto($event)" class="text-sm border-none bg-gray-50 rounded-lg focus:ring-0 font-bold text-blue-700 cursor-pointer">
                     <option value="">Seleccione un proyecto</option>
                     @foreach($proyectos as $p)
                         <option value="{{ $p->id }}">{{ $p->nombre }}</option>
                     @endforeach
                 </select>
+                <button @click="cargarArticulosProyecto(proyecto_id)" x-show="proyecto_id" class="ml-2 text-blue-600 hover:text-blue-800 text-xs font-bold underline">
+                    <i class="ph ph-arrows-clockwise"></i> Recargar
+                </button>
             </div>
         </div>
         
         <div class="flex items-center space-x-3">
-            <button class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 shadow-sm flex items-center text-sm font-medium">
+            <button @click="guardarTodo" class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 shadow-sm flex items-center text-sm font-medium">
                 <i class="ph ph-floppy-disk mr-2"></i> Guardar Todo
             </button>
         </div>
@@ -32,8 +35,18 @@
 
     <div class="flex flex-1 overflow-hidden">
         
-        <div class="w-2/5 bg-white border-r border-gray-200 overflow-y-auto shadow-xl z-10">
-            <div class="p-6">
+        <div class="w-2/5 bg-white border-r border-gray-200 overflow-y-auto shadow-xl z-10 relative">
+            
+            <!-- Overlay de Advertencia si no hay proyecto -->
+            <div x-show="!proyecto_id" class="h-full flex flex-col items-center justify-center text-center p-8">
+                <div class="bg-orange-100 p-4 rounded-full mb-4">
+                    <i class="ph ph-warning text-4xl text-orange-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Seleccione un Proyecto</h3>
+                <p class="text-sm text-gray-500">Para comenzar a dar de alta artículos, primero debe seleccionar un proyecto en la barra superior.</p>
+            </div>
+
+            <div class="p-6" x-show="proyecto_id">
                 <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                     <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs">1</span>
                     Datos Generales
@@ -68,7 +81,7 @@
 
                     <div class="mb-3">
                         <label class="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
-                        <textarea x-model="form.descripcion" rows="2" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos..."></textarea>
+                        <textarea x-model="form.descripcion" rows="5" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos extensos..."></textarea>
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
@@ -146,15 +159,15 @@
 
                                 <!-- Controles para agregar nueva madera -->
                                 <div class="bg-blue-50 p-3 rounded border border-blue-100">
-                                    <div class="mb-2">
-                                        <select x-model="tempMadera.seleccion" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex">
+                                        <select x-model="tempMadera.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
                                             <template x-for="combo in combinacionesMadera" :key="combo"><option :value="combo" x-text="combo"></option></template>
                                         </select>
+                                        <button type="button" @click="agregarMaderaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
                                     </div>
-                                    <button type="button" @click="agregarMaderaLista()" class="w-full py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
-                                        <i class="ph ph-plus mr-1"></i> Agregar Madera
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -177,15 +190,15 @@
                                 </template>
                                 <!-- Controles -->
                                 <div class="bg-blue-50 p-3 rounded border border-blue-100">
-                                    <div class="mb-2">
-                                        <select x-model="tempMelamina.seleccion" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex">
+                                        <select x-model="tempMelamina.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
                                             <template x-for="combo in combinacionesMelamina" :key="combo"><option :value="combo" x-text="combo"></option></template>
                                         </select>
+                                        <button type="button" @click="agregarMelaminaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
                                     </div>
-                                    <button type="button" @click="agregarMelaminaLista()" class="w-full py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
-                                        <i class="ph ph-plus mr-1"></i> Agregar Melamina
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -208,15 +221,15 @@
                                 </template>
                                 <!-- Controles (Builder) -->
                                 <div class="bg-blue-50 p-3 rounded border border-blue-100">
-                                    <div class="mb-2">
-                                        <select x-model="tempTela.seleccion" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex">
+                                        <select x-model="tempTela.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
                                             <template x-for="combo in combinacionesTela" :key="combo"><option :value="combo" x-text="combo"></option></template>
                                         </select>
+                                        <button type="button" @click="agregarTelaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
                                     </div>
-                                    <button type="button" @click="agregarTelaLista()" class="w-full py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
-                                        <i class="ph ph-plus mr-1"></i> Agregar Tela
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -239,15 +252,15 @@
                                 </template>
                                 <!-- Controles -->
                                 <div class="bg-blue-50 p-3 rounded border border-blue-100">
-                                    <div class="mb-2">
-                                        <select x-model="tempCubierta.seleccion" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex">
+                                        <select x-model="tempCubierta.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
                                             <template x-for="combo in combinacionesCubierta" :key="combo"><option :value="combo" x-text="combo"></option></template>
                                         </select>
+                                        <button type="button" @click="agregarCubiertaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
                                     </div>
-                                    <button type="button" @click="agregarCubiertaLista()" class="w-full py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
-                                        <i class="ph ph-plus mr-1"></i> Agregar Cubierta
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -283,8 +296,11 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Comentarios Generales</label>
-                        <textarea x-model="form.comentarios" rows="2" class="w-full rounded bg-gray-50 border-gray-300 text-xs"></textarea>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Archivo PDF (Planos/Guías)</label>
+                        <input type="file" @change="handlePdf" accept=".pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <template x-if="form.pdf">
+                            <p class="text-xs text-green-600 mt-1 font-bold" x-text="'Archivo cargado: ' + form.pdf.name"></p>
+                        </template>
                     </div>
 
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 flex items-center">
@@ -379,6 +395,11 @@
                                         </template>
                                     </div>
                                     <div class="text-[10px] text-gray-400 mt-1 truncate w-32" x-text="item.descripcion"></div>
+                                    <template x-if="item.pdf">
+                                        <div class="text-[10px] text-red-500 mt-1 flex items-center">
+                                            <i class="ph ph-file-pdf mr-1"></i> PDF Adjunto
+                                        </div>
+                                    </template>
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     <div class="flex items-center justify-end gap-3">
@@ -426,10 +447,12 @@
                             </button>
                             <button @click="seleccionarTipoMaterial('melamina')" class="p-6 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition flex flex-col items-center justify-center">
                                 <i class="ph ph-squares-four text-4xl text-blue-600 mb-3"></i>
+                                <i class="ph ph-stack text-4xl text-blue-600 mb-3"></i>
                                 <span class="font-bold text-gray-800">Melamina</span>
                             </button>
                             <button @click="seleccionarTipoMaterial('tela')" class="p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition flex flex-col items-center justify-center">
                                 <i class="ph ph-briefcase text-4xl text-purple-600 mb-3"></i>
+                                <i class="ph ph-t-shirt text-4xl text-purple-600 mb-3"></i>
                                 <span class="font-bold text-gray-800">Tela</span>
                             </button>
                             <button @click="seleccionarTipoMaterial('cubierta')" class="p-6 border-2 border-gray-300 rounded-lg hover:border-green-600 hover:bg-green-50 transition flex flex-col items-center justify-center">
@@ -447,21 +470,164 @@
 
                 <!-- Formulario Genérico para Materiales -->
                 <template x-if="tipoMaterialSeleccionado">
-                    <form @submit.prevent="agregarMaterial">
+                    <form @submit.prevent="agregarMaterial" class="space-y-4">
                         <h3 class="text-lg font-bold text-gray-800 mb-4 capitalize" x-text="'Alta de ' + tipoMaterialSeleccionado"></h3>
-                        <div class="mb-4">
+                        
+                        <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Nombre del Material</label>
-                            <input type="text" x-model="formularioMaterial.nombre" :placeholder="'Ej. Roble, Lino Gris, Mármol Carrara'" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <input type="text" x-model="formularioMaterial.nombre" placeholder="Ej. Roble Americano, Melamina Vesto, Lino Gris" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                         </div>
-                        <div class="mb-6">
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Campos para Madera -->
+                            <template x-if="tipoMaterialSeleccionado === 'madera'">
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Chapa</label>
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="formularioMaterial.chapa_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow" required>
+                                                <option value="">-- Seleccionar --</option>
+                                                <template x-for="chapa in db_chapas" :key="chapa.chapa_id">
+                                                    <option :value="chapa.chapa_id" x-text="chapa.nombre"></option>
+                                                </template>
+                                            </select>
+                                            <button @click.prevent="formActivoParaAgregar = 'chapa'; nuevoNombreGenerico = ''" type="button" class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 shrink-0" title="Agregar nueva chapa">
+                                                <i class="ph ph-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div x-show="formActivoParaAgregar === 'chapa'" x-transition class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                                            <input type="text" x-model="nuevoNombreGenerico" @keydown.enter.prevent="agregarItemGenerico('chapa')" placeholder="Nombre nueva chapa" class="flex-grow px-2 py-1 text-sm border-gray-300 rounded">
+                                            <button @click.prevent="agregarItemGenerico('chapa')" type="button" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">OK</button>
+                                            <button @click.prevent="formActivoParaAgregar = null" type="button" class="text-gray-500 hover:text-red-600"><i class="ph ph-x"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Nogal, Chocolate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    </div>
+                                </div>
+                            </template>
+                            
+                            <!-- Campos para Melamina -->
+                            <template x-if="tipoMaterialSeleccionado === 'melamina'">
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Proveedor</label>
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="formularioMaterial.proveedor_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow" required>
+                                                <option value="">-- Seleccionar --</option>
+                                                <template x-for="prov in db_proveedores" :key="prov.proveedor_id">
+                                                    <option :value="prov.proveedor_id" x-text="prov.nombre"></option>
+                                                </template>
+                                            </select>
+                                            <button @click.prevent="formActivoParaAgregar = 'proveedor_melamina'; nuevoNombreGenerico = ''" type="button" class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 shrink-0" title="Agregar nuevo proveedor">
+                                                <i class="ph ph-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div x-show="formActivoParaAgregar === 'proveedor_melamina'" x-transition class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                                            <input type="text" x-model="nuevoNombreGenerico" @keydown.enter.prevent="agregarItemGenerico('proveedor_melamina')" placeholder="Nombre nuevo proveedor" class="flex-grow px-2 py-1 text-sm border-gray-300 rounded">
+                                            <button @click.prevent="agregarItemGenerico('proveedor_melamina')" type="button" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">OK</button>
+                                            <button @click.prevent="formActivoParaAgregar = null" type="button" class="text-gray-500 hover:text-red-600"><i class="ph ph-x"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Blanco, Gris" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Textura</label>
+                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Veta, Textil" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Campos para Tela -->
+                            <template x-if="tipoMaterialSeleccionado === 'tela'">
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Proveedor</label>
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="formularioMaterial.proveedor_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow" required>
+                                                <option value="">-- Seleccionar --</option>
+                                                <template x-for="prov in db_proveedores" :key="prov.proveedor_id">
+                                                    <option :value="prov.proveedor_id" x-text="prov.nombre"></option>
+                                                </template>
+                                            </select>
+                                            <button @click.prevent="formActivoParaAgregar = 'proveedor_tela'; nuevoNombreGenerico = ''" type="button" class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 shrink-0" title="Agregar nuevo proveedor">
+                                                <i class="ph ph-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div x-show="formActivoParaAgregar === 'proveedor_tela'" x-transition class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                                            <input type="text" x-model="nuevoNombreGenerico" @keydown.enter.prevent="agregarItemGenerico('proveedor_tela')" placeholder="Nombre nuevo proveedor" class="flex-grow px-2 py-1 text-sm border-gray-300 rounded">
+                                            <button @click.prevent="agregarItemGenerico('proveedor_tela')" type="button" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">OK</button>
+                                            <button @click.prevent="formActivoParaAgregar = null" type="button" class="text-gray-500 hover:text-red-600"><i class="ph ph-x"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Colección</label>
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="formularioMaterial.submaterial_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow">
+                                                <option value="">-- Opcional --</option>
+                                                <template x-for="sub in db_submateriales" :key="sub.submaterial_id">
+                                                    <option :value="sub.submaterial_id" x-text="sub.nombre"></option>
+                                                </template>
+                                            </select>
+                                            <button @click.prevent="formActivoParaAgregar = 'submaterial_tela'; nuevoNombreGenerico = ''" type="button" class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 shrink-0" title="Agregar nueva colección">
+                                                <i class="ph ph-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div x-show="formActivoParaAgregar === 'submaterial_tela'" x-transition class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                                            <input type="text" x-model="nuevoNombreGenerico" @keydown.enter.prevent="agregarItemGenerico('submaterial_tela')" placeholder="Nombre nueva colección" class="flex-grow px-2 py-1 text-sm border-gray-300 rounded">
+                                            <button @click.prevent="agregarItemGenerico('submaterial_tela')" type="button" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">OK</button>
+                                            <button @click.prevent="formActivoParaAgregar = null" type="button" class="text-gray-500 hover:text-red-600"><i class="ph ph-x"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Patrón</label>
+                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Rayas, Floral" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Gris Oxford, Beige" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Campos para Cubierta -->
+                            <template x-if="tipoMaterialSeleccionado === 'cubierta'">
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Tipo de Piedra / Colección</label>
+                                    <div class="flex items-center gap-2">
+                                        <select x-model="formularioMaterial.submaterial_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow" required>
+                                            <option value="">-- Seleccionar --</option>
+                                            <template x-for="sub in db_submateriales" :key="sub.submaterial_id">
+                                                <option :value="sub.submaterial_id" x-text="sub.nombre"></option>
+                                            </template>
+                                        </select>
+                                        <button @click.prevent="formActivoParaAgregar = 'submaterial_cubierta'; nuevoNombreGenerico = ''" type="button" class="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 shrink-0" title="Agregar nuevo tipo/colección">
+                                            <i class="ph ph-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div x-show="formActivoParaAgregar === 'submaterial_cubierta'" x-transition class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                                        <input type="text" x-model="nuevoNombreGenerico" @keydown.enter.prevent="agregarItemGenerico('submaterial_cubierta')" placeholder="Nombre nuevo tipo/colección" class="flex-grow px-2 py-1 text-sm border-gray-300 rounded">
+                                        <button @click.prevent="agregarItemGenerico('submaterial_cubierta')" type="button" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700">OK</button>
+                                        <button @click.prevent="formActivoParaAgregar = null" type="button" class="text-gray-500 hover:text-red-600"><i class="ph ph-x"></i></button>
+                                    </div>
+                                </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">Imagen de Referencia</label>
                             <input type="file" @change="handleMaterialImage" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                             <template x-if="formularioMaterial.imagenPreview">
                                 <img :src="formularioMaterial.imagenPreview" class="mt-3 h-24 rounded object-contain border p-1">
                             </template>
                         </div>
-                        <div class="flex gap-3">
-                            <button type="button" @click="tipoMaterialSeleccionado = null" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition">
+                        <div class="flex gap-3 pt-4">
+                            <button type="button" @click="tipoMaterialSeleccionado = null; formularioMaterial.imagenPreview = null" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition">
                                 Atrás
                             </button>
                             <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center">
@@ -516,7 +682,7 @@
 
                     <div class="mb-3">
                         <label class="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
-                        <textarea x-model="form.descripcion" rows="2" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos..."></textarea>
+                        <textarea x-model="form.descripcion" rows="5" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos extensos..."></textarea>
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
@@ -576,19 +742,27 @@
                                 <input type="checkbox" x-model="form.usa_madera" class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500">
                                 <span class="ml-3 text-sm font-bold text-gray-700">Madera</span>
                             </label>
-                            <div x-show="form.usa_madera" class="flex items-center gap-3 mt-2 ml-8">
-                                <div class="flex-grow">
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Tipo de Madera</label>
-                                    <select x-model="form.tipo_madera" class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">-- Seleccionar --</option>
-                                        <option value="Pino">Pino</option>
-                                        <option value="Roble">Roble</option>
-                                        <option value="Cedro">Cedro</option>
-                                        <option value="Caoba">Caoba</option>
-                                    </select>
-                                </div>
-                                <div class="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-image text-gray-400 text-2xl"></i>
+                            <div x-show="form.usa_madera" class="mt-2 ml-4">
+                                <!-- Lista de maderas seleccionadas -->
+                                <template x-for="(madera, index) in form.maderas_seleccionadas" :key="index">
+                                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
+                                        <span x-text="madera" class="font-medium text-gray-700"></span>
+                                        <button type="button" @click="eliminarMaderaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <!-- Controles -->
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                                    <div class="flex">
+                                        <select x-model="tempMadera.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
+                                            <option value="">-- Seleccionar Combinación --</option>
+                                            <template x-for="combo in combinacionesMadera" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                        </select>
+                                        <button type="button" @click="agregarMaderaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -599,18 +773,27 @@
                                 <input type="checkbox" x-model="form.usa_melamina" class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500">
                                 <span class="ml-3 text-sm font-bold text-gray-700">Melamina</span>
                             </label>
-                            <div x-show="form.usa_melamina" class="flex items-center gap-3 mt-2 ml-8">
-                                <div class="flex-grow">
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Tipo Melamina</label>
-                                    <select x-model="form.tipo_melamina" class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">-- Seleccionar --</option>
-                                        <option value="Melamina Blanca">Melamina Blanca</option>
-                                        <option value="Melamina Roble">Melamina Roble</option>
-                                        <option value="Formica">Formica</option>
-                                    </select>
-                                </div>
-                                <div class="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-image text-gray-400 text-2xl"></i>
+                            <div x-show="form.usa_melamina" class="mt-2 ml-4">
+                                <!-- Lista de melaminas seleccionadas -->
+                                <template x-for="(melamina, index) in form.melaminas_seleccionadas" :key="index">
+                                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
+                                        <span x-text="melamina" class="font-medium text-gray-700"></span>
+                                        <button type="button" @click="eliminarMelaminaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <!-- Controles -->
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                                    <div class="flex">
+                                        <select x-model="tempMelamina.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
+                                            <option value="">-- Seleccionar Combinación --</option>
+                                            <template x-for="combo in combinacionesMelamina" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                        </select>
+                                        <button type="button" @click="agregarMelaminaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -619,21 +802,29 @@
                         <div class="bg-white p-3 rounded-lg border border-blue-200">
                             <label class="flex items-center cursor-pointer mb-3">
                                 <input type="checkbox" x-model="form.usa_textil" class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-3 text-sm font-bold text-gray-700">Textil / Tapicería</span>
+                                <span class="ml-3 text-sm font-bold text-gray-700">Tela</span>
                             </label>
-                            <div x-show="form.usa_textil" class="flex items-center gap-3 mt-2 ml-8">
-                                <div class="flex-grow">
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Tipo de Tela</label>
-                                    <select x-model="form.tipo_tela" class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">-- Seleccionar --</option>
-                                        <option value="Algodón">Algodón</option>
-                                        <option value="Lino">Lino</option>
-                                        <option value="Poliéster">Poliéster</option>
-                                        <option value="Terciopelo">Terciopelo</option>
-                                    </select>
-                                </div>
-                                <div class="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-image text-gray-400 text-2xl"></i>
+                            <div x-show="form.usa_textil" class="mt-2 ml-4">
+                                <!-- Lista de telas seleccionadas -->
+                                <template x-for="(tela, index) in form.telas_seleccionadas" :key="index">
+                                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
+                                        <span x-text="tela" class="font-medium text-gray-700"></span>
+                                        <button type="button" @click="eliminarTelaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <!-- Controles -->
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                                    <div class="flex">
+                                        <select x-model="tempTela.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
+                                            <option value="">-- Seleccionar Combinación --</option>
+                                            <template x-for="combo in combinacionesTela" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                        </select>
+                                        <button type="button" @click="agregarTelaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -642,21 +833,29 @@
                         <div class="bg-white p-3 rounded-lg border border-blue-200">
                             <label class="flex items-center cursor-pointer mb-3">
                                 <input type="checkbox" x-model="form.usa_cubierta" class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-3 text-sm font-bold text-gray-700">Lleva Cubierta Especial</span>
+                                <span class="ml-3 text-sm font-bold text-gray-700">Cubierta</span>
                             </label>
-                            <div x-show="form.usa_cubierta" class="flex items-center gap-3 mt-2 ml-8">
-                                <div class="flex-grow">
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Tipo de Cubierta</label>
-                                    <select x-model="form.tipo_cubierta" class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">-- Seleccionar --</option>
-                                        <option value="Cristal">Cristal</option>
-                                        <option value="Mármol">Mármol</option>
-                                        <option value="Granito">Granito</option>
-                                        <option value="Cuarzo">Cuarzo</option>
-                                    </select>
-                                </div>
-                                <div class="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center flex-shrink-0">
-                                    <i class="ph ph-image text-gray-400 text-2xl"></i>
+                            <div x-show="form.usa_cubierta" class="mt-2 ml-4">
+                                <!-- Lista de cubiertas seleccionadas -->
+                                <template x-for="(cubierta, index) in form.cubiertas_seleccionadas" :key="index">
+                                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
+                                        <span x-text="cubierta" class="font-medium text-gray-700"></span>
+                                        <button type="button" @click="eliminarCubiertaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <!-- Controles -->
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                                    <div class="flex">
+                                        <select x-model="tempCubierta.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
+                                            <option value="">-- Seleccionar Combinación --</option>
+                                            <template x-for="combo in combinacionesCubierta" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                        </select>
+                                        <button type="button" @click="agregarCubiertaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
+                                            OK
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -692,8 +891,11 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Comentarios Generales</label>
-                        <textarea x-model="form.comentarios" rows="2" class="w-full rounded bg-gray-50 border-gray-300 text-xs"></textarea>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Archivo PDF (Planos/Guías)</label>
+                        <input type="file" @change="handlePdf" accept=".pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <template x-if="form.pdf">
+                            <p class="text-xs text-green-600 mt-1 font-bold" x-text="'Archivo cargado: ' + form.pdf.name"></p>
+                        </template>
                     </div>
 
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 flex items-center">
@@ -748,6 +950,7 @@
             db_proveedores: @json($proveedores),
             articulos_catalogo: @json($articulos),
             proyecto_id: '',
+            cargando: false,
             form: {
                 id_articulo_produccion: '',
                 categoria_articulo_id: '',
@@ -776,9 +979,9 @@
                 tipo_cubierta: '',
                 requiere_instalacion: false,
                 requiere_desemplaye: false,
-                comentarios: '',
                 es_planta_baja: 'si',
-                condiciones_acceso: ''
+                condiciones_acceso: '',
+                pdf: null
             },
             imagePreview: null,
             articulos: [],
@@ -787,10 +990,17 @@
             showModalEdicion: false,
             indexEdicion: null,
             formularioMaterial: {
+                imagenPreview: null,
                 nombre: '',
                 imagen: null,
-                imagenPreview: null
+                chapa_id: '',
+                color: '',
+                proveedor_id: '',
+                dibujo: '', // Para tela
+                submaterial_id: '',
             },
+            formActivoParaAgregar: null, // e.g., 'chapa', 'proveedor_melamina', 'submaterial_cubierta'
+            nuevoNombreGenerico: '',
             tempMadera: {
                 seleccion: ''
             },
@@ -805,135 +1015,64 @@
             },
 
             get combinacionesMadera() {
-                let combos = [];
-                if(this.db_submateriales && this.db_materiales && this.db_chapas) {
-                    // 1. Filtrar solo materiales de categoría 1 (Maderas)
-                    const maderas = this.db_materiales.filter(m => m.categoria_id == 1);
-
-                    maderas.forEach(mat => {
-                        // 2. Buscar submateriales relacionados (Bidireccional)
-                        let submaterialesRelacionados = this.db_submateriales.filter(s => s.material_id == mat.material_id);
+                if (!this.db_materiales) return [];
+                return this.db_materiales
+                    .filter(m => m.categoria_id == 1) // 1 = Madera
+                    .map(m => {
+                        const sub = this.db_submateriales.find(s => s.submaterial_id == m.submaterial_id)?.nombre;
+                        const chapa = this.db_chapas.find(c => c.chapa_id == m.chapa_id)?.nombre;
                         
-                        // Si el material apunta a un submaterial (Material es hijo), agregarlo
-                        if (mat.submaterial_id) {
-                            const subPadre = this.db_submateriales.find(s => s.submaterial_id == mat.submaterial_id);
-                            if (subPadre && !submaterialesRelacionados.find(s => s.submaterial_id == subPadre.submaterial_id)) {
-                                submaterialesRelacionados.push(subPadre);
-                            }
-                        }
-
-                        // Si no hay submateriales, permitimos mostrar el material solo (para evitar lista vacía)
-                        if (submaterialesRelacionados.length === 0) {
-                            submaterialesRelacionados.push({ submaterial_id: null, nombre: '' });
-                        }
-
-                        submaterialesRelacionados.forEach(sub => {
-                            // 3. Filtrar chapas que pertenecen a este submaterial (o al material si no hay relación directa con sub)
-                            const chapasRelacionadas = this.db_chapas.filter(c => {
-                                if (sub.submaterial_id && c.submaterial_id && c.submaterial_id == sub.submaterial_id) return true;
-                                if (c.material_id && c.material_id == mat.material_id) return true;
-                                return false; // Si no tiene relación, no mostrar
-                            });
-
-                            if (chapasRelacionadas.length > 0) {
-                                chapasRelacionadas.forEach(cha => {
-                                    let nombre = sub.nombre ? `${sub.nombre}, ${mat.nombre}, ${cha.nombre}` : `${mat.nombre}, ${cha.nombre}`;
-                                    combos.push(nombre);
-                                });
-                            } else {
-                                let nombre = sub.nombre ? `${sub.nombre}, ${mat.nombre}` : `${mat.nombre}`;
-                                combos.push(nombre);
-                            }
-                        });
+                        let parts = [m.nombre];
+                        if(sub) parts.push(sub);
+                        if(chapa) parts.push(chapa);
+                        
+                        return parts.join(' - ');
                     });
-                }
-                return combos;
             },
 
             get combinacionesMelamina() {
-                let combos = [];
-                if(this.db_proveedores && this.db_materiales) {
-                    this.db_proveedores.forEach(prov => {
-                        this.db_materiales.forEach(mat => {
-                            // Filtro: El material (melamina) debe ser del proveedor
-                            if (mat.proveedor_id && prov.proveedor_id && mat.proveedor_id != prov.proveedor_id) return;
-
-                            combos.push(`${prov.nombre} + ${mat.nombre}`);
-                        });
+                if (!this.db_materiales) return [];
+                return this.db_materiales
+                    .filter(m => m.categoria_id == 2) // 2 = Melamina
+                    .map(m => {
+                        const prov = this.db_proveedores.find(p => p.proveedor_id == m.proveedor_id)?.nombre;
+                        
+                        let parts = [m.nombre];
+                        if(prov) parts.push(prov);
+                        if(m.color) parts.push(m.color);
+                        
+                        return parts.join(' - ');
                     });
-                }
-                return combos;
             },
 
-                get combinacionesTela() {
-                    let combos = [];
-                    if(this.db_materiales && this.db_proveedores) {
-                        // Filtrar materiales por categoría (Se usa ID 3 para Tela/Textil para separar de Madera/Melamina)
-                        const telas = this.db_materiales.filter(m => m.categoria_id == 3);
-
-                        telas.forEach(mat => {
-                            // 1. Intentar encontrar el Submaterial relacionado
-                            // Opción A: El material tiene un submaterial_id (Material es hijo)
-                            let sub = null;
-                            if (mat.submaterial_id && this.db_submateriales) {
-                                sub = this.db_submateriales.find(s => s.submaterial_id == mat.submaterial_id);
-                            }
-
-                            // Opción B: Submateriales apuntan al material (Material es padre)
-                            let subsHijos = [];
-                            if (!sub && this.db_submateriales) {
-                                subsHijos = this.db_submateriales.filter(s => s.material_id == mat.material_id);
-                            }
-
-                            const construirNombre = (nombreProv, nombreSub, nombreMat, dibujo) => {
-                                let partes = [];
-                                if (nombreProv) partes.push(nombreProv);
-                                if (nombreSub) partes.push(nombreSub);
-                                partes.push(nombreMat);
-                                if (dibujo) partes.push(dibujo);
-                                return partes.join(' + ');
-                            };
-
-                            if (subsHijos.length > 0) {
-                                subsHijos.forEach(s => {
-                                    let provId = mat.proveedor_id || s.proveedor_id;
-                                    let prov = this.db_proveedores.find(p => p.proveedor_id == provId);
-                                    combos.push(construirNombre(prov ? prov.nombre : '', s.nombre, mat.nombre, mat.dibujo));
-                                });
-                            } else {
-                                let provId = mat.proveedor_id;
-                                if (!provId && sub) provId = sub.proveedor_id;
-                                let prov = this.db_proveedores.find(p => p.proveedor_id == provId);
-                                let nomSub = sub ? sub.nombre : '';
-                                combos.push(construirNombre(prov ? prov.nombre : '', nomSub, mat.nombre, mat.dibujo));
-                            }
-                        });
-                    }
-                    return combos;
-                },
+            get combinacionesTela() {
+                if (!this.db_materiales) return [];
+                return this.db_materiales
+                    .filter(m => m.categoria_id == 3) // 3 = Tela
+                    .map(m => {
+                        const prov = this.db_proveedores.find(p => p.proveedor_id == m.proveedor_id)?.nombre;
+                        
+                        let parts = [m.nombre];
+                        if(prov) parts.push(prov);
+                        if(m.dibujo) parts.push(m.dibujo);
+                        if(m.color) parts.push(m.color);
+                        
+                        return parts.join(' - ');
+                    });
+            },
 
             get combinacionesCubierta() {
-                let combos = [];
-                if(this.db_submateriales && this.db_materiales) {
-                    // Filtrar materiales por categoría (Se asume ID 4 para Cubiertas)
-                    const cubiertas = this.db_materiales.filter(m => m.categoria_id == 4);
-
-                    cubiertas.forEach(mat => {
-                        // 1. Buscar submateriales que pertenecen a este material (Material es Padre)
-                        const submateriales = this.db_submateriales.filter(s => s.material_id == mat.material_id);
-
-                        if (submateriales.length > 0) {
-                            submateriales.forEach(sub => {
-                                combos.push(`${sub.nombre} + ${mat.nombre}`);
-                            });
-                        } else if (mat.submaterial_id) {
-                            // 2. Buscar si el material pertenece a un submaterial (Material es Hijo)
-                            const sub = this.db_submateriales.find(s => s.submaterial_id == mat.submaterial_id);
-                            if (sub) combos.push(`${sub.nombre} + ${mat.nombre}`);
-                        }
+                if (!this.db_materiales) return [];
+                return this.db_materiales
+                    .filter(m => m.categoria_id == 4) // 4 = Cubierta
+                    .map(m => {
+                        const sub = this.db_submateriales.find(s => s.submaterial_id == m.submaterial_id)?.nombre;
+                        
+                        let parts = [m.nombre];
+                        if(sub) parts.push(sub);
+                        
+                        return parts.join(' - ');
                     });
-                }
-                return combos;
             },
 
             agregarMaderaLista() {
@@ -1026,14 +1165,55 @@
                 }
             },            
 
+            validarCampos() {
+                let errores = [];
+
+                if (!this.form.id_articulo_produccion) errores.push('El ID del artículo es obligatorio.');
+                if (!this.form.categoria_articulo_id) errores.push('La categoría es obligatoria.');
+                if (!this.form.nombre) errores.push('El nombre del artículo es obligatorio.');
+                if (!this.form.descripcion) errores.push('La descripción es obligatoria.');
+                
+                if (!this.form.alto || this.form.alto <= 0) errores.push('El alto es obligatorio.');
+                if (!this.form.ancho || this.form.ancho <= 0) errores.push('El ancho es obligatorio.');
+                if (!this.form.profundo || this.form.profundo <= 0) errores.push('La profundidad es obligatoria.');
+                if (!this.form.peso || this.form.peso <= 0) errores.push('El peso es obligatorio.');
+                if (!this.form.cantidad || this.form.cantidad <= 0) errores.push('La cantidad es obligatoria.');
+
+                if (this.form.tiene_division && (!this.form.piezas_divididas || this.form.piezas_divididas <= 0)) {
+                    errores.push('Si tiene división, debe especificar el número de piezas.');
+                }
+
+                const tieneMaterial = 
+                    this.form.maderas_seleccionadas.length > 0 ||
+                    this.form.melaminas_seleccionadas.length > 0 ||
+                    this.form.telas_seleccionadas.length > 0 ||
+                    this.form.cubiertas_seleccionadas.length > 0 ||
+                    this.form.usa_herreria;
+
+                if (!tieneMaterial) {
+                    errores.push('Debe seleccionar al menos un material (Madera, Melamina, Tela, Cubierta o Herrería).');
+                }
+
+                if (this.form.es_planta_baja === 'no' && !this.form.condiciones_acceso) {
+                    errores.push('Debe especificar las condiciones de acceso si no es planta baja.');
+                }
+
+                return errores;
+            },
+
             agregarArticulo() {
-                // Validación básica
-                if(!this.form.nombre || !this.form.categoria_articulo_id) {
-                    alert('Faltan datos obligatorios (Categoría o Nombre)');
+                const errores = this.validarCampos();
+                if (errores.length > 0) {
+                    alert('Por favor corrija los siguientes errores:\n\n- ' + errores.join('\n- '));
                     return;
                 }
 
-                const nuevoItem = JSON.parse(JSON.stringify(this.form));
+                // Copia manual para preservar objetos File y Arrays
+                const nuevoItem = { ...this.form };
+                nuevoItem.maderas_seleccionadas = [...this.form.maderas_seleccionadas];
+                nuevoItem.melaminas_seleccionadas = [...this.form.melaminas_seleccionadas];
+                nuevoItem.telas_seleccionadas = [...this.form.telas_seleccionadas];
+                nuevoItem.cubiertas_seleccionadas = [...this.form.cubiertas_seleccionadas];
                 nuevoItem.imagen = this.imagePreview; 
                 
                 this.articulos.unshift(nuevoItem); 
@@ -1048,18 +1228,19 @@
 
             resetForm() {
                 this.form.categoria_articulo_id = '';
+                delete this.form.id; // Limpiar ID
                 this.form.nombre = '';
                 this.form.id_articulo_produccion = '';
                 this.form.ancho = ''; this.form.alto = ''; this.form.profundo = '';
                 this.form.peso = ''; this.form.cubicaje = 0;
                 this.form.descripcion = '';
-                this.form.comentarios = '';
                 this.form.maderas_seleccionadas = [];
                 this.form.melaminas_seleccionadas = [];
                 this.form.telas_seleccionadas = [];
                 this.form.cubiertas_seleccionadas = [];
                 this.form.es_planta_baja = 'si';
                 this.form.condiciones_acceso = '';
+                this.form.pdf = null;
                 this.imagePreview = null;
                 // No reseteamos los materiales para agilizar carga de muebles similares
             },
@@ -1073,82 +1254,154 @@
                 this.tipoMaterialSeleccionado = null;
                 this.formularioMaterial = {
                     nombre: '',
-                    imagen: null,
-                    imagenPreview: null
+                    imagen: null, 
+                    imagenPreview: null,
+                    chapa_id: '', color: '', proveedor_id: '',
+                    dibujo: '', submaterial_id: '',
                 };
             },            
 
             cerrarModalMateriales() {
                 this.showModalMateriales = false;
                 this.tipoMaterialSeleccionado = null;
-                this.formularioMaterial = {
-                    tipo_madera: '',
-                    color_madera: '',
-                    grosor_madera: '',
-                    observaciones_madera: '',
-                    marca_melamina: '',
-                    color_melamina: '',
-                    acabado_melamina: '',
-                    observaciones_melamina: '',
-                    tipo_tela: '',
-                    color_tela: '',
-                    patron_tela: '',
-                    observaciones_tela: '',
-                    tipo_cubierta: '',
-                    material_cubierta: '',
-                    especificaciones_cubierta: '',
-                    observaciones_cubierta: ''
-                };
+                this.formularioMaterial.imagenPreview = null;
             },
 
             seleccionarTipoMaterial(tipo) {
                 this.tipoMaterialSeleccionado = tipo;
             },
 
-            agregarMaterial() {
-                // Aquí iría la lógica para guardar el nuevo material en la base de datos vía AJAX.
-                // Por ahora, solo actualiza el formulario principal como en la versión anterior,
-                // pero usando el nuevo campo 'nombre'.
+            async agregarMaterial() {
+                const formData = new FormData();
+                formData.append('tipo_material', this.tipoMaterialSeleccionado);
+                
+                for (const key in this.formularioMaterial) {
+                    if (key !== 'imagenPreview' && this.formularioMaterial[key] !== null) {
+                        formData.append(key, this.formularioMaterial[key]);
+                    }
+                }
 
-                if (!this.formularioMaterial.nombre) {
-                    alert('Por favor, ingresa el nombre del material.');
+                try {
+                    const response = await fetch("{{ route('guardarNuevoMaterial') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.db_materiales.push(data.material);
+                        alert('Material "' + data.material.nombre + '" guardado en el catálogo.');
+                        this.cerrarModalMateriales();
+                    } else {
+                        if (data.errors) {
+                            let errorMessages = Object.values(data.errors).flat().join('\n');
+                            alert('Error de validación:\n- ' + errorMessages);
+                        } else {
+                            alert('Error: ' + (data.message || 'No se pudo guardar el material.'));
+                        }
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error de conexión al guardar el material.');
+                }
+            },
+
+            async agregarItemGenerico(tipoForm) {
+                if (!this.nuevoNombreGenerico.trim()) {
+                    alert('El nombre no puede estar vacío.');
                     return;
                 }
 
-                if (this.tipoMaterialSeleccionado === 'madera') {
-                    // Si se agrega desde el modal genérico, lo añadimos a la lista también
-                    this.form.maderas_seleccionadas.push(this.formularioMaterial.nombre);
-                    this.form.tipo_madera = this.form.maderas_seleccionadas.join(' | ');
-                    this.form.usa_madera = true;
-                } else if (this.tipoMaterialSeleccionado === 'melamina') {
-                    this.form.melaminas_seleccionadas.push(this.formularioMaterial.nombre);
-                    this.form.tipo_melamina = this.form.melaminas_seleccionadas.join(' | ');
-                    this.form.usa_melamina = true;
-                } else if (this.tipoMaterialSeleccionado === 'tela') {
-                    this.form.telas_seleccionadas.push(this.formularioMaterial.nombre);
-                    this.form.tipo_tela = this.form.telas_seleccionadas.join(' | ');
-                    this.form.usa_textil = true;
-                } else if (this.tipoMaterialSeleccionado === 'cubierta') {
-                    this.form.cubiertas_seleccionadas.push(this.formularioMaterial.nombre);
-                    this.form.tipo_cubierta = this.form.cubiertas_seleccionadas.join(' | ');
-                    this.form.usa_cubierta = true;
+                let tipoItem = tipoForm.split('_')[0];
+                let url = '';
+                let dataKey = '';
+                let listToUpdate = '';
+                let formFieldToUpdate = '';
+                let idKeyInResponse = '';
+
+                switch (tipoItem) {
+                    case 'chapa':
+                        url = "{{ route('guardarNuevaChapa') }}";
+                        dataKey = 'chapa';
+                        listToUpdate = 'db_chapas';
+                        formFieldToUpdate = 'chapa_id';
+                        idKeyInResponse = 'chapa_id';
+                        break;
+                    case 'proveedor':
+                        url = "{{ route('guardarNuevoProveedor') }}";
+                        dataKey = 'proveedor';
+                        listToUpdate = 'db_proveedores';
+                        formFieldToUpdate = 'proveedor_id';
+                        idKeyInResponse = 'proveedor_id';
+                        break;
+                    case 'submaterial':
+                        url = "{{ route('guardarNuevoSubmaterial') }}";
+                        dataKey = 'submaterial';
+                        listToUpdate = 'db_submateriales';
+                        formFieldToUpdate = 'submaterial_id';
+                        idKeyInResponse = 'submaterial_id';
+                        break;
+                    default:
+                        alert('Tipo de item no reconocido.');
+                        return;
                 }
-                alert('Material "' + this.formularioMaterial.nombre + '" agregado al artículo actual.');
-                this.cerrarModalMateriales();
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                        body: JSON.stringify({ nombre: this.nuevoNombreGenerico })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        const newItem = data[dataKey];
+                        this[listToUpdate].push(newItem);
+                        this[listToUpdate].sort((a, b) => a.nombre.localeCompare(b.nombre));
+                        this.$nextTick(() => { this.formularioMaterial[formFieldToUpdate] = newItem[idKeyInResponse]; });
+                        this.nuevoNombreGenerico = '';
+                        this.formActivoParaAgregar = null;
+                    } else {
+                        let errorMessages = data.message || Object.values(data.errors).flat().join('\n');
+                        alert('Error:\n- ' + errorMessages);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error de conexión al guardar el nuevo item.');
+                }
             },
 
             editarArticulo(index) {
                 this.indexEdicion = index;
-                this.form = JSON.parse(JSON.stringify(this.articulos[index]));
+                const item = this.articulos[index];
+                
+                // Copia manual para preservar objetos File y Arrays al editar
+                this.form = { ...item };
+                this.form.maderas_seleccionadas = item.maderas_seleccionadas ? [...item.maderas_seleccionadas] : [];
+                this.form.melaminas_seleccionadas = item.melaminas_seleccionadas ? [...item.melaminas_seleccionadas] : [];
+                this.form.telas_seleccionadas = item.telas_seleccionadas ? [...item.telas_seleccionadas] : [];
+                this.form.cubiertas_seleccionadas = item.cubiertas_seleccionadas ? [...item.cubiertas_seleccionadas] : [];
+
                 this.imagePreview = this.form.imagen || null;
                 this.showModalEdicion = true;
             },
 
             duplicarArticulo(index) {
                 this.indexEdicion = null;
-                this.form = JSON.parse(JSON.stringify(this.articulos[index]));
+                const item = this.articulos[index];
+                this.form = { ...item };
+                this.form.maderas_seleccionadas = [...item.maderas_seleccionadas];
+                this.form.melaminas_seleccionadas = [...item.melaminas_seleccionadas];
+                this.form.telas_seleccionadas = [...item.telas_seleccionadas];
+                this.form.cubiertas_seleccionadas = [...item.cubiertas_seleccionadas];
+
                 this.imagePreview = this.form.imagen || null;
                 this.form.id_articulo_produccion = '';
+                delete this.form.id; // Al duplicar, quitamos el ID para que se cree uno nuevo
                 this.showModalEdicion = true;
             },
 
@@ -1160,24 +1413,160 @@
             },
 
             guardarEdicion() {
-                if(!this.form.nombre || !this.form.categoria_articulo_id) {
-                    alert('Faltan datos obligatorios (Categoría o Nombre)');
+                const errores = this.validarCampos();
+                if (errores.length > 0) {
+                    alert('Por favor corrija los siguientes errores:\n\n- ' + errores.join('\n- '));
                     return;
                 }
 
                 this.form.imagen = this.imagePreview;
                 
+                // Copia manual para guardar
+                const itemEditado = { ...this.form };
+                itemEditado.maderas_seleccionadas = [...this.form.maderas_seleccionadas];
+                itemEditado.melaminas_seleccionadas = [...this.form.melaminas_seleccionadas];
+                itemEditado.telas_seleccionadas = [...this.form.telas_seleccionadas];
+                itemEditado.cubiertas_seleccionadas = [...this.form.cubiertas_seleccionadas];
+
                 if (this.indexEdicion !== null) {
                     // Modo edición: actualizar artículo existente
-                    this.articulos[this.indexEdicion] = JSON.parse(JSON.stringify(this.form));
+                    this.articulos[this.indexEdicion] = itemEditado;
                     alert('Artículo actualizado correctamente');
                 } else {
                     // Modo duplicación: agregar como nuevo artículo
-                    this.articulos.unshift(JSON.parse(JSON.stringify(this.form)));
+                    this.articulos.unshift(itemEditado);
                     alert('Artículo duplicado correctamente');
                 }
                 
                 this.cerrarModalEdicion();
+            },
+
+            confirmarCambioProyecto(event) {
+                const nuevoId = event.target.value;
+                // Solo advertir si ya había un proyecto seleccionado y hay items en la lista
+                if (this.proyecto_id !== '' && this.articulos.length > 0) {
+                    if (!confirm('Si cambias de proyecto, se cargarán los artículos guardados de ese proyecto y perderás los cambios no guardados actuales. ¿Continuar?')) {
+                        event.target.value = this.proyecto_id; // Revertir selección
+                        return;
+                    }
+                }
+                this.proyecto_id = nuevoId;
+                if(nuevoId) {
+                    this.cargarArticulosProyecto(nuevoId);
+                } else {
+                    this.articulos = [];
+                }
+            },
+
+            async cargarArticulosProyecto(id) {
+                if(!id) return;
+                this.cargando = true;
+                try {
+                    const response = await fetch(`{{ url('/erp/articulos-proyecto') }}/${id}`);
+                    if (!response.ok) {
+                        throw new Error('Error al conectar con el servidor: ' + response.status);
+                    }
+                    const data = await response.json();
+                    
+                    // Mapeo de datos para asegurar compatibilidad con el formulario
+                    this.articulos = data.map(item => {
+                        // Asegurar que los campos numéricos sean números o strings válidos
+                        item.cantidad = item.cantidad || 1;
+                        // La imagen ya viene como URL completa desde el controlador
+                        return item;
+                    });
+                } catch (error) {
+                    console.error('Error cargando artículos:', error);
+                    alert('Error al cargar los artículos del proyecto.');
+                } finally {
+                    this.cargando = false;
+                }
+            },
+
+            handlePdf(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.form.pdf = file;
+                }
+            },
+
+            async guardarTodo() {
+                if (!this.proyecto_id) {
+                    alert('Por favor selecciona un proyecto primero.');
+                    return;
+                }
+                if (this.articulos.length === 0) {
+                    alert('No hay artículos para guardar.');
+                    return;
+                }
+
+                if (!confirm('¿Estás seguro de sincronizar ' + this.articulos.length + ' artículos? Esto actualizará la base de datos con la lista actual.')) return;
+
+                const formData = new FormData();
+                formData.append('proyecto_id', this.proyecto_id);
+
+                this.articulos.forEach((item, index) => {
+                    // Datos básicos
+                    if(item.id) formData.append(`articulos[${index}][id]`, item.id); // ID para actualizar
+                    formData.append(`articulos[${index}][id_articulo_produccion]`, item.id_articulo_produccion || '');
+                    formData.append(`articulos[${index}][categoria_articulo_id]`, item.categoria_articulo_id || '');
+                    formData.append(`articulos[${index}][nombre]`, item.nombre || '');
+                    formData.append(`articulos[${index}][descripcion]`, item.descripcion || '');
+                    formData.append(`articulos[${index}][alto]`, item.alto || 0);
+                    formData.append(`articulos[${index}][ancho]`, item.ancho || 0);
+                    formData.append(`articulos[${index}][profundo]`, item.profundo || 0);
+                    formData.append(`articulos[${index}][peso]`, item.peso || 0);
+                    formData.append(`articulos[${index}][cubicaje]`, item.cubicaje || 0);
+                    formData.append(`articulos[${index}][cantidad]`, item.cantidad || 1);
+                    formData.append(`articulos[${index}][tiene_division]`, item.tiene_division ? 1 : 0);
+                    formData.append(`articulos[${index}][piezas_divididas]`, item.piezas_divididas || 0);
+                    formData.append(`articulos[${index}][es_planta_baja]`, item.es_planta_baja);
+                    formData.append(`articulos[${index}][condiciones_acceso]`, item.condiciones_acceso || '');
+                    formData.append(`articulos[${index}][requiere_instalacion]`, item.requiere_instalacion ? 1 : 0);
+                    formData.append(`articulos[${index}][requiere_desemplaye]`, item.requiere_desemplaye ? 1 : 0);
+                    
+                    // Imagen (Base64)
+                    if (item.imagen && item.imagen.startsWith('data:')) {
+                        formData.append(`articulos[${index}][imagen_base64]`, item.imagen);
+                    }
+
+                    // PDF (Archivo)
+                    if (item.pdf instanceof File) {
+                        formData.append(`articulos[${index}][pdf_archivo]`, item.pdf);
+                    }
+
+                    // Materiales (Agrupamos todos los arrays en una estructura para el backend)
+                    const materiales = [
+                        ...item.maderas_seleccionadas.map(m => ({ tipo: 'Madera', desc: m })),
+                        ...item.melaminas_seleccionadas.map(m => ({ tipo: 'Melamina', desc: m })),
+                        ...item.telas_seleccionadas.map(m => ({ tipo: 'Tela', desc: m })),
+                        ...item.cubiertas_seleccionadas.map(m => ({ tipo: 'Cubierta', desc: m }))
+                    ];
+                    if (item.usa_herreria) materiales.push({ tipo: 'Otros', desc: 'Herrería' });
+
+                    materiales.forEach((mat, matIndex) => {
+                        formData.append(`articulos[${index}][materiales][${matIndex}][tipo]`, mat.tipo);
+                        formData.append(`articulos[${index}][materiales][${matIndex}][descripcion]`, mat.desc);
+                    });
+                });
+
+                try {
+                    const response = await fetch("{{ url('/erp/guardar-articulos-produccion') }}", {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        alert('Artículos guardados correctamente.');
+                        this.cargarArticulosProyecto(this.proyecto_id); // Recargar para obtener IDs actualizados
+                    } else {
+                        alert('Error: ' + (data.message || 'Desconocido'));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error de conexión al guardar');
+                }
             }
         }
     }

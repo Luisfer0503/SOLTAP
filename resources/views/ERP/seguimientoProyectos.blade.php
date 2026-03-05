@@ -172,9 +172,9 @@
                                     </a>
                                 @endif
                                 
-                                <button class="text-gray-400 hover:text-gray-600 p-1 border border-gray-200 rounded bg-white" title="Ver Detalles">
+                                <a href="{{ route('detalleProyecto', $p->id) }}" class="text-gray-400 hover:text-gray-600 p-1 border border-gray-200 rounded bg-white inline-flex items-center justify-center" title="Ver Detalles">
                                     <i class="ph ph-eye text-lg"></i>
-                                </button>
+                                </a>
                                 <button class="text-gray-400 hover:text-blue-600 p-1 border border-gray-200 rounded bg-white" title="Editar">
                                     <i class="ph ph-pencil-simple text-lg"></i>
                                 </button>

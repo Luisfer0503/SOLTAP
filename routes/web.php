@@ -39,11 +39,21 @@ Route::get('reporteEstatus', [CRMController::class, 'reporteEstatus'])->name('re
 Route::post('crm/prospecto/venta-no-concluida/{id}', [CRMController::class, 'cambiarEstatusVentaNoConcluida'])->name('cambiarEstatusVentaNoConcluida');
 
 // Artículos
+Route::post('/erp/guardar-articulos-produccion', [App\Http\Controllers\ERPController::class, 'guardarArticulosProduccion']);
+Route::get('/erp/detalle-proyecto/{id}', [App\Http\Controllers\ERPController::class, 'detalleProyecto'])->name('detalleProyecto');
+Route::get('/erp/articulos-proyecto/{id}', [App\Http\Controllers\ERPController::class, 'obtenerArticulosProyecto']);
+
 Route::get('altaArticulos', [ERPController::class, 'altaArticulos'])->name('altaArticulos');
 Route::post('guardarArticulo', [ERPController::class, 'guardarArticulo'])->name('guardarArticulo');
 Route::get('gestionArticulos', [ERPController::class, 'gestionArticulos'])->name('gestionArticulos');
 Route::get('altasCategorias', [ERPController::class, 'altasCategorias'])->name('altasCategorias');
 Route::post('guardarCategoria', [ERPController::class, 'guardarCategoria'])->name('guardarCategoria');
+Route::post('/erp/guardar-nuevo-material', [ERPController::class, 'guardarNuevoMaterial'])->name('guardarNuevoMaterial');
+Route::post('/erp/guardar-nueva-chapa', [ERPController::class, 'guardarNuevaChapa'])->name('guardarNuevaChapa');
+Route::post('/erp/guardar-nuevo-proveedor', [ERPController::class, 'guardarNuevoProveedor'])->name('guardarNuevoProveedor');
+Route::post('/erp/guardar-nuevo-submaterial', [ERPController::class, 'guardarNuevoSubmaterial'])->name('guardarNuevoSubmaterial');
+
+
 
 // Reportes
 Route::get('seguimientoProyectos', [ERPController::class, 'seguimientoProyectos'])->name('seguimientoProyectos');

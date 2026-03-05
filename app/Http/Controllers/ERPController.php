@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use App\Models\Vendedor;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage as FacadeStorage;
@@ -247,7 +248,8 @@ class ERPController extends Controller
               'peso' => 'nullable|numeric',
               'dimensiones' => 'nullable|string|max:100',
               'descripcion' => 'nullable|string',
-              'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+              'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+              'pdf_archivo' => 'nullable|mimes:pdf|max:10000'
           ]);
 
           $data = $request->only([
@@ -267,8 +269,308 @@ class ERPController extends Controller
               $data['imagen'] = $filename; // Guardamos el nombre del archivo en la columna 'imagen'
           }
 
+          if ($request->hasFile('pdf_archivo')) {
+              $file = $request->file('pdf_archivo');
+              $filename = time() . '_pdf_' . $file->getClientOriginalName();
+              FacadeStorage::disk('public')->put($filename, \File::get($file));
+              $data['pdf_archivo'] = $filename;
+          }
+
           DB::table('articulos')->insert($data);
 
           return redirect()->back()->with('mensaje', 'Artículo guardado correctamente');
+      }
+
+      public function guardarArticulosProduccion(Request $request)
+      {
+          $request->validate([
+              'proyecto_id' => 'required|exists:Proyectos,proyecto_id',
+              'articulos' => 'nullable|array'
+          ]);
+
+          DB::beginTransaction();
+          try {
+              $proyecto_id = $request->proyecto_id;
+              $incoming_ids = []; // Para rastrear qué IDs se mantienen/actualizan
+
+              $articulos = $request->articulos ?? [];
+
+              foreach ($articulos as $index => $item) {
+                  $data = [
+                      'proyecto_id' => $request->proyecto_id,
+                      'articulo_produccion_id' => $item['id_articulo_produccion'] ?? null,
+                      'categoria_id' => $item['categoria_articulo_id'] ?? null,
+                      'nombre' => $item['nombre'],
+                      'descripcion' => $item['descripcion'] ?? null,
+                      'alto' => $item['alto'] ?? 0,
+                      'ancho' => $item['ancho'] ?? 0,
+                      'profundo' => $item['profundo'] ?? 0,
+                      'peso' => $item['peso'] ?? 0,
+                      'cubicaje' => $item['cubicaje'] ?? 0,
+                      'cantidad' => $item['cantidad'] ?? 1,
+                      'tiene_division' => $item['tiene_division'] ?? 0,
+                      'piezas_divididas' => $item['piezas_divididas'] ?? 0,
+                      'es_planta_baja' => $item['es_planta_baja'] ?? 'si',
+                      'condiciones_acceso' => $item['condiciones_acceso'] ?? null,
+                      'requiere_instalacion' => $item['requiere_instalacion'] ?? 0,
+                      'requiere_desemplaye' => $item['requiere_desemplaye'] ?? 0,
+                      'created_at' => now(),
+                      'updated_at' => now()
+                  ];
+
+                  // Manejo de Imagen Base64 (viene del preview de JS)
+                  if (isset($item['imagen_base64']) && preg_match('/^data:image\/(\w+);base64,/', $item['imagen_base64'], $type)) {
+                      $data['imagen'] = 'prod_' . time() . '_' . uniqid() . '.' . strtolower($type[1]);
+                      $image_base64 = substr($item['imagen_base64'], strpos($item['imagen_base64'], ',') + 1);
+                      $image_base64 = base64_decode($image_base64);
+                      FacadeStorage::disk('public')->put($data['imagen'], $image_base64);
+                  }
+
+                  // Manejo de PDF (Archivo real enviado por FormData)
+                  if ($request->hasFile("articulos.$index.pdf_archivo")) {
+                      $file = $request->file("articulos.$index.pdf_archivo");
+                      $filename = 'pdf_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                      FacadeStorage::disk('public')->put($filename, \File::get($file));
+                      $data['pdf_archivo'] = $filename;
+                  }
+
+                  // Lógica de Sincronización (Update vs Insert)
+                  $id = $item['id'] ?? null;
+
+                  if ($id) {
+                      // Actualizar existente
+                      DB::table('proyecto_articulos')->where('id', $id)->update($data);
+                      $proyectoArticuloId = $id;
+                      $incoming_ids[] = $id;
+                      
+                      // Borramos materiales viejos para reinsertarlos limpios
+                      DB::table('proyecto_articulo_materiales')->where('proyecto_articulo_id', $id)->delete();
+                  } else {
+                      // Insertar nuevo
+                      $data['created_at'] = now();
+                      $proyectoArticuloId = DB::table('proyecto_articulos')->insertGetId($data);
+                      $incoming_ids[] = $proyectoArticuloId;
+                  }
+
+                  // Guardar Materiales relacionados
+                  if (isset($item['materiales']) && is_array($item['materiales'])) {
+                      foreach ($item['materiales'] as $mat) {
+                          DB::table('proyecto_articulo_materiales')->insert([
+                              'proyecto_articulo_id' => $proyectoArticuloId,
+                              'tipo_material' => $mat['tipo'] ?? 'Otro',
+                              'descripcion' => $mat['descripcion'] ?? '',
+                          ]);
+                      }
+                  }
+              }
+
+              // Eliminar artículos que estaban en la BD pero ya no vienen en la solicitud (fueron borrados en el frontend)
+              DB::table('proyecto_articulos')
+                  ->where('proyecto_id', $proyecto_id)
+                  ->whereNotIn('id', $incoming_ids)
+                  ->delete();
+
+              DB::commit();
+              return response()->json(['success' => true, 'message' => 'Artículos guardados correctamente']);
+          } catch (\Exception $e) {
+              DB::rollBack();
+              return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+          }
+      }
+
+      public function guardarNuevaChapa(Request $request)
+      {
+          $validator = Validator::make($request->all(), [
+              'nombre' => 'required|string|max:255|unique:chapas,nombre',
+          ]);
+  
+          if ($validator->fails()) {
+              return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+          }
+  
+          $id = DB::table('chapas')->insertGetId(['nombre' => $request->nombre]);
+          $chapa = DB::table('chapas')->where('chapa_id', $id)->first();
+  
+          return response()->json(['success' => true, 'chapa' => $chapa]);
+      }
+  
+      public function guardarNuevoProveedor(Request $request)
+      {
+          $validator = Validator::make($request->all(), [
+              'nombre' => 'required|string|max:255|unique:proveedores,nombre',
+          ]);
+  
+          if ($validator->fails()) {
+              return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+          }
+  
+          $id = DB::table('proveedores')->insertGetId(['nombre' => $request->nombre]);
+          $proveedor = DB::table('proveedores')->where('proveedor_id', $id)->first();
+  
+          return response()->json(['success' => true, 'proveedor' => $proveedor]);
+      }
+  
+      public function guardarNuevoSubmaterial(Request $request)
+      {
+          $validator = Validator::make($request->all(), [
+              'nombre' => 'required|string|max:255|unique:submateriales,nombre',
+          ]);
+  
+          if ($validator->fails()) {
+              return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+          }
+  
+          $id = DB::table('submateriales')->insertGetId(['nombre' => $request->nombre]);
+          $submaterial = DB::table('submateriales')->where('submaterial_id', $id)->first();
+  
+          return response()->json(['success' => true, 'submaterial' => $submaterial]);
+      }
+
+      public function guardarNuevoMaterial(Request $request)
+      {
+          $tipo_map = [
+              'madera' => 1,
+              'melamina' => 2,
+              'tela' => 3,
+              'cubierta' => 4,
+          ];
+  
+          $tipo = $request->input('tipo_material');
+          $categoria_id = $tipo_map[$tipo] ?? null;
+  
+          if (!$categoria_id) {
+              return response()->json(['success' => false, 'message' => 'Tipo de material no válido'], 400);
+          }
+  
+          $rules = [
+              'nombre' => 'required|string|max:255',
+              'imagen' => 'nullable|image|max:2048',
+              'tipo_material' => 'required|in:madera,melamina,tela,cubierta',
+          ];
+  
+          $data = [
+              'categoria_id' => $categoria_id,
+              'nombre' => $request->nombre,
+          ];
+  
+          if ($tipo === 'madera') {
+              $rules['chapa_id'] = 'required|exists:chapas,chapa_id';
+              $rules['color'] = 'required|string|max:100';
+              $data['chapa_id'] = $request->chapa_id;
+              $data['color'] = $request->color;
+          } elseif ($tipo === 'melamina') {
+              $rules['proveedor_id'] = 'required|exists:proveedores,proveedor_id';
+              $rules['color'] = 'required|string|max:100';
+              $rules['dibujo'] = 'required|string|max:100';
+              $data['proveedor_id'] = $request->proveedor_id;
+              $data['color'] = $request->color;
+              $data['dibujo'] = $request->dibujo;
+          } elseif ($tipo === 'tela') {
+              $rules['proveedor_id'] = 'required|exists:proveedores,proveedor_id';
+              $rules['submaterial_id'] = 'nullable|exists:submateriales,submaterial_id'; // Coleccion
+              $rules['dibujo'] = 'required|string|max:100';
+              $rules['color'] = 'required|string|max:100';
+              $data['proveedor_id'] = $request->proveedor_id;
+              $data['submaterial_id'] = $request->submaterial_id;
+              $data['dibujo'] = $request->dibujo;
+              $data['color'] = $request->color;
+          } elseif ($tipo === 'cubierta') {
+              $rules['submaterial_id'] = 'required|exists:submateriales,submaterial_id';
+              $data['submaterial_id'] = $request->submaterial_id;
+          }
+  
+          $validator = Validator::make($request->all(), $rules);
+  
+          if ($validator->fails()) {
+              return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+          }
+  
+          if ($request->hasFile('imagen')) {
+              $file = $request->file('imagen');
+              $filename = 'mat_' . time() . '_' . $file->getClientOriginalName();
+              FacadeStorage::disk('public')->put($filename, \File::get($file));
+              $data['imagen'] = $filename;
+          }
+  
+          $id = DB::table('materiales')->insertGetId($data);
+          $material = DB::table('materiales')->where('material_id', $id)->first();
+
+          return response()->json(['success' => true, 'material' => $material]);
+      }
+
+      public function detalleProyecto($id)
+      {
+          // Obtener información del proyecto y cliente
+          $proyecto = DB::table('Proyectos')
+              ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+              ->leftJoin('Prospectos', 'Clientes.prospecto_id', '=', 'Prospectos.prospecto_id')
+              ->select(
+                  'Proyectos.proyecto_id',
+                  'Proyectos.nombre',
+                  'Proyectos.estatus',
+                  DB::raw("CONCAT(COALESCE(Prospectos.nombre,''), ' ', COALESCE(Prospectos.apellido_paterno,''), ' ', COALESCE(Prospectos.apellido_materno,'')) as cliente_nombre")
+              )
+              ->where('Proyectos.proyecto_id', $id)
+              ->first();
+
+          if (!$proyecto) {
+              return redirect()->back()->with('error', 'Proyecto no encontrado');
+          }
+
+          // Obtener artículos del proyecto
+          $articulos = DB::table('proyecto_articulos')
+              ->where('proyecto_id', $id)
+              ->get();
+
+          // Obtener materiales para cada artículo
+          foreach ($articulos as $articulo) {
+              $articulo->materiales = DB::table('proyecto_articulo_materiales')
+                  ->where('proyecto_articulo_id', $articulo->id)
+                  ->get();
+          }
+
+          return view('ERP.detalleProyecto', compact('proyecto', 'articulos'));
+      }
+
+      public function obtenerArticulosProyecto($id)
+      {
+          $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
+          
+          foreach ($articulos as $art) {
+              $materiales = DB::table('proyecto_articulo_materiales')
+                  ->where('proyecto_articulo_id', $art->id)
+                  ->get();
+                  
+              // Reconstruir arrays para el frontend
+              $art->maderas_seleccionadas = array_values($materiales->where('tipo_material', 'Madera')->pluck('descripcion')->toArray());
+              $art->melaminas_seleccionadas = array_values($materiales->where('tipo_material', 'Melamina')->pluck('descripcion')->toArray());
+              $art->telas_seleccionadas = array_values($materiales->where('tipo_material', 'Tela')->pluck('descripcion')->toArray());
+              $art->cubiertas_seleccionadas = array_values($materiales->where('tipo_material', 'Cubierta')->pluck('descripcion')->toArray());
+              
+              // Booleanos para UI
+              $art->usa_madera = count($art->maderas_seleccionadas) > 0;
+              $art->usa_melamina = count($art->melaminas_seleccionadas) > 0;
+              $art->usa_textil = count($art->telas_seleccionadas) > 0;
+              $art->usa_cubierta = count($art->cubiertas_seleccionadas) > 0;
+              $art->usa_herreria = $materiales->where('tipo_material', 'Otros')->where('descripcion', 'Herrería')->count() > 0;
+              
+              // Mapeo de campos de BD a nombres esperados por el frontend
+              $art->categoria_articulo_id = $art->categoria_id;
+              $art->id_articulo_produccion = $art->articulo_produccion_id;
+
+              // Casting explícito de campos booleanos/checkbox y mapeo de PDF
+              $art->tiene_division = (bool) $art->tiene_division;
+              $art->requiere_instalacion = (bool) $art->requiere_instalacion;
+              $art->requiere_desemplaye = (bool) $art->requiere_desemplaye;
+              $art->pdf = $art->pdf_archivo;
+
+              // Ajustar ruta de imagen para visualización
+              if ($art->imagen) {
+                  // Guardamos la URL completa en una propiedad temporal para el frontend
+                  $art->imagen = asset('storage/' . $art->imagen);
+              }
+          }
+          
+          return response()->json($articulos);
       }
 }
