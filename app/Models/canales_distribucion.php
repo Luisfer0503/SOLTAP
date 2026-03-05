@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class canales_distribuccion extends Model
+class canales_distribucion extends Model
 {
     //
     protected $table = 'canales_distribucion';

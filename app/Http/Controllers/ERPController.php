@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Vendedor;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage as FacadeStorage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 class ERPController extends Controller
@@ -117,12 +118,14 @@ class ERPController extends Controller
             ->select(
                 'Proyectos.proyecto_id',
                 'Proyectos.nombre as nombre_proyecto',
-                DB::raw("COALESCE(CONCAT(P1.nombre, ' ', P1.apellido_paterno, ' ', P1.apellido_materno), CONCAT(P2.nombre, ' ', P2.apellido_paterno, ' ', P2.apellido_materno)) as cliente_nombre"),
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
                 DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
                 DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
-                DB::raw("COALESCE(proyecto_detalles.direccion_entrega, CONCAT(COALESCE(P1.calle, P2.calle), ', ', COALESCE(P1.municipio, P2.municipio))) as direccion"),
+                DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
                 'Proyectos.created_at as fecha',
-                DB::raw("CONCAT(vendedores.nombre, ' ', vendedores.apellido_paterno) as vendedor_nombre")
+                DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
+                DB::raw("COALESCE(P1.iva, P2.iva, 0) as iva_porcentaje"),
+                DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje")
             )
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -137,13 +140,39 @@ class ERPController extends Controller
 
     public function generarCotizacionPdf(Request $request)
     {
-        // Aquí se implementaría la lógica para generar el PDF con una librería como DomPDF
-        // Por ahora retornamos los datos para depuración o confirmación
-        return response()->json([
-            'success' => true,
-            'message' => 'PDF generado correctamente (Simulación)',
-            'data' => $request->all()
-        ]);
+        try {
+            $data = $request->all();
+            $proyecto = $data['proyecto'];
+            $articulos = $data['articulos'];
+            $totales = $data['totales'];
+
+            // 1. Guardar precio de cada artículo en la tabla proyecto_articulos
+            foreach ($articulos as $art) {
+                DB::table('proyecto_articulos')
+                    ->where('id', $art['id'])
+                    ->update(['precio' => $art['precio_unitario'] ?? 0]);
+            }
+
+            // 2. Guardar datos generales en la tabla cotizaciones
+            $cotizacionId = DB::table('cotizaciones')->insertGetId([
+                'proyecto_id' => $proyecto['proyecto_id'],
+                'subtotal' => $totales['subtotal'], // Base imponible
+                'envio' => $totales['envio'],
+                'descuento' => $totales['descuento'],
+                'iva' => $totales['iva'],
+                'total' => $totales['total'],
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // 3. Generar PDF usando la vista
+            $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId'));
+            
+            // Retornar el PDF como descarga
+            return $pdf->download('Cotizacion_' . $proyecto['nombre_proyecto'] . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage(), 'line' => $e->getLine(), 'file' => $e->getFile()], 500);
+        }
     }
 
     public function logistica($proyecto_id = 1)

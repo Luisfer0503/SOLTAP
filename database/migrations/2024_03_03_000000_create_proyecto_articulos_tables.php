@@ -29,6 +29,7 @@ return new class extends Migration
             $table->decimal('profundo', 10, 2)->default(0);
             $table->decimal('peso', 10, 2)->default(0);
             $table->decimal('cubicaje', 10, 3)->default(0);
+            $table->decimal('precio', 10, 2)->default(0); // Agregamos precio
             
             // Cantidades y Divisiones
             $table->integer('cantidad')->default(1);

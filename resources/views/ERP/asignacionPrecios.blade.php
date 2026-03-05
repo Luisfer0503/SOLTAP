@@ -2,6 +2,18 @@
 
 @section('contenido')
 
+    <style>
+        /* Ocultar flechas (spinners) en inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+
 <script src="//unpkg.com/alpinejs" defer></script>
 
 <main class="flex-1 flex flex-col h-screen bg-gray-50" x-data="cotizadorApp()">
@@ -156,15 +168,20 @@
                             <input type="number" x-model="costoEnvio" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
                         </div>
                         <div class="flex justify-between items-center text-sm">
-                            <span class="text-gray-600">Descuento:</span>
-                            <input type="number" x-model="descuento" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                            <span class="text-gray-600">Descuento <span x-show="descuentoPorcentaje > 0" x-text="'(' + descuentoPorcentaje + '%)'"></span>:</span>
+                            <template x-if="descuentoPorcentaje > 0">
+                                <span class="font-bold text-gray-900" x-text="money(descuentoCalculado)"></span>
+                            </template>
+                            <template x-if="descuentoPorcentaje == 0">
+                                <input type="number" x-model="descuento" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                            </template>
                         </div>
                         <div class="border-t border-gray-100 pt-2 flex justify-between text-sm">
                             <span class="text-gray-600 font-bold">Subtotal:</span>
                             <span class="font-bold text-gray-900" x-text="money(subtotalGeneral)"></span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">IVA (16%):</span>
+                            <span class="text-gray-600">IVA (<span x-text="ivaPorcentaje"></span>%):</span>
                             <span class="font-bold text-gray-900" x-text="money(iva)"></span>
                         </div>
                         <div class="border-t border-gray-200 pt-3 flex justify-between text-lg">
@@ -194,12 +211,16 @@
             articulos: [],
             costoEnvio: 0,
             descuento: 0,
+            ivaPorcentaje: 16,
+            descuentoPorcentaje: 0,
 
             async abrirCotizador(proyecto) {
                 this.proyecto = proyecto;
                 this.articulos = [];
                 this.costoEnvio = 0;
                 this.descuento = 0;
+                this.ivaPorcentaje = parseFloat(proyecto.iva_porcentaje) || 0;
+                this.descuentoPorcentaje = parseFloat(proyecto.descuento_porcentaje) || 0;
                 this.mostrarModal = true;
                 
                 // Cargar artículos
@@ -226,11 +247,22 @@
             },
 
             get subtotalGeneral() {
-                return Math.max(0, this.subtotalArticulos + (parseFloat(this.costoEnvio) || 0) - (parseFloat(this.descuento) || 0));
+                let descuentoAplicado = parseFloat(this.descuento) || 0;
+                if (this.descuentoPorcentaje > 0) {
+                    descuentoAplicado = this.subtotalArticulos * (this.descuentoPorcentaje / 100);
+                }
+                return Math.max(0, this.subtotalArticulos + (parseFloat(this.costoEnvio) || 0) - descuentoAplicado);
             },
 
             get iva() {
-                return this.subtotalGeneral * 0.16;
+                return this.subtotalGeneral * (this.ivaPorcentaje / 100);
+            },
+
+            get descuentoCalculado() {
+                if (this.descuentoPorcentaje > 0) {
+                    return this.subtotalArticulos * (this.descuentoPorcentaje / 100);
+                }
+                return parseFloat(this.descuento) || 0;
             },
 
             get totalPagar() {
@@ -265,19 +297,34 @@
                 try {
                     const response = await fetch('{{ route("generarCotizacionPdf") }}', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                         body: JSON.stringify(data)
                     });
                     
                     if (response.ok) {
-                        // Aquí podrías manejar la descarga del blob si el backend retornara el PDF
-                        // Por ahora, simulamos éxito
-                        alert('Solicitud de PDF enviada. (Funcionalidad de descarga pendiente de backend)');
+                        // Convertir la respuesta a Blob (archivo)
+                        const blob = await response.blob();
+                        // Crear una URL temporal para el archivo
+                        const url = window.URL.createObjectURL(blob);
+                        // Crear un enlace invisible y hacer clic en él para descargar
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Cotizacion_${this.proyecto.nombre_proyecto}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        alert('Cotización guardada y PDF descargado correctamente.');
                     } else {
-                        alert('Error al generar PDF');
+                        // Intentar obtener el mensaje de error del servidor
+                        try {
+                            const errorJson = await response.json();
+                            console.error('Error detallado:', errorJson);
+                            alert('Error al generar PDF: ' + (errorJson.error || 'Error desconocido'));
+                        } catch (e) {
+                            const errorText = await response.text();
+                            console.error('Error del servidor (HTML):', errorText);
+                            alert('Error crítico del servidor. Revisa la consola.');
+                        }
                     }
                 } catch (e) {
                     console.error(e);
