@@ -106,39 +106,45 @@ class ERPController extends Controller
       }
 
 
-      public function asignacionPrecios()
-{
-    // MOCK DATA: Esto vendría de tu BD. 
-    // 'costo_produccion' es la suma automática de materiales (que ya tienes en otras tablas).
-    $articulos = [
-        (object)[
-            'id' => 1,
-            'nombre' => 'Escritorio Ejecutivo Lomas',
-            'imagen' => 'https://via.placeholder.com/150', // Aquí iría la ruta real
-            'costo_produccion' => 3500.00, // Costo real (Madera + Mano de obra)
-            'precio_venta' => 5500.00,     // Precio sugerido o anterior
-            'dimensiones' => '1.80 x 0.80 x 0.75'
-        ],
-        (object)[
-            'id' => 2,
-            'nombre' => 'Silla Eames Replica',
-            'imagen' => null, 
-            'costo_produccion' => 850.50,
-            'precio_venta' => 1200.00,
-            'dimensiones' => 'Estandar'
-        ],
-        (object)[
-            'id' => 3,
-            'nombre' => 'Credenza Archivero',
-            'imagen' => 'https://via.placeholder.com/150',
-            'costo_produccion' => 2100.00,
-            'precio_venta' => 2800.00, // Margen bajo intencional para probar la vista
-            'dimensiones' => '2.00 x 0.50 x 0.90'
-        ],
-    ];
+    public function asignacionPrecios()
+    {
+        $proyectos = DB::table('Proyectos')
+            ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+            ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
+            ->select(
+                'Proyectos.proyecto_id',
+                'Proyectos.nombre as nombre_proyecto',
+                DB::raw("COALESCE(CONCAT(P1.nombre, ' ', P1.apellido_paterno, ' ', P1.apellido_materno), CONCAT(P2.nombre, ' ', P2.apellido_paterno, ' ', P2.apellido_materno)) as cliente_nombre"),
+                DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
+                DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
+                DB::raw("COALESCE(proyecto_detalles.direccion_entrega, CONCAT(COALESCE(P1.calle, P2.calle), ', ', COALESCE(P1.municipio, P2.municipio))) as direccion"),
+                'Proyectos.created_at as fecha',
+                DB::raw("CONCAT(vendedores.nombre, ' ', vendedores.apellido_paterno) as vendedor_nombre")
+            )
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('proyecto_articulos')
+                      ->whereColumn('proyecto_articulos.proyecto_id', 'Proyectos.proyecto_id');
+            })
+            ->orderBy('Proyectos.proyecto_id', 'desc')
+            ->get();
 
-    return view('ERP.asignacionPrecios', compact('articulos'));
-}
+        return view('ERP.asignacionPrecios', compact('proyectos'));
+    }
+
+    public function generarCotizacionPdf(Request $request)
+    {
+        // Aquí se implementaría la lógica para generar el PDF con una librería como DomPDF
+        // Por ahora retornamos los datos para depuración o confirmación
+        return response()->json([
+            'success' => true,
+            'message' => 'PDF generado correctamente (Simulación)',
+            'data' => $request->all()
+        ]);
+    }
 
     public function logistica($proyecto_id = 1)
 {
@@ -354,13 +360,14 @@ class ERPController extends Controller
 
                   // Guardar Materiales relacionados
                   if (isset($item['materiales']) && is_array($item['materiales'])) {
-                      foreach ($item['materiales'] as $mat) {
-                          DB::table('proyecto_articulo_materiales')->insert([
-                              'proyecto_articulo_id' => $proyectoArticuloId,
-                              'tipo_material' => $mat['tipo'] ?? 'Otro',
-                              'descripcion' => $mat['descripcion'] ?? '',
-                          ]);
-                      }
+                    foreach ($item['materiales'] as $mat) {
+                        DB::table('proyecto_articulo_materiales')->insert([
+                            'proyecto_articulo_id' => $proyectoArticuloId,
+                            'tipo_material' => $mat['tipo'] ?? 'Otro',
+                            'material_id' => $mat['material_id'] ?? null,
+                            'descripcion' => $mat['descripcion'] ?? '' // Para casos especiales como Herrería
+                        ]);
+                    }
                   }
               }
 
@@ -536,16 +543,64 @@ class ERPController extends Controller
       {
           $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
           
+          // Optimización: Cargar todos los materiales de estos artículos en una sola consulta
+          $articuloIds = $articulos->pluck('id')->toArray();
+          $todosMateriales = DB::table('proyecto_articulo_materiales')
+              ->whereIn('proyecto_articulo_id', $articuloIds)
+              ->get()
+              ->groupBy('proyecto_articulo_id');
+          
+          // Optimización: Cargar todos los datos de materiales necesarios en una sola consulta
+          $allMaterialIds = $todosMateriales->flatten()->pluck('material_id')->unique()->filter()->values();
+          $materialsData = DB::table('materiales as m')
+              ->leftJoin('chapas as c', 'm.chapa_id', '=', 'c.chapa_id')
+              ->leftJoin('proveedores as p', 'm.proveedor_id', '=', 'p.proveedor_id')
+              ->leftJoin('submateriales as s', 'm.submaterial_id', '=', 's.submaterial_id')
+              ->whereIn('m.material_id', $allMaterialIds)
+              ->select(
+                  'm.material_id', 'm.categoria_id', 'm.nombre as material_nombre', 'm.color', 'm.dibujo',
+                  'c.nombre as chapa_nombre',
+                  'p.nombre as proveedor_nombre',
+                  's.nombre as submaterial_nombre'
+              )
+              ->get()->keyBy('material_id');
+
           foreach ($articulos as $art) {
-              $materiales = DB::table('proyecto_articulo_materiales')
-                  ->where('proyecto_articulo_id', $art->id)
-                  ->get();
+              // Obtener materiales específicos de este artículo desde la colección agrupada
+              $materiales = $todosMateriales->get($art->id, collect());
                   
-              // Reconstruir arrays para el frontend
-              $art->maderas_seleccionadas = array_values($materiales->where('tipo_material', 'Madera')->pluck('descripcion')->toArray());
-              $art->melaminas_seleccionadas = array_values($materiales->where('tipo_material', 'Melamina')->pluck('descripcion')->toArray());
-              $art->telas_seleccionadas = array_values($materiales->where('tipo_material', 'Tela')->pluck('descripcion')->toArray());
-              $art->cubiertas_seleccionadas = array_values($materiales->where('tipo_material', 'Cubierta')->pluck('descripcion')->toArray());
+              // Reconstruir arrays de objetos {id, text} para el frontend
+              $art->maderas_seleccionadas = [];
+              $art->melaminas_seleccionadas = [];
+              $art->telas_seleccionadas = [];
+              $art->cubiertas_seleccionadas = [];
+
+              foreach ($materiales->where('tipo_material', '!=', 'Otros') as $matRel) {
+                  if (isset($matRel->material_id) && $materialsData->has($matRel->material_id)) {
+                      $materialInfo = $materialsData->get($matRel->material_id);
+                      $parts = [$materialInfo->material_nombre];
+
+                      if ($materialInfo->categoria_id == 1) { // Madera
+                          if($materialInfo->chapa_nombre) $parts[] = $materialInfo->chapa_nombre;
+                          if($materialInfo->color) $parts[] = $materialInfo->color;
+                          $art->maderas_seleccionadas[] = ['id' => $materialInfo->material_id, 'text' => implode(' - ', $parts)];
+                      } elseif ($materialInfo->categoria_id == 2) { // Melamina
+                          if($materialInfo->proveedor_nombre) $parts[] = $materialInfo->proveedor_nombre;
+                          if($materialInfo->color) $parts[] = $materialInfo->color;
+                          if($materialInfo->dibujo) $parts[] = $materialInfo->dibujo;
+                          $art->melaminas_seleccionadas[] = ['id' => $materialInfo->material_id, 'text' => implode(' - ', $parts)];
+                      } elseif ($materialInfo->categoria_id == 3) { // Tela
+                          if($materialInfo->proveedor_nombre) $parts[] = $materialInfo->proveedor_nombre;
+                          if($materialInfo->submaterial_nombre) $parts[] = $materialInfo->submaterial_nombre;
+                          if($materialInfo->dibujo) $parts[] = $materialInfo->dibujo;
+                          if($materialInfo->color) $parts[] = $materialInfo->color;
+                          $art->telas_seleccionadas[] = ['id' => $materialInfo->material_id, 'text' => implode(' - ', $parts)];
+                      } elseif ($materialInfo->categoria_id == 4) { // Cubierta
+                          if($materialInfo->submaterial_nombre) $parts[] = $materialInfo->submaterial_nombre;
+                          $art->cubiertas_seleccionadas[] = ['id' => $materialInfo->material_id, 'text' => implode(' - ', $parts)];
+                      }
+                  }
+              }
               
               // Booleanos para UI
               $art->usa_madera = count($art->maderas_seleccionadas) > 0;
@@ -554,6 +609,10 @@ class ERPController extends Controller
               $art->usa_cubierta = count($art->cubiertas_seleccionadas) > 0;
               $art->usa_herreria = $materiales->where('tipo_material', 'Otros')->where('descripcion', 'Herrería')->count() > 0;
               
+              // Mapeo de campos de BD a nombres esperados por el frontend
+              $art->categoria_articulo_id = $art->categoria_id;
+              $art->id_articulo_produccion = $art->articulo_produccion_id;
+
               // Mapeo de campos de BD a nombres esperados por el frontend
               $art->categoria_articulo_id = $art->categoria_id;
               $art->id_articulo_produccion = $art->articulo_produccion_id;

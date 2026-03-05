@@ -127,6 +127,10 @@
                                 <input type="text" name="Municipio" x-model="municipio" @change="generarMapsUrl()" value="{{ old('Municipio', $prospecto->municipio) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
+                                <input type="number" name="CodigoPostal" x-model="codigoPostal" @change="generarMapsUrl()" value="{{ old('CodigoPostal', $prospecto->codigo_postal) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Calle</label>
                                 <input type="text" name="Calle" x-model="calle" @change="generarMapsUrl()" value="{{ old('Calle', $prospecto->calle) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
                             </div>
@@ -198,24 +202,64 @@
                                     @endforeach
                                 </select>
                             </div>
+
+                            <!-- Envío -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Canal Distribuccion</label>
-                                <select name="IdCanalDistribuccion" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
-                                    <option value="">Seleccionar Canal...</option>
-                                    @foreach($canales as $canal)
-                                        <option value="{{ $canal->canal_id }}" @selected(old('IdCanalDistribuccion', $prospecto->canal_id) == $canal->canal_id)>{{ $canal->nombre }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene Envío?</label>
+                                <div class="flex items-center space-x-4">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneEnvio" value="no" class="w-4 h-4 text-blue-600" {{ old('TieneEnvio', $prospecto->tiene_envio ? 'si' : 'no') == 'no' ? 'checked' : '' }}>
+                                        <span class="ml-2 text-sm text-gray-700">No</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneEnvio" value="si" class="w-4 h-4 text-blue-600" {{ old('TieneEnvio', $prospecto->tiene_envio ? 'si' : 'no') == 'si' ? 'checked' : '' }}>
+                                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                                    </label>
+                                </div>
                             </div>
+
+                            <!-- IVA -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Estatus</label>
-                                <select name="IdEstatus" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500">
-                                    <option value="">Seleccionar Estatus...</option>
-                                    @foreach($estatus as $est)
-                                        <option value="{{ $est->estatus_id }}" @selected(old('IdEstatus', $prospecto->estatus_id) == $est->estatus_id)>{{ $est->nombre }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene IVA?</label>
+                                <div class="flex items-center space-x-4 mb-2">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneIva" value="no" x-model="tieneIva" class="w-4 h-4 text-blue-600">
+                                        <span class="ml-2 text-sm text-gray-700">No</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneIva" value="si" x-model="tieneIva" class="w-4 h-4 text-blue-600">
+                                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                                    </label>
+                                </div>
+                                <div x-show="tieneIva === 'si'" x-transition>
+                                    <div class="relative">
+                                        <input type="number" name="IvaPorcentaje" value="{{ old('IvaPorcentaje', $prospecto->iva) }}" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="16">
+                                        <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Descuento -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene Descuento?</label>
+                                <div class="flex items-center space-x-4 mb-2">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneDescuento" value="no" x-model="tieneDescuento" class="w-4 h-4 text-blue-600">
+                                        <span class="ml-2 text-sm text-gray-700">No</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="TieneDescuento" value="si" x-model="tieneDescuento" class="w-4 h-4 text-blue-600">
+                                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                                    </label>
+                                </div>
+                                <div x-show="tieneDescuento === 'si'" x-transition>
+                                    <div class="relative">
+                                        <input type="number" name="DescuentoPorcentaje" value="{{ old('DescuentoPorcentaje', $prospecto->descuento) }}" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="0">
+                                        <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="md:col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
                                 <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Detalles del prospecto...">{{ old('Descripcion', $prospecto->descripcion) }}</textarea>
@@ -242,6 +286,7 @@
             return {
                 estadoNombre: '',
                 municipio: '{{ $prospecto->municipio }}',
+                codigoPostal: '{{ $prospecto->codigo_postal }}',
                 calle: '{{ $prospecto->calle }}',
                 mapsUrl: '{{ $prospecto->maps }}',
                 direccionDiferente: '{{ strpos($prospecto->direccion_entrega, $prospecto->calle) !== false ? "no" : "si" }}',
@@ -254,8 +299,8 @@
                 },
                 
                 generarMapsUrl() {
-                    if (this.estadoNombre && this.municipio && this.calle) {
-                        const direccion = `${this.calle}, ${this.municipio}, ${this.estadoNombre}, Mexico`;
+                    if (this.estadoNombre && this.municipio && this.calle && this.codigoPostal) {
+                        const direccion = `${this.calle}, ${this.codigoPostal}, ${this.municipio}, ${this.estadoNombre}, Mexico`;
                         this.mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(direccion)}`;
                     }
                 }
@@ -273,6 +318,8 @@
                 apellidoMat: '{{ $prospecto->apellido_materno }}',
                 empresaId: '{{ $prospecto->empresa_id }}',
                 empresas: @json($empresas),
+                tieneIva: '{{ old('TieneIva', $prospecto->tiene_iva ? "si" : "no") }}',
+                tieneDescuento: '{{ old('TieneDescuento', $prospecto->tiene_descuento ? "si" : "no") }}',
 
                 init() {
                     this.generarNombreProyecto();

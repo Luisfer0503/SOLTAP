@@ -230,15 +230,63 @@
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Interacción</label>
-                                <select name="IdInteraccion" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500">
-                                    <option value="">Seleccionar Interacción...</option>
-                                    @foreach($interacciones as $interaccion)
-                                        <option value="{{ $interaccion->interaccion_id }}" @selected(old('IdInteraccion') == $interaccion->interaccion_id)>{{ $interaccion->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                           <!-- Envío -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene Envío?</label>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneEnvio" value="no" class="w-4 h-4 text-blue-600" checked>
+                        <span class="ml-2 text-sm text-gray-700">No</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneEnvio" value="si" class="w-4 h-4 text-blue-600">
+                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- IVA -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene IVA?</label>
+                <div class="flex items-center space-x-4 mb-2">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneIva" value="no" x-model="tieneIva" class="w-4 h-4 text-blue-600">
+                        <span class="ml-2 text-sm text-gray-700">No</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneIva" value="si" x-model="tieneIva" class="w-4 h-4 text-blue-600">
+                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                    </label>
+                </div>
+                <div x-show="tieneIva === 'si'" x-transition>
+                    <div class="relative">
+                        <input type="number" name="IvaPorcentaje" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="16">
+                        <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descuento -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">¿Tiene Descuento?</label>
+                <div class="flex items-center space-x-4 mb-2">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneDescuento" value="no" x-model="tieneDescuento" class="w-4 h-4 text-blue-600">
+                        <span class="ml-2 text-sm text-gray-700">No</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="TieneDescuento" value="si" x-model="tieneDescuento" class="w-4 h-4 text-blue-600">
+                        <span class="ml-2 text-sm text-gray-700">Sí</span>
+                    </label>
+                </div>
+                <div x-show="tieneDescuento === 'si'" x-transition>
+                    <div class="relative">
+                        <input type="number" name="DescuentoPorcentaje" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="0">
+                        <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                    </div>
+                </div>
+            </div>
+
                             <div class="md:col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
                                 <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Detalles iniciales del prospecto...">{{ old('Descripcion') }}</textarea>
@@ -380,6 +428,8 @@
                 fechaActual: '',
                 horaActual: '',
                 empresas: @json($empresas),
+                tieneIva: 'no',
+                tieneDescuento: 'no',
 
                 init() {
                     // Inicializar con valores del formulario si existen

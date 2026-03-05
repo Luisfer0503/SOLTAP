@@ -2,6 +2,17 @@
 
 @section('contenido')
 
+    <style>
+        /* Ocultar flechas (spinners) en inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
 <script src="//unpkg.com/alpinejs" defer></script>
 
 <div class="flex-1 overflow-y-auto p-8" x-data="vendedoresForm()">
@@ -10,6 +21,12 @@
         @if(session('mensaje'))
             <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
                 <p>{{ session('mensaje') }}</p>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                <p>{{ session('error') }}</p>
             </div>
         @endif
 
@@ -140,7 +157,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2 w-full">Fotografía</label>
                         
                         <div class="mb-4 w-40 h-40 rounded-full overflow-hidden border-4 border-gray-100 shadow-md bg-gray-50 flex items-center justify-center">
-                            <img id="preview-img" src="https://via.placeholder.com/150?text=Sin+Foto" class="w-full h-full object-cover">
+                            <img :src="fotoPreview" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150?text=Sin+Foto'">
                         </div>
 
                         <div class="w-full">
@@ -149,7 +166,7 @@
                                     <i class="ph ph-upload-simple text-2xl text-gray-600"></i>
                                     <span class="font-medium text-gray-600">Seleccionar imagen</span>
                                 </span>
-                                <input type="file" name="foto" class="hidden" accept="image/*" onchange="previewImage(event)">
+                                <input type="file" name="foto" class="hidden" accept="image/*" @change="updatePreview($event)">
                             </label>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">Formatos: JPG, PNG. Máx 3MB.</p>
@@ -175,11 +192,14 @@
             showVendedores: false,
             isEditing: false,
             formAction: '{{ route('guardarVendedor') }}',
+            fotoPreview: 'https://via.placeholder.com/150?text=Sin+Foto',
+            storageUrl: '{{ asset("storage") }}',
             
             editar(v) {
                 this.isEditing = true;
                 this.showVendedores = false;
-                this.formAction = '{{ url('crm/vendedor/actualizar') }}/' + v.vendedor_id;
+                let url = '{{ route("actualizarVendedor", "PLACEHOLDER") }}';
+                this.formAction = url.replace('PLACEHOLDER', v.vendedor_id);
                 
                 // Llenar campos
                 document.querySelector('input[name="vendedor_id"]').value = v.vendedor_id;
@@ -194,11 +214,10 @@
                 if(radio) radio.checked = true;
                 
                 // Cargar imagen
-                const preview = document.getElementById('preview-img');
-                if(v.foto) {
-                    preview.src = '{{ asset("storage") }}/' + v.foto;
+                if (v.foto) {
+                    this.fotoPreview = this.storageUrl + '/' + v.foto;
                 } else {
-                    preview.src = 'https://via.placeholder.com/150?text=Sin+Foto';
+                    this.fotoPreview = 'https://via.placeholder.com/150?text=Sin+Foto';
                 }
             },
             
@@ -206,24 +225,20 @@
                 this.isEditing = false;
                 this.formAction = '{{ route('guardarVendedor') }}';
                 document.querySelector('form').reset();
-                document.getElementById('preview-img').src = 'https://via.placeholder.com/150?text=Sin+Foto';
+                this.fotoPreview = 'https://via.placeholder.com/150?text=Sin+Foto';
                 document.querySelector('input[name="vendedor_id"]').value = '{{ $sigue }}';
-            }
-        }
-    }
-
-    function previewImage(event) {
-        const input = event.target;
-        const preview = document.getElementById('preview-img');
-        
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
+            },
             
-            reader.onload = function(e) {
-                preview.src = e.target.result; // Cambia la fuente de la imagen al archivo cargado
+            updatePreview(event) {
+                const input = event.target;
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.fotoPreview = e.target.result;
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                }
             }
-            
-            reader.readAsDataURL(input.files[0]); // Lee el archivo como URL de datos
         }
     }
 </script>

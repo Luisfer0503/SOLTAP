@@ -148,21 +148,20 @@
                             </label>
                             <div x-show="form.usa_madera" class="mt-2 ml-4">
                                 <!-- Lista de maderas seleccionadas -->
-                                <template x-for="(madera, index) in form.maderas_seleccionadas" :key="index">
+                                <template x-for="(madera, index) in form.maderas_seleccionadas" :key="madera.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="madera" class="font-medium text-gray-700"></span>
+                                        <span x-text="madera.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarMaderaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
                                 </template>
-
                                 <!-- Controles para agregar nueva madera -->
                                 <div class="bg-blue-50 p-3 rounded border border-blue-100">
                                     <div class="flex">
                                         <select x-model="tempMadera.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesMadera" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesMadera" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarMaderaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -180,9 +179,9 @@
                             </label>
                             <div x-show="form.usa_melamina" class="mt-2 ml-4">
                                 <!-- Lista de melaminas seleccionadas -->
-                                <template x-for="(melamina, index) in form.melaminas_seleccionadas" :key="index">
+                                <template x-for="(melamina, index) in form.melaminas_seleccionadas" :key="melamina.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="melamina" class="font-medium text-gray-700"></span>
+                                        <span x-text="melamina.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarMelaminaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -193,7 +192,7 @@
                                     <div class="flex">
                                         <select x-model="tempMelamina.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesMelamina" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesMelamina" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarMelaminaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -211,9 +210,9 @@
                             </label>
                             <div x-show="form.usa_textil" class="mt-2 ml-4">
                                 <!-- Lista de telas seleccionadas -->
-                                <template x-for="(tela, index) in form.telas_seleccionadas" :key="index">
+                                <template x-for="(tela, index) in form.telas_seleccionadas" :key="tela.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="tela" class="font-medium text-gray-700"></span>
+                                        <span x-text="tela.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarTelaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -224,7 +223,7 @@
                                     <div class="flex">
                                         <select x-model="tempTela.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesTela" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesTela" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarTelaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -242,9 +241,9 @@
                             </label>
                             <div x-show="form.usa_cubierta" class="mt-2 ml-4">
                                 <!-- Lista de cubiertas seleccionadas -->
-                                <template x-for="(cubierta, index) in form.cubiertas_seleccionadas" :key="index">
+                                <template x-for="(cubierta, index) in form.cubiertas_seleccionadas" :key="cubierta.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="cubierta" class="font-medium text-gray-700"></span>
+                                        <span x-text="cubierta.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarCubiertaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -255,7 +254,7 @@
                                     <div class="flex">
                                         <select x-model="tempCubierta.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesCubierta" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesCubierta" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarCubiertaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -744,9 +743,9 @@
                             </label>
                             <div x-show="form.usa_madera" class="mt-2 ml-4">
                                 <!-- Lista de maderas seleccionadas -->
-                                <template x-for="(madera, index) in form.maderas_seleccionadas" :key="index">
+                                <template x-for="(madera, index) in form.maderas_seleccionadas" :key="madera.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="madera" class="font-medium text-gray-700"></span>
+                                        <span x-text="madera.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarMaderaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -757,7 +756,7 @@
                                     <div class="flex">
                                         <select x-model="tempMadera.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesMadera" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesMadera" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarMaderaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -775,9 +774,9 @@
                             </label>
                             <div x-show="form.usa_melamina" class="mt-2 ml-4">
                                 <!-- Lista de melaminas seleccionadas -->
-                                <template x-for="(melamina, index) in form.melaminas_seleccionadas" :key="index">
+                                <template x-for="(melamina, index) in form.melaminas_seleccionadas" :key="melamina.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="melamina" class="font-medium text-gray-700"></span>
+                                        <span x-text="melamina.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarMelaminaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -788,7 +787,7 @@
                                     <div class="flex">
                                         <select x-model="tempMelamina.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesMelamina" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesMelamina" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarMelaminaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -806,9 +805,9 @@
                             </label>
                             <div x-show="form.usa_textil" class="mt-2 ml-4">
                                 <!-- Lista de telas seleccionadas -->
-                                <template x-for="(tela, index) in form.telas_seleccionadas" :key="index">
+                                <template x-for="(tela, index) in form.telas_seleccionadas" :key="tela.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="tela" class="font-medium text-gray-700"></span>
+                                        <span x-text="tela.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarTelaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -819,7 +818,7 @@
                                     <div class="flex">
                                         <select x-model="tempTela.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesTela" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesTela" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarTelaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -837,9 +836,9 @@
                             </label>
                             <div x-show="form.usa_cubierta" class="mt-2 ml-4">
                                 <!-- Lista de cubiertas seleccionadas -->
-                                <template x-for="(cubierta, index) in form.cubiertas_seleccionadas" :key="index">
+                                <template x-for="(cubierta, index) in form.cubiertas_seleccionadas" :key="cubierta.id">
                                     <div class="flex items-center justify-between bg-gray-50 p-2 rounded mb-2 border border-gray-200 text-xs">
-                                        <span x-text="cubierta" class="font-medium text-gray-700"></span>
+                                        <span x-text="cubierta.text" class="font-medium text-gray-700"></span>
                                         <button type="button" @click="eliminarCubiertaLista(index)" class="text-red-500 hover:text-red-700 ml-2">
                                             <i class="ph ph-trash"></i>
                                         </button>
@@ -850,7 +849,7 @@
                                     <div class="flex">
                                         <select x-model="tempCubierta.seleccion" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-l border-r-0 focus:ring-blue-500 focus:z-10">
                                             <option value="">-- Seleccionar Combinación --</option>
-                                            <template x-for="combo in combinacionesCubierta" :key="combo"><option :value="combo" x-text="combo"></option></template>
+                                            <template x-for="combo in combinacionesCubierta" :key="combo.id"><option :value="combo.id" x-text="combo.text"></option></template>
                                         </select>
                                         <button type="button" @click="agregarCubiertaLista()" class="px-3 py-1 bg-blue-600 text-white rounded-r text-xs font-bold hover:bg-blue-700 flex items-center justify-center shadow-sm">
                                             OK
@@ -1019,14 +1018,13 @@
                 return this.db_materiales
                     .filter(m => m.categoria_id == 1) // 1 = Madera
                     .map(m => {
-                        const sub = this.db_submateriales.find(s => s.submaterial_id == m.submaterial_id)?.nombre;
                         const chapa = this.db_chapas.find(c => c.chapa_id == m.chapa_id)?.nombre;
                         
                         let parts = [m.nombre];
-                        if(sub) parts.push(sub);
                         if(chapa) parts.push(chapa);
+                        if(m.color) parts.push(m.color);
                         
-                        return parts.join(' - ');
+                        return { id: m.material_id, text: parts.join(' - ') };
                     });
             },
 
@@ -1040,8 +1038,9 @@
                         let parts = [m.nombre];
                         if(prov) parts.push(prov);
                         if(m.color) parts.push(m.color);
+                        if(m.dibujo) parts.push(m.dibujo);
                         
-                        return parts.join(' - ');
+                        return { id: m.material_id, text: parts.join(' - ') };
                     });
             },
 
@@ -1051,13 +1050,15 @@
                     .filter(m => m.categoria_id == 3) // 3 = Tela
                     .map(m => {
                         const prov = this.db_proveedores.find(p => p.proveedor_id == m.proveedor_id)?.nombre;
+                        const sub = this.db_submateriales.find(s => s.submaterial_id == m.submaterial_id)?.nombre;
                         
                         let parts = [m.nombre];
                         if(prov) parts.push(prov);
+                        if(sub) parts.push(sub);
                         if(m.dibujo) parts.push(m.dibujo);
                         if(m.color) parts.push(m.color);
                         
-                        return parts.join(' - ');
+                        return { id: m.material_id, text: parts.join(' - ') };
                     });
             },
 
@@ -1067,18 +1068,18 @@
                     .filter(m => m.categoria_id == 4) // 4 = Cubierta
                     .map(m => {
                         const sub = this.db_submateriales.find(s => s.submaterial_id == m.submaterial_id)?.nombre;
-                        
                         let parts = [m.nombre];
                         if(sub) parts.push(sub);
-                        
-                        return parts.join(' - ');
+                        return { id: m.material_id, text: parts.join(' - ') };
                     });
             },
 
             agregarMaderaLista() {
                 if (this.tempMadera.seleccion) {
-                    this.form.maderas_seleccionadas.push(this.tempMadera.seleccion);
-                    this.form.tipo_madera = this.form.maderas_seleccionadas.join(' | ');
+                    const seleccion = this.combinacionesMadera.find(c => c.id == this.tempMadera.seleccion);
+                    if (seleccion && !this.form.maderas_seleccionadas.some(m => m.id === seleccion.id)) {
+                        this.form.maderas_seleccionadas.push(seleccion);
+                    }
                     this.tempMadera.seleccion = '';
                 } else {
                     alert('Por favor selecciona una combinación de madera.');
@@ -1086,13 +1087,14 @@
             },
             eliminarMaderaLista(index) {
                 this.form.maderas_seleccionadas.splice(index, 1);
-                this.form.tipo_madera = this.form.maderas_seleccionadas.join(' | ');
             },
 
             agregarMelaminaLista() {
                 if (this.tempMelamina.seleccion) {
-                    this.form.melaminas_seleccionadas.push(this.tempMelamina.seleccion);
-                    this.form.tipo_melamina = this.form.melaminas_seleccionadas.join(' | ');
+                    const seleccion = this.combinacionesMelamina.find(c => c.id == this.tempMelamina.seleccion);
+                    if (seleccion && !this.form.melaminas_seleccionadas.some(m => m.id === seleccion.id)) {
+                        this.form.melaminas_seleccionadas.push(seleccion);
+                    }
                     this.tempMelamina.seleccion = '';
                 } else {
                     alert('Por favor selecciona una combinación de melamina.');
@@ -1100,13 +1102,14 @@
             },
             eliminarMelaminaLista(index) {
                 this.form.melaminas_seleccionadas.splice(index, 1);
-                this.form.tipo_melamina = this.form.melaminas_seleccionadas.join(' | ');
             },
 
             agregarCubiertaLista() {
                 if (this.tempCubierta.seleccion) {
-                    this.form.cubiertas_seleccionadas.push(this.tempCubierta.seleccion);
-                    this.form.tipo_cubierta = this.form.cubiertas_seleccionadas.join(' | ');
+                    const seleccion = this.combinacionesCubierta.find(c => c.id == this.tempCubierta.seleccion);
+                    if (seleccion && !this.form.cubiertas_seleccionadas.some(c => c.id === seleccion.id)) {
+                        this.form.cubiertas_seleccionadas.push(seleccion);
+                    }
                     this.tempCubierta.seleccion = '';
                 } else {
                     alert('Por favor selecciona una combinación de cubierta.');
@@ -1114,13 +1117,14 @@
             },
             eliminarCubiertaLista(index) {
                 this.form.cubiertas_seleccionadas.splice(index, 1);
-                this.form.tipo_cubierta = this.form.cubiertas_seleccionadas.join(' | ');
             },
 
             agregarTelaLista() {
                 if (this.tempTela.seleccion) {
-                    this.form.telas_seleccionadas.push(this.tempTela.seleccion);
-                    this.form.tipo_tela = this.form.telas_seleccionadas.join(' | ');
+                    const seleccion = this.combinacionesTela.find(c => c.id == this.tempTela.seleccion);
+                    if (seleccion && !this.form.telas_seleccionadas.some(t => t.id === seleccion.id)) {
+                        this.form.telas_seleccionadas.push(seleccion);
+                    }
                     this.tempTela.seleccion = '';
                 } else {
                     alert('Por favor selecciona una combinación de tela.');
@@ -1128,7 +1132,6 @@
             },
             eliminarTelaLista(index) {
                 this.form.telas_seleccionadas.splice(index, 1);
-                this.form.tipo_tela = this.form.telas_seleccionadas.join(' | ');
             },
             
             // Cálculo matemático automático
@@ -1381,10 +1384,10 @@
                 
                 // Copia manual para preservar objetos File y Arrays al editar
                 this.form = { ...item };
-                this.form.maderas_seleccionadas = item.maderas_seleccionadas ? [...item.maderas_seleccionadas] : [];
-                this.form.melaminas_seleccionadas = item.melaminas_seleccionadas ? [...item.melaminas_seleccionadas] : [];
-                this.form.telas_seleccionadas = item.telas_seleccionadas ? [...item.telas_seleccionadas] : [];
-                this.form.cubiertas_seleccionadas = item.cubiertas_seleccionadas ? [...item.cubiertas_seleccionadas] : [];
+                this.form.maderas_seleccionadas = Array.isArray(item.maderas_seleccionadas) ? [...item.maderas_seleccionadas] : [];
+                this.form.melaminas_seleccionadas = Array.isArray(item.melaminas_seleccionadas) ? [...item.melaminas_seleccionadas] : [];
+                this.form.telas_seleccionadas = Array.isArray(item.telas_seleccionadas) ? [...item.telas_seleccionadas] : [];
+                this.form.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? [...item.cubiertas_seleccionadas] : [];
 
                 this.imagePreview = this.form.imagen || null;
                 this.showModalEdicion = true;
@@ -1394,13 +1397,13 @@
                 this.indexEdicion = null;
                 const item = this.articulos[index];
                 this.form = { ...item };
-                this.form.maderas_seleccionadas = [...item.maderas_seleccionadas];
-                this.form.melaminas_seleccionadas = [...item.melaminas_seleccionadas];
-                this.form.telas_seleccionadas = [...item.telas_seleccionadas];
-                this.form.cubiertas_seleccionadas = [...item.cubiertas_seleccionadas];
+                this.form.maderas_seleccionadas = Array.isArray(item.maderas_seleccionadas) ? [...item.maderas_seleccionadas] : [];
+                this.form.melaminas_seleccionadas = Array.isArray(item.melaminas_seleccionadas) ? [...item.melaminas_seleccionadas] : [];
+                this.form.telas_seleccionadas = Array.isArray(item.telas_seleccionadas) ? [...item.telas_seleccionadas] : [];
+                this.form.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? [...item.cubiertas_seleccionadas] : [];
 
                 this.imagePreview = this.form.imagen || null;
-                this.form.id_articulo_produccion = '';
+                this.form.id_articulo_produccion = ''; // Limpiar ID visible
                 delete this.form.id; // Al duplicar, quitamos el ID para que se cree uno nuevo
                 this.showModalEdicion = true;
             },
@@ -1471,6 +1474,11 @@
                     // Mapeo de datos para asegurar compatibilidad con el formulario
                     this.articulos = data.map(item => {
                         // Asegurar que los campos numéricos sean números o strings válidos
+                        // Asegurar que los arrays de materiales existan
+                        item.maderas_seleccionadas = Array.isArray(item.maderas_seleccionadas) ? item.maderas_seleccionadas : [];
+                        item.melaminas_seleccionadas = Array.isArray(item.melaminas_seleccionadas) ? item.melaminas_seleccionadas : [];
+                        item.telas_seleccionadas = Array.isArray(item.telas_seleccionadas) ? item.telas_seleccionadas : [];
+                        item.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? item.cubiertas_seleccionadas : [];
                         item.cantidad = item.cantidad || 1;
                         // La imagen ya viene como URL completa desde el controlador
                         return item;
@@ -1537,16 +1545,17 @@
 
                     // Materiales (Agrupamos todos los arrays en una estructura para el backend)
                     const materiales = [
-                        ...item.maderas_seleccionadas.map(m => ({ tipo: 'Madera', desc: m })),
-                        ...item.melaminas_seleccionadas.map(m => ({ tipo: 'Melamina', desc: m })),
-                        ...item.telas_seleccionadas.map(m => ({ tipo: 'Tela', desc: m })),
-                        ...item.cubiertas_seleccionadas.map(m => ({ tipo: 'Cubierta', desc: m }))
+                        ...item.maderas_seleccionadas.map(m => ({ tipo: 'Madera', material_id: m.id })),
+                        ...item.melaminas_seleccionadas.map(m => ({ tipo: 'Melamina', material_id: m.id })),
+                        ...item.telas_seleccionadas.map(m => ({ tipo: 'Tela', material_id: m.id })),
+                        ...item.cubiertas_seleccionadas.map(m => ({ tipo: 'Cubierta', material_id: m.id }))
                     ];
-                    if (item.usa_herreria) materiales.push({ tipo: 'Otros', desc: 'Herrería' });
+                    if (item.usa_herreria) materiales.push({ tipo: 'Otros', material_id: null, descripcion: 'Herrería' });
 
                     materiales.forEach((mat, matIndex) => {
                         formData.append(`articulos[${index}][materiales][${matIndex}][tipo]`, mat.tipo);
-                        formData.append(`articulos[${index}][materiales][${matIndex}][descripcion]`, mat.desc);
+                        formData.append(`articulos[${index}][materiales][${matIndex}][material_id]`, mat.material_id);
+                        if (mat.descripcion) formData.append(`articulos[${index}][materiales][${matIndex}][descripcion]`, mat.descripcion);
                     });
                 });
 

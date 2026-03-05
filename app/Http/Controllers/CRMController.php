@@ -28,7 +28,7 @@ class CRMController extends Controller
             $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
         // Obtener lista de vendedores para mostrar en la vista
         $vendedores = DB::select("SELECT * FROM vendedores ORDER BY vendedor_id DESC");
-            
+
         return view('CRM.altaVendedores')
                 ->with('sigue', $sigue)
                 ->with('empresas', $empresas)
@@ -48,8 +48,8 @@ class CRMController extends Controller
             ]);
 
             $file = $request->file('foto');
-            $img = date_timestamp_get(date_create()) . $file->getClientOriginalName();
-            FacadeStorage::disk('public')->put($img, \File::get($file));
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('fotos', $filename, 'public');
 
             $vendedor = new Vendedor();
             $vendedor->nombre = $request->nombre;
@@ -58,7 +58,7 @@ class CRMController extends Controller
             $vendedor->correo = $request->correo;
             $vendedor->telefono = $request->telefono;
             $vendedor->empresa_id = $request->empresa;
-            $vendedor->foto = $img;
+            $vendedor->foto = $path;
             $vendedor->save();
 
              return redirect()->route('altaVendedores')->with('mensaje', 'Vendedor guardado correctamente');
@@ -82,8 +82,14 @@ class CRMController extends Controller
                 'correo' => ['required','email', Rule::unique('vendedores','correo')->ignore($id, 'vendedor_id')],
                 'telefono' => 'required|numeric',
                 'empresa' => 'required|exists:empresas,empresa_id',
-                'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:3072'
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:6000'
             ]);
+
+            $vendedor = DB::table('vendedores')->where('vendedor_id', $id)->first();
+
+            if (!$vendedor) {
+                return redirect()->route('altaVendedores')->with('error', 'Vendedor no encontrado.');
+            }
 
             $data = [
                 'nombre' => $request->nombre,
@@ -95,10 +101,15 @@ class CRMController extends Controller
             ];
 
             if ($request->hasFile('foto')) {
+                // Borrar foto anterior si existe
+                if ($vendedor->foto) {
+                    Storage::disk('public')->delete($vendedor->foto);
+                }
+
                 $file = $request->file('foto');
-                $img = date_timestamp_get(date_create()) . $file->getClientOriginalName();
-                FacadeStorage::disk('public')->put($img, \File::get($file));
-                $data['foto'] = $img;
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('fotos', $filename, 'public');
+                $data['foto'] = $path;
             }
 
             DB::table('vendedores')->where('vendedor_id', $id)->update($data);
@@ -107,11 +118,20 @@ class CRMController extends Controller
 
         public function eliminarVendedor($id)
         {
-            $deleted = DB::delete("DELETE FROM vendedores WHERE vendedor_id = ?", [$id]);
-            if ($deleted) {
+            $vendedor = DB::table('vendedores')->where('vendedor_id', $id)->first();
+
+            if ($vendedor) {
+                // Borrar la foto del almacenamiento si existe
+                if ($vendedor->foto) {
+                    Storage::disk('public')->delete($vendedor->foto);
+                }
+
+                // Eliminar el registro de la base de datos
+                DB::table('vendedores')->where('vendedor_id', $id)->delete();
+
                 return redirect()->route('altaVendedores')->with('mensaje', 'Vendedor eliminado correctamente');
             }
-            return redirect()->route('altaVendedores')->with('mensaje', 'No se pudo eliminar el vendedor');
+            return redirect()->route('altaVendedores')->with('error', 'No se pudo eliminar el vendedor o no fue encontrado.');
         }
 
       public function altaProspectos()
@@ -130,15 +150,12 @@ class CRMController extends Controller
             
             $canales_distribucion= DB::select("SELECT canal_id, nombre FROM canales_distribucion ORDER BY nombre ASC");
             
-            $interacciones = DB::select("SELECT interaccion_id, nombre FROM interacciones");
-
             return view('CRM.altaProspectos')
                         ->with('sigue', $sigue)
                         ->with('estados', $estados)
                         ->with('empresas', $empresas)
                         ->with('enfoques', $enfoques)
-                        ->with('canales', $canales_distribucion)
-                        ->with('interacciones', $interacciones);
+                        ->with('canales', $canales_distribucion);
       }
 
       public function guardarProspecto(Request $request)
@@ -158,11 +175,15 @@ class CRMController extends Controller
                   'Fecha' => 'required|date',
                   'Hora' => 'required',
                   'IdEmpresa' => 'required|exists:empresas,empresa_id',
-                  'IdInteraccion' => 'required|exists:interacciones,interaccion_id',
                   'IdEnfoque' => 'nullable|exists:enfoques,enfoque_id',
                   'IdCanalDistribuccion' => 'nullable|exists:canales_distribucion,canal_id',
                   'NombreProyectoCompleto' => 'nullable|string|max:255',
                   'Descripcion' => 'nullable|string',
+                  'TieneEnvio' => 'nullable|in:si,no',
+                  'TieneIva' => 'nullable|in:si,no',
+                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
+                  'TieneDescuento' => 'nullable|in:si,no',
+                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
             ]);
 
             DB::beginTransaction();
@@ -193,11 +214,18 @@ class CRMController extends Controller
                     $prospecto->estatus_id = DB::table('estatus')->where('nombre', 'Prospecto')->value('estatus_id');
                 }
 
-                $prospecto->interaccion_id = $request->IdInteraccion;
+                $prospecto->interaccion_id = 1; // Valor fijo por defecto
                 $prospecto->enfoque_id = $request->IdEnfoque;
                 $prospecto->canal_id = $request->IdCanalDistribuccion;
                 $prospecto->proyecto = $request->NombreProyectoCompleto;
                 $prospecto->descripcion = $request->Descripcion;
+
+                $prospecto->tiene_envio = ($request->TieneEnvio === 'si') ? 1 : 0;
+                $prospecto->tiene_iva = ($request->TieneIva === 'si') ? 1 : 0;
+                $prospecto->iva = ($request->TieneIva === 'si') ? $request->IvaPorcentaje : 0;
+                $prospecto->tiene_descuento = ($request->TieneDescuento === 'si') ? 1 : 0;
+                $prospecto->descuento = ($request->TieneDescuento === 'si') ? $request->DescuentoPorcentaje : 0;
+
                 $prospecto->save();
 
                 // Si es Solferino, guardar también en la tabla Clientes
@@ -440,15 +468,20 @@ class CRMController extends Controller
                   'Telefono' => 'required|numeric',
                   'IdEstado' => 'required|exists:estados,estado_id',
                   'Municipio' => 'required|string|max:100',
+                  'CodigoPostal' => 'required|numeric',
                   'Calle' => 'required|string|max:255',
                   'DireccionEntrega' => 'required_if:DireccionDiferente,si|nullable|string|max:255',
                   'Maps' => 'nullable|string',
                   'IdEmpresa' => 'required|exists:empresas,empresa_id',
-                  'IdEstatus' => 'required|exists:estatus,estatus_id',
                   'IdEnfoque' => 'nullable|exists:enfoques,enfoque_id',
                   'IdCanalDistribuccion' => 'nullable|exists:canales_distribucion,canal_id',
                   'NombreProyectoCompleto' => 'nullable|string|max:255',
                   'Descripcion' => 'nullable|string',
+                  'TieneEnvio' => 'nullable|in:si,no',
+                  'TieneIva' => 'nullable|in:si,no',
+                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
+                  'TieneDescuento' => 'nullable|in:si,no',
+                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
             ]);
 
             $data = [
@@ -459,15 +492,20 @@ class CRMController extends Controller
                 'telefono' => $request->Telefono,
                 'estado_id' => $request->IdEstado,
                 'municipio' => $request->Municipio,
+                'codigo_postal' => $request->CodigoPostal,
                 'calle' => $request->Calle,
                 'direccion_entrega' => ($request->DireccionDiferente === 'si') ? $request->DireccionEntrega : $request->Calle . ', ' . $request->Municipio,
                 'maps' => $request->Maps,
                 'empresa_id' => $request->IdEmpresa,
-                'estatus_id' => $request->IdEstatus,
                 'enfoque_id' => $request->IdEnfoque,
                 'canal_id' => $request->IdCanalDistribuccion,
                 'proyecto' => $request->NombreProyectoCompleto,
                 'descripcion' => $request->Descripcion,
+                'tiene_envio' => ($request->TieneEnvio === 'si') ? 1 : 0,
+                'tiene_iva' => ($request->TieneIva === 'si') ? 1 : 0,
+                'iva' => ($request->TieneIva === 'si') ? $request->IvaPorcentaje : 0,
+                'tiene_descuento' => ($request->TieneDescuento === 'si') ? 1 : 0,
+                'descuento' => ($request->TieneDescuento === 'si') ? $request->DescuentoPorcentaje : 0,
             ];
 
             DB::table('prospectos')->where('prospecto_id', $id)->update($data);

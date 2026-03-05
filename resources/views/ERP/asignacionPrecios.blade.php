@@ -4,187 +4,285 @@
 
 <script src="//unpkg.com/alpinejs" defer></script>
 
-<main class="flex-1 flex flex-col h-screen bg-gray-50" x-data="pricingApp({{ json_encode($articulos) }})">
-    
-    <header class="bg-white border-b px-8 py-4 shadow-sm z-20 sticky top-0">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="ph ph-currency-dollar text-green-600 mr-2"></i> Asignación de Precios
-            </h2>
-            
-            <div class="flex items-center bg-gray-100 rounded-lg px-4 py-2 border border-gray-300 w-80">
-                <i class="ph ph-magnifying-glass text-gray-500 mr-2"></i>
-                <input type="text" x-model="searchTerm" placeholder="Buscar por nombre o ID..." 
-                       class="bg-transparent text-sm text-gray-700 placeholder-gray-500 focus:outline-none w-full">
-            </div>
-            
-            <div class="flex items-center bg-gray-100 rounded-lg p-1">
-                <span class="text-xs font-semibold text-gray-500 px-3">Aplicar Margen Global:</span>
-                <button @click="aplicarMargen(30)" class="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:shadow rounded transition">30%</button>
-                <button @click="aplicarMargen(50)" class="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:shadow rounded transition">50%</button>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-6">
-            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <p class="text-xs text-gray-500 uppercase font-bold">Costo Producción (Base)</p>
-                <p class="text-lg font-bold text-gray-700" x-text="money(totalCosto)"></p>
-            </div>
-            
-            <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                <p class="text-xs text-blue-600 uppercase font-bold">Precio Venta Total</p>
-                <p class="text-2xl font-bold text-blue-700" x-text="money(totalVenta)"></p>
-            </div>
-
-            <div class="rounded-lg p-3 border transition-colors duration-300" 
-                 :class="margenGlobal < 20 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'">
-                <div class="flex justify-between items-center">
-                    <p class="text-xs uppercase font-bold" 
-                       :class="margenGlobal < 20 ? 'text-red-600' : 'text-green-600'">Utilidad / Margen</p>
-                    <span class="text-xs font-bold px-2 py-0.5 rounded-full"
-                          :class="margenGlobal < 20 ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'">
-                        <span x-text="margenGlobal"></span>%
-                    </span>
-                </div>
-                <p class="text-xl font-bold" 
-                   :class="margenGlobal < 20 ? 'text-red-700' : 'text-green-700'" 
-                   x-text="money(totalUtilidad)"></p>
-            </div>
-        </div>
+<main class="flex-1 flex flex-col h-screen bg-gray-50" x-data="cotizadorApp()">
+    <!-- Header -->
+    <header class="bg-white border-b px-8 py-4 shadow-sm z-20">
+        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+            <i class="ph ph-currency-dollar text-green-600 mr-2"></i> Asignación de Precios y Cotizaciones
+        </h2>
     </header>
 
+    <!-- Listado de Proyectos -->
     <div class="flex-1 overflow-y-auto p-8">
-        <div class="max-w-6xl mx-auto space-y-4">
-            
-            <template x-for="(item, index) in filteredItems" :key="item.id">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center transition hover:shadow-md">
-                    
-                    <div class="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 relative group cursor-pointer">
-                        <template x-if="item.imagen">
-                            <img :src="item.imagen" class="w-full h-full object-cover">
-                        </template>
-                        <template x-if="!item.imagen">
-                            <div class="w-full h-full flex items-center justify-center text-gray-300">
-                                <i class="ph ph-image text-3xl"></i>
-                            </div>
-                        </template>
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition flex items-center justify-center">
-                            <i class="ph ph-magnifying-glass-plus text-white opacity-0 group-hover:opacity-100"></i>
-                        </div>
-                    </div>
-
-                    <div class="ml-6 flex-1">
-                        <div class="flex items-center mb-1">
-                            <h3 class="text-lg font-bold text-gray-800" x-text="item.nombre"></h3>
-                            <span class="ml-3 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded border border-gray-200" x-text="item.dimensiones"></span>
-                        </div>
-                        <p class="text-xs text-gray-400 mb-3">ID: <span x-text="item.id"></span></p>
-                        
-                        <div class="flex items-center text-xs space-x-4">
-                            <div>
-                                <span class="text-gray-500 block">Costo Producción (Materiales)</span>
-                                <span class="font-bold text-gray-700" x-text="money(item.costo_produccion)"></span>
-                            </div>
-                            <i class="ph ph-arrow-right text-gray-300"></i>
-                            <div class="relative">
-                                <span class="text-blue-600 font-bold block mb-1">Precio Final Cliente</span>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2 text-gray-500">$</span>
-                                    <input type="number" x-model.number="item.precio_venta" 
-                                           class="w-40 pl-7 pr-3 py-1.5 rounded-lg border-2 border-blue-100 focus:border-blue-500 focus:ring-blue-500 font-bold text-gray-800 shadow-sm text-lg">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="w-32 text-right border-l pl-6 border-gray-100">
-                        <p class="text-xs text-gray-500 mb-1">Margen</p>
-                        <div class="flex items-center justify-end space-x-2">
-                            <span class="text-2xl font-bold" 
-                                  :class="calcularMargen(item) < 20 ? 'text-red-500' : 'text-green-500'"
-                                  x-text="calcularMargen(item) + '%'"></span>
-                            
-                            <template x-if="calcularMargen(item) >= 20">
-                                <i class="ph ph-trend-up text-green-500 text-xl"></i>
-                            </template>
-                            <template x-if="calcularMargen(item) < 20">
-                                <i class="ph ph-warning-circle text-red-500 text-xl" title="Margen bajo"></i>
-                            </template>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">Ganancia: <span x-text="money(item.precio_venta - item.costo_produccion)"></span></p>
-                    </div>
-
-                </div>
-            </template>
-
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Proyecto</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Cliente</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Contacto</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Vendedor</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach($proyectos as $p)
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-bold text-gray-900">{{ $p->nombre_proyecto }}</div>
+                            <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($p->fecha)->format('d/m/Y') }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ $p->cliente_nombre }}</div>
+                            <div class="text-xs text-gray-500">{{ $p->direccion }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ $p->telefono }}</div>
+                            <div class="text-xs text-gray-500">{{ $p->correo }}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ $p->vendedor_nombre }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button @click="abrirCotizador({{ json_encode($p) }})" class="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center ml-auto">
+                                <i class="ph ph-calculator mr-2"></i> Cotizar
+                            </button>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="bg-white border-t p-4 flex justify-end space-x-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-        <button class="px-6 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
-            Cancelar
-        </button>
-        <button class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-lg hover:bg-blue-700 flex items-center">
-            <i class="ph ph-file-pdf mr-2 text-lg"></i> Confirmar y Generar Cotización
-        </button>
-    </div>
+    <!-- Modal Cotizador -->
+    <div x-show="mostrarModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;">
+        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold flex items-center"><i class="ph ph-file-text mr-2"></i> Cotización de Proyecto</h3>
+                    <p class="text-sm text-gray-300" x-text="proyecto?.nombre_proyecto"></p>
+                </div>
+                <button @click="cerrarModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
 
+            <!-- Modal Body -->
+            <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <!-- Info Proyecto -->
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Cliente</span>
+                        <span class="font-semibold text-gray-800" x-text="proyecto?.cliente_nombre"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Teléfono</span>
+                        <span class="font-semibold text-gray-800" x-text="proyecto?.telefono"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Correo</span>
+                        <span class="font-semibold text-gray-800" x-text="proyecto?.correo"></span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Fecha</span>
+                        <span class="font-semibold text-gray-800" x-text="formatDate(proyecto?.fecha)"></span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Dirección</span>
+                        <span class="font-semibold text-gray-800" x-text="proyecto?.direccion"></span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="block text-gray-500 text-xs font-bold uppercase">Vendedor</span>
+                        <span class="font-semibold text-gray-800" x-text="proyecto?.vendedor_nombre"></span>
+                    </div>
+                </div>
+
+                <!-- Tabla Artículos -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Artículo</th>
+                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cant.</th>
+                                <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Dimensiones / Peso</th>
+                                <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Precio Unit.</th>
+                                <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <template x-for="(item, index) in articulos" :key="index">
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center">
+                                            <div class="h-12 w-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden mr-3 border border-gray-200">
+                                                <template x-if="item.imagen">
+                                                    <img :src="item.imagen" class="h-full w-full object-cover">
+                                                </template>
+                                                <template x-if="!item.imagen">
+                                                    <div class="h-full w-full flex items-center justify-center text-gray-400"><i class="ph ph-image"></i></div>
+                                                </template>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-bold text-gray-900" x-text="item.nombre"></div>
+                                                <div class="text-xs text-gray-500" x-text="item.id_articulo_produccion"></div>
+                                                <div class="text-xs text-gray-400 truncate w-48" x-text="item.descripcion"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm font-bold text-gray-800" x-text="item.cantidad"></td>
+                                    <td class="px-4 py-3 text-center text-xs text-gray-600">
+                                        <div x-text="`${item.alto}x${item.ancho}x${item.profundo}m`"></div>
+                                        <div x-text="`${item.peso}kg`"></div>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <input type="number" x-model="item.precio_unitario" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * (item.precio_unitario || 0))"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totales -->
+                <div class="flex justify-end">
+                    <div class="w-80 bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Subtotal Artículos:</span>
+                            <span class="font-bold text-gray-900" x-text="money(subtotalArticulos)"></span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Envío:</span>
+                            <input type="number" x-model="costoEnvio" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Descuento:</span>
+                            <input type="number" x-model="descuento" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                        </div>
+                        <div class="border-t border-gray-100 pt-2 flex justify-between text-sm">
+                            <span class="text-gray-600 font-bold">Subtotal:</span>
+                            <span class="font-bold text-gray-900" x-text="money(subtotalGeneral)"></span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">IVA (16%):</span>
+                            <span class="font-bold text-gray-900" x-text="money(iva)"></span>
+                        </div>
+                        <div class="border-t border-gray-200 pt-3 flex justify-between text-lg">
+                            <span class="font-bold text-gray-800">Total a Pagar:</span>
+                            <span class="font-bold text-blue-600" x-text="money(totalPagar)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
+                <button @click="cerrarModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
+                <button @click="imprimirPdf()" class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-lg flex items-center">
+                    <i class="ph ph-file-pdf mr-2"></i> Generar PDF
+                </button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
-    function pricingApp(data) {
+    function cotizadorApp() {
         return {
-            items: data,
-            searchTerm: '',
+            mostrarModal: false,
+            proyecto: null,
+            articulos: [],
+            costoEnvio: 0,
+            descuento: 0,
 
-            // Filtrar items según búsqueda
-            get filteredItems() {
-                if (!this.searchTerm.trim()) {
-                    return this.items;
+            async abrirCotizador(proyecto) {
+                this.proyecto = proyecto;
+                this.articulos = [];
+                this.costoEnvio = 0;
+                this.descuento = 0;
+                this.mostrarModal = true;
+                
+                // Cargar artículos
+                try {
+                    const response = await fetch(`{{ url('/erp/articulos-proyecto') }}/${proyecto.proyecto_id}`);
+                    const data = await response.json();
+                    this.articulos = data.map(item => ({
+                        ...item,
+                        precio_unitario: 0 // Inicializar precio
+                    }));
+                } catch (error) {
+                    console.error('Error cargando artículos:', error);
+                    alert('No se pudieron cargar los artículos del proyecto.');
                 }
-                const term = this.searchTerm.toLowerCase();
-                return this.items.filter(item => 
-                    item.nombre.toLowerCase().includes(term) || 
-                    (item.id && item.id.toString().toLowerCase().includes(term))
-                );
             },
 
-            // Cálculos Globales (Computed Properties)
-            get totalCosto() {
-                return this.filteredItems.reduce((sum, item) => sum + parseFloat(item.costo_produccion), 0);
-            },
-            get totalVenta() {
-                return this.filteredItems.reduce((sum, item) => sum + parseFloat(item.precio_venta || 0), 0);
-            },
-            get totalUtilidad() {
-                return this.totalVenta - this.totalCosto;
-            },
-            get margenGlobal() {
-                if (this.totalVenta === 0) return 0;
-                return Math.round(((this.totalVenta - this.totalCosto) / this.totalVenta) * 100);
+            cerrarModal() {
+                this.mostrarModal = false;
+                this.proyecto = null;
             },
 
-            // Funciones por Item
-            calcularMargen(item) {
-                if (!item.precio_venta || item.precio_venta == 0) return 0;
-                let costo = parseFloat(item.costo_produccion);
-                let precio = parseFloat(item.precio_venta);
-                // Fórmula de Margen: ((Precio - Costo) / Precio) * 100
-                return Math.round(((precio - costo) / precio) * 100);
+            get subtotalArticulos() {
+                return this.articulos.reduce((sum, item) => sum + (item.cantidad * (parseFloat(item.precio_unitario) || 0)), 0);
             },
 
-            // Herramienta Masiva
-            aplicarMargen(porcentaje) {
-                // Si quiero ganar el 30%, la fórmula es: Costo / (1 - 0.30)
-                let factor = 1 - (porcentaje / 100);
-                this.filteredItems.forEach(item => {
-                    item.precio_venta = Math.ceil(item.costo_produccion / factor);
-                });
+            get subtotalGeneral() {
+                return Math.max(0, this.subtotalArticulos + (parseFloat(this.costoEnvio) || 0) - (parseFloat(this.descuento) || 0));
             },
 
-            // Formato de Dinero
+            get iva() {
+                return this.subtotalGeneral * 0.16;
+            },
+
+            get totalPagar() {
+                return this.subtotalGeneral + this.iva;
+            },
+
             money(value) {
                 return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+            },
+
+            formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('es-MX');
+            },
+
+            async imprimirPdf() {
+                const data = {
+                    proyecto: this.proyecto,
+                    articulos: this.articulos,
+                    totales: {
+                        subtotal_articulos: this.subtotalArticulos,
+                        envio: this.costoEnvio,
+                        descuento: this.descuento,
+                        subtotal: this.subtotalGeneral,
+                        iva: this.iva,
+                        total: this.totalPagar
+                    }
+                };
+
+                // Enviar a backend para generar PDF
+                try {
+                    const response = await fetch('{{ route("generarCotizacionPdf") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (response.ok) {
+                        // Aquí podrías manejar la descarga del blob si el backend retornara el PDF
+                        // Por ahora, simulamos éxito
+                        alert('Solicitud de PDF enviada. (Funcionalidad de descarga pendiente de backend)');
+                    } else {
+                        alert('Error al generar PDF');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error de conexión');
+                }
             }
         }
     }
