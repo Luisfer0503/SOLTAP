@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cotización #{{ str_pad($cotizacionId, 6, '0', STR_PAD_LEFT) }}</title>
+    <title>Remisión #{{ str_pad($cotizacionId, 6, '0', STR_PAD_LEFT) }}</title>
     <style>
         @page { 
             size: A4 landscape; 
@@ -87,17 +87,6 @@
         }
         .items-table tr:nth-child(even) { background-color: #f8fafc; }
         
-        /* Imágenes */
-        .product-img { 
-            width: 50px; 
-            height: 50px; 
-            object-fit: contain; 
-            border: 1px solid #e2e8f0; 
-            background: white; 
-            padding: 2px; 
-            border-radius: 3px; 
-        }
-        
         /* Totales */
         .totals-table { 
             width: 300px; 
@@ -126,6 +115,17 @@
             border-top: 1px solid #e2e8f0; 
             padding-top: 10px; 
         }
+
+        /* Tabla Pagos */
+        .payments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 10px;
+        }
+        .payments-table th { background-color: #e2e8f0; padding: 5px; text-align: left; }
+        .payments-table td { border-bottom: 1px solid #edf2f7; padding: 5px; }
+        .payments-container { margin-top: 20px; page-break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -134,13 +134,11 @@
     <table class="header-table">
         <tr>
             <td width="60%" valign="bottom">
-                <!-- Puedes descomentar esto si tienes un logo en public/logo.png -->
-                <!-- <img src="{{ public_path('logo.png') }}" style="height: 40px; margin-bottom: 5px;"> -->
                 <div class="company-name">CASA TAPIER</div>
                 <div class="text-xs">Soluciones en Mobiliario y Diseño</div>
             </td>
             <td width="40%" valign="bottom" class="text-right">
-                <div class="doc-title">COTIZACIÓN</div>
+                <div class="doc-title">REMISIÓN</div>
                 <div style="color: #718096;">
                     <strong>Folio:</strong> #{{ str_pad($cotizacionId, 6, '0', STR_PAD_LEFT) }}<br>
                     <strong>Fecha:</strong> {{ date('d/m/Y') }}
@@ -168,20 +166,18 @@
                     <div class="info-row"><span class="label">Proyecto:</span> {{ $proyecto['nombre_proyecto'] }}</div>
                     <div class="info-row"><span class="label">ID Proyecto:</span> #{{ $proyecto['proyecto_id'] }}</div>
                     <div class="info-row"><span class="label">Vendedor:</span> {{ $proyecto['vendedor_nombre'] }}</div>
-                    <div class="info-row"><span class="label">Validez:</span> 15 días hábiles</div>
                 </div>
             </td>
         </tr>
     </table>
 
-    <!-- Tabla de Artículos -->
+    <!-- Tabla de Artículos (Sin Imagen) -->
     <table class="items-table">
         <thead>
             <tr>
                 <th width="5%" class="text-center">#</th>
-                <th width="8%" class="text-center">Imagen</th>
-                <th width="12%">Diferenciador</th>
-                <th width="35%">Descripción del Artículo</th>
+                <th width="15%">Diferenciador</th>
+                <th width="40%">Descripción del Artículo</th>
                 <th width="15%">Dimensiones</th>
                 <th width="5%" class="text-center">Cant.</th>
                 <th width="10%" class="text-right">Precio Unit.</th>
@@ -192,27 +188,6 @@
             @foreach($articulos as $index => $item)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">
-                    @php
-                        $imagePath = null;
-                        if (!empty($item['imagen'])) {
-                            // La imagen viene como URL completa (http://...), necesitamos la ruta local
-                            // Buscamos la parte que empieza con 'storage/'
-                            if (preg_match('/storage\/.*$/', $item['imagen'], $matches)) {
-                                $localPath = public_path($matches[0]);
-                                if (file_exists($localPath)) {
-                                    $imagePath = $localPath;
-                                }
-                            }
-                        }
-                    @endphp
-                    
-                    @if($imagePath)
-                        <img src="{{ $imagePath }}" class="product-img">
-                    @else
-                        <div style="color: #ccc; font-size: 9px; padding: 10px;">Sin img</div>
-                    @endif
-                </td>
                 <td>
                     <div class="font-bold">{{ $item['id_articulo_produccion'] ?? 'N/A' }}</div>
                 </td>
@@ -263,10 +238,34 @@
         </tr>
     </table>
 
+    <!-- Plan de Pagos -->
+    @if(isset($pagos) && count($pagos) > 0)
+    <div class="payments-container">
+        <div style="font-weight: bold; border-bottom: 1px solid #2d3748; margin-bottom: 5px;">PLAN DE PAGOS</div>
+        <table class="payments-table">
+            <thead>
+                <tr>
+                    <th width="50%">Concepto</th>
+                    <th width="20%" class="text-center">Porcentaje</th>
+                    <th width="30%" class="text-right">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($pagos as $pago)
+                <tr>
+                    <td>{{ $pago['nombre'] }}</td>
+                    <td class="text-center">{{ $pago['porcentaje'] }}%</td>
+                    <td class="text-right">${{ number_format($pago['monto'], 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    @endif
+
     <!-- Footer -->
     <div class="footer">
-        <p>Precios sujetos a cambio sin previo aviso. Tiempo de entrega a confirmar al momento del pedido.</p>
-        <p>Casa Tapier • Cotización generada automáticamente</p>
+        <p>Casa Tapier • Documento de Remisión</p>
     </div>
 
 </body>

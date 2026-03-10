@@ -1,7 +1,18 @@
 @extends('principal')
 
 @section('contenido')
-
+    <style>
+        [x-cloak] { display: none !important; }
+        /* Ocultar flechas (spinners) en inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
 <script src="//unpkg.com/alpinejs" defer></script>
 
 <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-100" x-data="appArticulos()">
@@ -56,8 +67,8 @@
                     
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <div class="col-span-1">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">ID Art. Producción</label>
-                            <input type="text" x-model="form.id_articulo_produccion" placeholder="ej. PROD-001" class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Diferenciador</label>
+                            <input type="text" x-model="form.id_articulo_produccion" placeholder="ej. Planta1" class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div class="col-span-2">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Categoría</label>
@@ -85,18 +96,18 @@
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
-                        <p class="text-[10px] text-blue-500 font-bold mb-2 uppercase">Dimensiones (Metros) y Peso (Kg)</p>
+                        <p class="text-[10px] text-blue-500 font-bold mb-2 uppercase">Dimensiones (cm) y Peso (Kg)</p>
                         <div class="grid grid-cols-4 gap-2">
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Alto (m)</label>
+                                <label class="text-[9px] text-gray-500 block">Alto (cm)</label>
                                 <input type="number" step="0.01" x-model="form.alto" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Ancho (m)</label>
+                                <label class="text-[9px] text-gray-500 block">Ancho (cm)</label>
                                 <input type="number" step="0.01" x-model="form.ancho" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Profundo (m)</label>
+                                <label class="text-[9px] text-gray-500 block">Profundo (cm)</label>
                                 <input type="number" step="0.01" x-model="form.profundo" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
@@ -287,7 +298,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Imagen / Boceto</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Imagen de Referencia del Artículo</label>
                         <input type="file" @change="fileChosen" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         <template x-if="imagePreview">
                             <img :src="imagePreview" class="mt-2 h-24 rounded object-contain border">
@@ -656,8 +667,8 @@
                     
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <div class="col-span-1">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">ID Art. Producción</label>
-                            <input type="text" x-model="form.id_articulo_produccion" placeholder="ej. PROD-001" class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Diferenciador</label>
+                            <input type="text" x-model="form.id_articulo_produccion" placeholder="ej. Planta1" class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div class="col-span-2">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Categoría</label>
@@ -882,7 +893,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Imagen / Boceto</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Imagen de Referencia del Artículo</label>
                         <input type="file" @change="fileChosen" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         <template x-if="imagePreview">
                             <img :src="imagePreview" class="mt-2 h-24 rounded object-contain border">

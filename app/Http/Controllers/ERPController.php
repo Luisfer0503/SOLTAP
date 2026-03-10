@@ -117,6 +117,8 @@ class ERPController extends Controller
             ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
             ->select(
                 'Proyectos.proyecto_id',
+                'Proyectos.prospecto_id',
+                'Proyectos.cliente_id',
                 'Proyectos.nombre as nombre_proyecto',
                 DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
                 DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
@@ -125,7 +127,9 @@ class ERPController extends Controller
                 'Proyectos.created_at as fecha',
                 DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
                 DB::raw("COALESCE(P1.iva, P2.iva, 0) as iva_porcentaje"),
-                DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje")
+                DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje"),
+                DB::raw("(SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) as tiene_cotizacion"),
+                DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes")
             )
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -141,29 +145,26 @@ class ERPController extends Controller
     public function generarCotizacionPdf(Request $request)
     {
         try {
+            // Validar que todos los campos necesarios estén completos
+            $validator = Validator::make($request->all(), [
+                'articulos' => 'required|array|min:1',
+                'articulos.*.precio_unitario' => 'required|numeric|min:0',
+                'totales.envio' => 'required|numeric|min:0',
+                'cotizacionId' => 'required|integer'
+            ], [
+                'articulos.*.precio_unitario.required' => 'Todos los artículos deben tener un precio asignado.',
+                'totales.envio.required' => 'El costo de envío es obligatorio para generar el PDF.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()->first()], 422);
+            }
+
             $data = $request->all();
             $proyecto = $data['proyecto'];
             $articulos = $data['articulos'];
             $totales = $data['totales'];
-
-            // 1. Guardar precio de cada artículo en la tabla proyecto_articulos
-            foreach ($articulos as $art) {
-                DB::table('proyecto_articulos')
-                    ->where('id', $art['id'])
-                    ->update(['precio' => $art['precio_unitario'] ?? 0]);
-            }
-
-            // 2. Guardar datos generales en la tabla cotizaciones
-            $cotizacionId = DB::table('cotizaciones')->insertGetId([
-                'proyecto_id' => $proyecto['proyecto_id'],
-                'subtotal' => $totales['subtotal'], // Base imponible
-                'envio' => $totales['envio'],
-                'descuento' => $totales['descuento'],
-                'iva' => $totales['iva'],
-                'total' => $totales['total'],
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            $cotizacionId = $data['cotizacionId'];
 
             // 3. Generar PDF usando la vista
             $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId'));
@@ -173,6 +174,169 @@ class ERPController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage(), 'line' => $e->getLine(), 'file' => $e->getFile()], 500);
         }
+    }
+
+    public function generarRemisionPdf(Request $request)
+    {
+        try {
+            $proyecto_id = $request->input('proyecto_id');
+            $pagos = $request->input('pagos'); // Recibir plan de pagos
+            
+            // 1. Obtener datos del proyecto (desde BD)
+            $proyectoData = DB::table('Proyectos')
+                ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+                ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+                ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+                ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+                ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
+                ->select(
+                    'Proyectos.proyecto_id',
+                    'Proyectos.nombre as nombre_proyecto',
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                    DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
+                    DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
+                    DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
+                    'Proyectos.created_at as fecha',
+                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre")
+                )
+                ->where('Proyectos.proyecto_id', $proyecto_id)
+                ->first();
+
+            if (!$proyectoData) {
+                return response()->json(['error' => 'Proyecto no encontrado'], 404);
+            }
+            
+            $proyecto = (array)$proyectoData;
+
+            // 2. Obtener artículos guardados
+            $articulos = DB::table('proyecto_articulos')
+                ->where('proyecto_id', $proyecto_id)
+                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario')
+                ->get()
+                ->map(function($item){ return (array)$item; })
+                ->toArray();
+
+            // 3. Obtener totales guardados (última cotización)
+            $cotizacion = DB::table('cotizaciones')
+                ->where('proyecto_id', $proyecto_id)
+                ->orderBy('cotizacion_id', 'desc')
+                ->first();
+
+            $totales = [
+                'subtotal_articulos' => 0,
+                'envio' => 0,
+                'descuento' => 0,
+                'subtotal' => 0,
+                'iva' => 0,
+                'total' => 0
+            ];
+
+            foreach($articulos as $art){
+                $totales['subtotal_articulos'] += $art['cantidad'] * $art['precio_unitario'];
+            }
+
+            $cotizacionId = 0;
+            if ($cotizacion) {
+                $totales['envio'] = $cotizacion->envio;
+                $totales['descuento'] = $cotizacion->descuento;
+                $totales['subtotal'] = $cotizacion->subtotal;
+                $totales['iva'] = $cotizacion->iva;
+                $totales['total'] = $cotizacion->total;
+                $cotizacionId = $cotizacion->cotizacion_id;
+            }
+
+            // 4. Guardar Plan de Pagos en BD (Si existen)
+            if ($cotizacionId && !empty($pagos)) {
+                // Limpiar pagos previos de esta cotización para evitar duplicados
+                DB::table('plan_pagos')->where('cotizacion_id', $cotizacionId)->delete();
+
+                $totalPagosPlan = count($pagos);
+
+                foreach ($pagos as $index => $pago) {
+                    DB::table('plan_pagos')->insert([
+                        'cotizacion_id' => $cotizacionId,
+                        'nombre' => $pago['nombre'],
+                        'numero_pago' => $index + 1, // 1, 2, 3...
+                        'total_pagos_plan' => $totalPagosPlan, // Total de divisiones (ej. 10)
+                        'porcentaje' => $pago['porcentaje'],
+                        'monto' => $pago['monto'],
+                        'estatus' => 'pendiente',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+
+            $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos'));
+            return $pdf->download('Remision_' . $proyecto['nombre_proyecto'] . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function guardarCotizacion(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $proyecto = $data['proyecto'];
+            $articulos = $data['articulos'];
+            $totales = $data['totales'];
+
+            // Actualizar porcentajes de IVA y Descuento en el Prospecto asociado
+            $prospectoId = $proyecto['prospecto_id'] ?? null;
+            
+            // Si no hay prospecto_id directo en el proyecto, buscar a través del cliente
+            if (!$prospectoId && !empty($proyecto['cliente_id'])) {
+                $cliente = DB::table('Clientes')->where('cliente_id', $proyecto['cliente_id'])->first();
+                if ($cliente) {
+                    $prospectoId = $cliente->prospecto_id;
+                }
+            }
+
+            if ($prospectoId) {
+                DB::table('prospectos')
+                    ->where('prospecto_id', $prospectoId)
+                    ->update([
+                        'iva' => $totales['iva_porcentaje'] ?? 0,
+                        'tiene_iva' => ($totales['iva_porcentaje'] ?? 0) > 0 ? 1 : 0,
+                        'descuento' => $totales['descuento_porcentaje'] ?? 0,
+                        'tiene_descuento' => ($totales['descuento_porcentaje'] ?? 0) > 0 ? 1 : 0
+                    ]);
+            }
+
+            // 1. Guardar precio de cada artículo (acepta 0 si no se ha llenado)
+            foreach ($articulos as $art) {
+                DB::table('proyecto_articulos')
+                    ->where('id', $art['id'])
+                    ->update(['precio' => (float)($art['precio_unitario'] ?? 0)]);
+            }
+
+            // 2. Guardar datos generales en cotizaciones
+            $cotizacionId = DB::table('cotizaciones')->insertGetId([
+                'proyecto_id' => $proyecto['proyecto_id'],
+                'subtotal' => $totales['subtotal'] ?? 0,
+                'envio' => (float)($totales['envio'] ?? 0),
+                'descuento' => $totales['descuento'] ?? 0,
+                'iva' => $totales['iva'] ?? 0,
+                'total' => $totales['total'] ?? 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Guardado correctamente', 'cotizacion_id' => $cotizacionId]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function obtenerCotizacion($proyecto_id)
+    {
+        $cotizacion = DB::table('cotizaciones')
+            ->where('proyecto_id', $proyecto_id)
+            ->orderBy('cotizacion_id', 'desc')
+            ->first();
+
+        return response()->json($cotizacion);
     }
 
     public function logistica($proyecto_id = 1)

@@ -59,6 +59,9 @@ Route::post('/erp/guardar-nuevo-submaterial', [ERPController::class, 'guardarNue
 Route::get('seguimientoProyectos', [ERPController::class, 'seguimientoProyectos'])->name('seguimientoProyectos');
 Route::get('asignacionPrecios', [ERPController::class, 'asignacionPrecios'])->name('asignacionPrecios');
 Route::post('generarCotizacionPdf', [ERPController::class, 'generarCotizacionPdf'])->name('generarCotizacionPdf');
+Route::post('generarRemisionPdf', [ERPController::class, 'generarRemisionPdf'])->name('generarRemisionPdf');
+Route::get('/erp/obtener-cotizacion/{id}', [App\Http\Controllers\ERPController::class, 'obtenerCotizacion']);
+Route::post('guardarCotizacion', [ERPController::class, 'guardarCotizacion'])->name('guardarCotizacion');
 
 //logistica
 Route::get('logistica', [ERPController::class, 'logistica'])->name('logistica');

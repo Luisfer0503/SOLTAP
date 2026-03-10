@@ -311,30 +311,47 @@
             return {
                 nombreProyecto: '',
                 prefijoProyecto: '',
-                partePersonalizada: '{{ $prospecto->proyecto }}',
-                nombreProyectoCompleto: '{{ $prospecto->proyecto }}',
-                nombre: '{{ $prospecto->nombre }}',
-                apellidoPat: '{{ $prospecto->apellido_paterno }}',
-                apellidoMat: '{{ $prospecto->apellido_materno }}',
+                partePersonalizada: '',
+                nombreProyectoCompleto: '',
+                nombre: '{{ old('Nombre', $prospecto->nombre) }}',
+                apellidoPat: '{{ old('ApellidoPat', $prospecto->apellido_paterno) }}',
+                apellidoMat: '{{ old('ApellidoMat', $prospecto->apellido_materno) }}',
                 empresaId: '{{ $prospecto->empresa_id }}',
                 empresas: @json($empresas),
                 tieneIva: '{{ old('TieneIva', $prospecto->tiene_iva ? "si" : "no") }}',
                 tieneDescuento: '{{ old('TieneDescuento', $prospecto->tiene_descuento ? "si" : "no") }}',
 
                 init() {
+                    // 1. Genera el prefijo correcto (ej. 'SH-') y lo asigna a this.prefijoProyecto
                     this.generarNombreProyecto();
+
+                    // 2. Obtiene el nombre completo del proyecto desde la base de datos
+                    const fullProjectNameFromDB = '{{ $prospecto->proyecto ?? '' }}';
+                    let customPart = fullProjectNameFromDB;
+
+                    // 3. Separa el prefijo de la parte personalizada del nombre
+                    if (this.prefijoProyecto && fullProjectNameFromDB.startsWith(this.prefijoProyecto)) {
+                        customPart = fullProjectNameFromDB.substring(this.prefijoProyecto.length);
+                    } else {
+                        // Fallback para formatos antiguos: busca el primer guion
+                        const hyphenIndex = fullProjectNameFromDB.indexOf('-');
+                        if (hyphenIndex !== -1) {
+                            customPart = fullProjectNameFromDB.substring(hyphenIndex + 1);
+                        }
+                    }
+                    
+                    this.partePersonalizada = customPart;
+                    this.actualizarNombreCompleto();
+
+                    // 4. Observador para actualizar el nombre completo cuando el usuario escribe
+                    this.$watch('partePersonalizada', () => this.actualizarNombreCompleto());
                 },
 
                 generarNombreProyecto() {
-                    if (!this.nombre || !this.apellidoPat || !this.apellidoMat || !this.empresaId) {
+                    if (!this.empresaId) {
                         this.prefijoProyecto = '';
-                        this.nombreProyectoCompleto = '';
                         return;
                     }
-
-                    const dosLetrasNombre = this.nombre.substring(0, 2).toUpperCase();
-                    const dosApellidoPaterno = this.apellidoPat.substring(0, 2).toUpperCase();
-                    const dosApellidoMaterno = this.apellidoMat.substring(0, 2).toUpperCase();
                     
                     let codigoEmpresa = '';
                     const empresa = this.empresas.find(e => e.empresa_id == this.empresaId);
@@ -342,15 +359,17 @@
                         if (empresa.nombre.toLowerCase().includes('casa tapier')) {
                             codigoEmpresa = 'CT';
                         } else if (empresa.nombre.toLowerCase().includes('solferino')) {
-                            codigoEmpresa = 'SF';
+                            codigoEmpresa = 'SH';
                         } else {
                             codigoEmpresa = empresa.nombre.substring(0, 2).toUpperCase();
                         }
                     }
                     
-                    const prefijoAutomatico = `${dosLetrasNombre}${dosApellidoPaterno}${dosApellidoMaterno}-${codigoEmpresa}`;
-                    this.prefijoProyecto = prefijoAutomatico;
-                    this.nombreProyectoCompleto = prefijoAutomatico + (this.partePersonalizada || '');
+                    this.prefijoProyecto = `${codigoEmpresa}-`;
+                },
+
+                actualizarNombreCompleto() {
+                    this.nombreProyectoCompleto = this.prefijoProyecto + (this.partePersonalizada || '');
                 }
             }
         }
