@@ -57,9 +57,15 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex justify-end gap-2">
-                                <button @click="abrirCotizador({{ json_encode($p) }})" class="px-3 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
-                                    <i class="ph ph-calculator mr-1"></i> Cotizar
-                                </button>
+                                @if($p->tiene_pagos > 0)
+                                    <button @click="abrirCotizador({{ json_encode($p) }})" class="px-3 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition shadow-sm flex items-center" title="Cotización bloqueada por pagos existentes">
+                                        <i class="ph ph-lock-key mr-1"></i> Ver Cotización
+                                    </button>
+                                @else
+                                    <button @click="abrirCotizador({{ json_encode($p) }})" class="px-3 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
+                                        <i class="ph ph-calculator mr-1"></i> Cotizar
+                                    </button>
+                                @endif
                                 
                                 <button @click="abrirModalPagos({{ $p->proyecto_id }}, '{{ $p->nombre_proyecto }}')" 
                                         class="px-3 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -90,6 +96,11 @@
 
             <!-- Modal Body -->
             <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <div x-show="cotizacionBloqueada" class="mb-6 p-4 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-200 text-sm font-bold flex items-center shadow-sm">
+                    <i class="ph ph-lock-key mr-2 text-xl"></i> 
+                    <span>La cotización está bloqueada porque existen pagos en proceso. No se pueden modificar precios ni totales.</span>
+                </div>
+
                 <!-- Info Proyecto -->
                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 grid grid-cols-4 gap-4 text-sm">
                     <div>
@@ -157,6 +168,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-right">
                                         <input type="number" x-model="item.precio_unitario" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                        <input type="number" x-model="item.precio_unitario" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
                                     </td>
                                     <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * (item.precio_unitario || 0))"></td>
                                 </tr>
@@ -175,11 +187,13 @@
                         <div class="flex justify-between items-center text-sm">
                             <span class="text-gray-600">Envío:</span>
                             <input type="number" x-model="costoEnvio" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                            <input type="number" x-model="costoEnvio" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                         </div>
                         
                         <!-- Botón para editar configuración -->
                         <div class="flex justify-end mt-1">
                             <button @click="editarConfiguracion = !editarConfiguracion" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center">
+                            <button @click="editarConfiguracion = !editarConfiguracion" :disabled="cotizacionBloqueada" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed">
                                 <i class="ph" :class="editarConfiguracion ? 'ph-lock-key' : 'ph-pencil-simple'"></i>
                                 <span class="ml-1" x-text="editarConfiguracion ? 'Bloquear Configuración' : 'Editar IVA/Descuento'"></span>
                             </button>
@@ -202,6 +216,7 @@
                             </template>
                             <template x-if="descuentoPorcentaje == 0">
                                 <input type="number" x-model="descuento" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
+                                <input type="number" x-model="descuento" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                             </template>
                         </div>
                         <div class="border-t border-gray-100 pt-2 flex justify-between text-sm">
@@ -234,6 +249,7 @@
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
                 <button @click="cerrarModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
                 <button @click="guardarCotizacion()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
+                <button @click="guardarCotizacion()" x-show="!cotizacionBloqueada" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
                     <i class="ph ph-floppy-disk mr-2"></i> Guardar
                 </button>
                 <button @click="imprimirPdf()" 
@@ -262,8 +278,12 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <label class="text-sm font-bold text-gray-700">Cantidad de Pagos:</label>
-                        <input type="number" x-model="numeroPagos" @change="generarPagos()" min="1" max="10" class="w-20 text-center border-gray-300 rounded font-bold">
+                        <input type="number" x-model="numeroPagos" @change="generarPagos()" min="1" max="10" class="w-20 text-center border-gray-300 rounded font-bold" :disabled="planBloqueado">
                     </div>
+                </div>
+
+                <div x-show="planBloqueado" class="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded border border-yellow-200 text-sm font-bold flex items-center">
+                    <i class="ph ph-lock-key mr-2 text-lg"></i> El plan de pagos está bloqueado porque ya existen abonos registrados.
                 </div>
 
                 <div class="bg-white rounded border border-gray-200 overflow-hidden">
@@ -281,7 +301,7 @@
                                     <td class="px-4 py-2 text-sm font-bold text-gray-800" x-text="pago.nombre"></td>
                                     <td class="px-4 py-2 text-center">
                                         <div class="flex items-center justify-center">
-                                            <input type="number" x-model="pago.porcentaje" @input="calcularMontos()" class="w-16 text-center text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500">
+                                            <input type="number" x-model="pago.porcentaje" @input="calcularMontos()" class="w-16 text-center text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500" :disabled="planBloqueado">
                                             <span class="ml-1 text-gray-500">%</span>
                                         </div>
                                     </td>
@@ -320,6 +340,7 @@
             ivaPorcentaje: 16,
             descuentoPorcentaje: 0,
             editarConfiguracion: false,
+            cotizacionBloqueada: false,
             
             // Variables para Modal Pagos
             mostrarModalPagos: false,
@@ -327,6 +348,7 @@
             numeroPagos: 2,
             listaPagos: [],
             proyectoPagos: null, // {id, nombre}
+            planBloqueado: false,
 
             async abrirCotizador(proyecto) {
                 this.proyecto = proyecto;
@@ -336,6 +358,7 @@
                 this.ivaPorcentaje = parseFloat(proyecto.iva_porcentaje) || 0;
                 this.descuentoPorcentaje = parseFloat(proyecto.descuento_porcentaje) || 0;
                 this.editarConfiguracion = false;
+                this.cotizacionBloqueada = (proyecto.tiene_pagos > 0);
                 this.mostrarModal = true;
                 
                 // Cargar artículos
@@ -434,6 +457,7 @@
 
             async abrirModalPagos(proyectoId, nombreProyecto) {
                 this.proyectoPagos = { id: proyectoId, nombre: nombreProyecto };
+                this.planBloqueado = false;
                 
                 // Obtener el total de la cotización guardada
                 try {
@@ -442,8 +466,31 @@
                         const cotizacion = await response.json();
                         if (cotizacion && cotizacion.total) {
                             this.totalRemision = parseFloat(cotizacion.total);
-                            this.numeroPagos = 2; // Resetear a default
-                            this.generarPagos(); // Generar lista inicial
+                            
+                            // Intentar cargar plan de pagos existente
+                            let planCargado = false;
+                            try {
+                                const resPlan = await fetch(`{{ url('/erp/plan-pagos') }}/${cotizacion.cotizacion_id}`);
+                                if (resPlan.ok) {
+                                    const plan = await resPlan.json();
+                                    if (plan && plan.length > 0) {
+                                        this.listaPagos = plan.map(p => ({
+                                            nombre: p.nombre,
+                                            porcentaje: parseFloat(p.porcentaje),
+                                            monto: parseFloat(p.monto),
+                                            monto_pagado: parseFloat(p.monto_pagado || 0)
+                                        }));
+                                        this.numeroPagos = plan.length;
+                                        if (this.listaPagos.some(p => p.monto_pagado > 0)) this.planBloqueado = true;
+                                        planCargado = true;
+                                    }
+                                }
+                            } catch(err) { console.error(err); }
+
+                            if (!planCargado) {
+                                this.numeroPagos = 2; // Resetear a default
+                                this.generarPagos(); // Generar lista inicial
+                            }
                             this.mostrarModalPagos = true;
                         } else {
                             alert('Este proyecto no tiene una cotización guardada o el total es 0. Por favor cotice primero.');

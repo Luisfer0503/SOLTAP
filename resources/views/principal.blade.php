@@ -14,18 +14,27 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-slate-800 text-slate-300 flex flex-col transition-all duration-300" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" style="position: fixed; left: 0; top: 0; height: 100vh; z-index: 50;">
         <div class="p-6 flex items-center justify-between border-b border-slate-700">
+            @auth
             <div class="flex items-center flex-1">
-                <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" class="w-10 h-10 rounded-full mr-3 border-2 border-blue-400">
+                @if(Auth::user()->foto)
+                    <img src="{{ asset('storage/' . Auth::user()->foto) }}" class="w-10 h-10 rounded-full mr-3 border-2 border-blue-400 object-cover">
+                @else
+                    <div class="w-10 h-10 rounded-full mr-3 border-2 border-blue-400 bg-slate-600 flex items-center justify-center">
+                        <span class="text-white font-bold">{{ strtoupper(substr(Auth::user()->name, 0, 2)) }}</span>
+                    </div>
+                @endif
                 <div>
-                    <h4 class="text-white font-semibold text-sm">Luis Coyotecatl</h4>
-                    <p class="text-xs text-slate-400">Admin</p>
+                    <h4 class="text-white font-semibold text-sm">{{ Auth::user()->name }}</h4>
+                    <p class="text-xs text-slate-400">{{ Auth::user()->role ?? 'Usuario' }}</p>
                 </div>
             </div>
+            @endauth
             <button @click="sidebarOpen = false" class="text-slate-400 hover:text-white md:hidden">
                 <i class="ph ph-x text-2xl"></i>
             </button>
         </div>
 
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;"> @csrf </form>
         <nav class="flex-1 overflow-y-auto py-4">
             
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">CRM</p>
@@ -59,13 +68,22 @@
                <a href="{{ route('asignacionPrecios') }}" class="{{ request()->routeIs('asignacionPrecios') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-tag text-lg mr-3"></i> Asignación de Precios
             </a>
+            <a href="{{ route('cobranza') }}" class="{{ request()->routeIs('cobranza') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-tag text-lg mr-3"></i> Cobranza
+            </a>
 
                <a href="{{ route('logistica') }}" class="{{ request()->routeIs('logistica') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-truck text-lg mr-3"></i> Logística
             </a>
 
-            <a href="{{ route('altasCategorias') }}" class="{{ request()->routeIs('altasCategorias') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
-                <i class="ph ph-truck text-lg mr-3"></i> Altas de Categorías
+            <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Administración</p>
+            <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-users-three text-lg mr-3"></i> Gestión de Usuarios
+            </a>
+
+            <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Cuenta</p>
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition">
+                <i class="ph ph-sign-out text-lg mr-3 text-red-400"></i> Cerrar Sesión
             </a>
 
 

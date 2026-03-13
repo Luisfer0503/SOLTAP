@@ -5,6 +5,8 @@ use App\Http\Controllers\CRMController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ERPController;
 
+use App\Http\Controllers\AuthController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -54,6 +56,11 @@ Route::post('/erp/guardar-nuevo-proveedor', [ERPController::class, 'guardarNuevo
 Route::post('/erp/guardar-nuevo-submaterial', [ERPController::class, 'guardarNuevoSubmaterial'])->name('guardarNuevoSubmaterial');
 
 
+// Rutas para el Módulo de Cobranza
+Route::get('/erp/cobranza', [App\Http\Controllers\ERPController::class, 'cobranza'])->name('cobranza');
+Route::get('/erp/plan-pagos/{cotizacion_id}', [App\Http\Controllers\ERPController::class, 'obtenerPlanPagos'])->name('obtenerPlanPagos');
+Route::post('/erp/registrar-pago', [App\Http\Controllers\ERPController::class, 'registrarPago'])->name('registrarPago');
+
 
 // Reportes
 Route::get('seguimientoProyectos', [ERPController::class, 'seguimientoProyectos'])->name('seguimientoProyectos');
@@ -62,6 +69,28 @@ Route::post('generarCotizacionPdf', [ERPController::class, 'generarCotizacionPdf
 Route::post('generarRemisionPdf', [ERPController::class, 'generarRemisionPdf'])->name('generarRemisionPdf');
 Route::get('/erp/obtener-cotizacion/{id}', [App\Http\Controllers\ERPController::class, 'obtenerCotizacion']);
 Route::post('guardarCotizacion', [ERPController::class, 'guardarCotizacion'])->name('guardarCotizacion');
+
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/register', [AuthController::class, 'showRegistrationForm'])->name('register');
+Route::post('/register', [AuthController::class, 'register']);
+
+
+Route::get('/users/{user}/edit', [AuthController::class, 'editUser'])->name('users.edit');
+Route::put('/users/{user}', [AuthController::class, 'updateUser'])->name('users.update');
+Route::delete('/users/{user}', [AuthController::class, 'destroyUser'])->name('users.destroy');
+
+// En tu archivo routes/web.php
+
+Route::get('/users/{user}/edit', [AuthController::class, 'editUser'])->name('users.edit');
+Route::put('/users/{user}', [AuthController::class, 'updateUser'])->name('users.update');
+Route::delete('/users/{user}', [AuthController::class, 'destroyUser'])->name('users.destroy');
+
+
+// Rutas de Administración de Usuarios
+Route::get('/usuarios', [AuthController::class, 'indexUsers'])->name('users.index');
+Route::post('/usuarios', [AuthController::class, 'storeUser'])->name('users.store');
 
 //logistica
 Route::get('logistica', [ERPController::class, 'logistica'])->name('logistica');

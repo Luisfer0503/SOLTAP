@@ -21,22 +21,6 @@
     </header>
 
     <div class="px-8 pt-6 pb-2">
-        
-        @if($urgentes > 0)
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded shadow-sm flex items-center justify-between animate-pulse">
-            <div class="flex items-center">
-                <div class="bg-red-100 p-2 rounded-full mr-4">
-                    <i class="ph ph-alarm text-2xl text-red-600"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-red-800">¡Atención requerida!</h4>
-                    <p class="text-sm text-red-700">Tienes <span class="font-bold text-lg">{{ $urgentes }}</span> cotización(es) que debe(n) entregarse mañana.</p>
-                </div>
-            </div>
-            <button class="text-sm font-bold text-red-700 underline hover:text-red-900">Ver Urgentes</button>
-        </div>
-        @endif
-
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
@@ -44,27 +28,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase font-semibold">Activos</p>
-                    <p class="text-xl font-bold text-gray-800">{{ count($proyectos->where('estatus', '!=', 'Cerrado / Ganado')) }}</p>
-                </div>
-            </div>
-            
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 mr-3">
-                    <i class="ph ph-clock-countdown text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-semibold">Pendientes Cotizar</p>
-                    <p class="text-xl font-bold text-gray-800">{{ count($proyectos->where('estatus', 'Cotización Pendiente')) }}</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-                    <i class="ph ph-currency-dollar text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 uppercase font-semibold">Ventas Mes</p>
-                    <p class="text-xl font-bold text-gray-800">$350k</p>
+                    <p class="text-xl font-bold text-gray-800">{{ count($proyectos) }}</p>
                 </div>
             </div>
         </div>
@@ -73,76 +37,103 @@
     <div class="flex-1 overflow-y-auto px-8 pb-8">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             
-            <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap gap-4 justify-between items-center">
-                <div class="relative w-full md:w-64">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
-                    <input type="text" placeholder="Buscar proyecto o cliente..." class="w-full pl-10 pr-4 py-2 rounded-lg border-gray-300 border focus:ring-blue-500 focus:border-blue-500 text-sm">
-                </div>
-                <div class="flex gap-2">
-                    <select class="text-sm border-gray-300 rounded-lg focus:ring-blue-500 text-gray-600">
-                        <option>Todos los Estatus</option>
-                        <option>Cotización Pendiente</option>
-                        <option>En Proceso</option>
-                    </select>
-                    <select class="text-sm border-gray-300 rounded-lg focus:ring-blue-500 text-gray-600">
-                        <option>Este Mes</option>
-                        <option>Próximos 7 días</option>
-                    </select>
-                </div>
-            </div>
-
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Cliente</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Avance</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha Limite Cot.</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Progreso</th>
                         <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Estatus</th>
                         <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($proyectos as $p)
-                    
-                    {{-- Lógica visual para la fila --}}
-                    @php
-                        $fecha = \Carbon\Carbon::parse($p->fecha_limite);
-                        $esUrgente = $fecha->isSameDay(\Carbon\Carbon::now()->addDay()) && $p->estatus !== 'Cerrado / Ganado';
-                        $filaClass = $esUrgente ? 'bg-red-50' : 'hover:bg-gray-50';
-                    @endphp
-
-                    <tr class="{{ $filaClass }} transition">
+                @foreach($proyectos as $p)
+                <tbody class="bg-white border-b border-gray-200" x-data="{ 
+                    expanded: false, 
+                    articles: {{ json_encode($p->articulos) }}.map(a => ({
+                        ...a, 
+                        notas: '', 
+                        fallas: '', 
+                        checks: [false, false, false] 
+                    })),
+                    projectId: {{ $p->id }},
+                    progressP: 0,
+                    progressDV: 0,
+                    progressL: 0,
+                    labels: ['P', 'DV', 'L'],
+                    init() {
+                        this.calculateProgress();
+                    },
+                    toggleRow() {
+                        this.expanded = !this.expanded;
+                    },
+                    toggleCheck(artIndex, checkIndex) {
+                        this.articles[artIndex].checks[checkIndex] = !this.articles[artIndex].checks[checkIndex];
+                        this.calculateProgress();
+                    },
+                    calculateProgress() {
+                        if (this.articles.length === 0) { this.progressP = 0; this.progressDV = 0; this.progressL = 0; return; }
+                        let total = this.articles.length;
                         
+                        this.progressP = Math.round((this.articles.reduce((acc, art) => acc + (art.checks[0] ? 1 : 0), 0) / total) * 100);
+                        this.progressDV = Math.round((this.articles.reduce((acc, art) => acc + (art.checks[1] ? 1 : 0), 0) / total) * 100);
+                        this.progressL = Math.round((this.articles.reduce((acc, art) => acc + (art.checks[2] ? 1 : 0), 0) / total) * 100);
+                    },
+                    getRowProgress(art) {
+                        let checked = art.checks.filter(Boolean).length;
+                        return Math.round((checked / 3) * 100);
+                    }
+                }">
+                        <tr class="hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer" @click="toggleRow()">
+                            
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
+                                <div class="mr-3 text-gray-400">
+                                    <i class="ph" :class="expanded ? 'ph-caret-down' : 'ph-caret-right'"></i>
+                                </div>
                                 <div class="flex-shrink-0 h-10 w-10 rounded bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                                     {{ substr($p->nombre, 0, 2) }}
                                 </div>
                                 <div class="ml-4">
                                     <div class="text-sm font-bold text-gray-900">{{ $p->nombre }}</div>
-                                    <div class="text-xs text-gray-500">{{ $p->cliente }}</div>
+                                    <div class="text-xs text-gray-500">{{ $p->cliente ?? 'Sin Cliente' }}</div>
                                 </div>
                             </div>
                         </td>
-
                         <td class="px-6 py-4 whitespace-nowrap align-middle">
-                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1 max-w-[100px]">
-                                <div class="bg-blue-600 h-1.5 rounded-full" style="width: {{ $p->progreso }}%"></div>
+                            <div class="flex flex-col space-y-1 w-40">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-blue-600 w-6">P</span>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
+                                        <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressP}%`"></div>
+                                    </div>
+                                    <span class="w-8 text-right font-bold text-gray-600" x-text="progressP + '%'"></span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-purple-600 w-6">DV</span>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
+                                        <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressDV}%`"></div>
+                                    </div>
+                                    <span class="w-8 text-right font-bold text-gray-600" x-text="progressDV + '%'"></span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-orange-600 w-6">L</span>
+                                    <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
+                                        <div class="bg-orange-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressL}%`"></div>
+                                    </div>
+                                    <span class="w-8 text-right font-bold text-gray-600" x-text="progressL + '%'"></span>
+                                </div>
                             </div>
-                            <span class="text-xs text-gray-500 mt-1 block">{{ $p->progreso }}% Completado</span>
+                            <!-- Desglose de porcentaje por artículo en la fila principal -->
+                            <div class="mt-2 flex flex-wrap gap-1 w-64">
+                                <template x-for="art in articles" :key="art.id">
+                                    <div class="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 flex items-center" 
+                                         :class="getRowProgress(art) == 100 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600'">
+                                        <span class="font-bold mr-1" x-text="(art.articulo_produccion_id || art.nombre.substring(0,3)) + ':'"></span>
+                                        <span x-text="getRowProgress(art) + '%'"></span>
+                                    </div>
+                                </template>
+                            </div>
                         </td>
-
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            @if($esUrgente)
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 animate-pulse">
-                                    <i class="ph ph-warning mr-1"></i> Mañana
-                                </span>
-                            @else
-                                <div class="text-sm text-gray-900">{{ $fecha->format('d M, Y') }}</div>
-                                <div class="text-xs text-gray-500">{{ $fecha->diffForHumans() }}</div>
-                            @endif
-                        </td>
-
                         <td class="px-6 py-4 whitespace-nowrap text-center">
                             @if($p->estatus == 'Cotización Pendiente')
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 border border-orange-200">
@@ -162,40 +153,99 @@
                                 </span>
                             @endif
                         </td>
-
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end space-x-2">
                                 
-                                @if($p->estatus == 'Cotización Pendiente')
-                                    <a href="#" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md shadow-sm text-xs flex items-center">
-                                        <i class="ph ph-calculator mr-1"></i> Cotizar
-                                    </a>
-                                @endif
-                                
-                                <a href="{{ route('detalleProyecto', $p->id) }}" class="text-gray-400 hover:text-gray-600 p-1 border border-gray-200 rounded bg-white inline-flex items-center justify-center" title="Ver Detalles">
+                                <a href="{{ route('detalleProyecto', $p->id) }}" class="text-blue-500 hover:text-blue-700 p-1 rounded bg-white inline-flex items-center justify-center" title="Ver Detalles">
                                     <i class="ph ph-eye text-lg"></i>
                                 </a>
-                                <button class="text-gray-400 hover:text-blue-600 p-1 border border-gray-200 rounded bg-white" title="Editar">
-                                    <i class="ph ph-pencil-simple text-lg"></i>
-                                </button>
                             </div>
                         </td>
-
                     </tr>
-                    @endforeach
+                    
+                    <!-- Fila de desglose de artículos -->
+                    <tr x-show="expanded" x-collapse class="bg-gray-50 border-b border-gray-200">
+                        <td colspan="4" class="p-4">
+                            <div class="pl-14">
+                                <div class="mb-2 font-bold text-gray-700 text-sm flex items-center">
+                                    <i class="ph ph-package mr-2"></i> Desglose de Artículos
+                                </div>
+
+                                <div x-show="articles.length === 0" class="text-sm text-gray-500 py-2 italic">
+                                    No hay artículos registrados para este proyecto.
+                                </div>
+
+                                <div x-show="articles.length > 0" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="bg-gray-100 text-xs text-gray-500 uppercase">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left w-1/3">Artículo</th>
+                                                <th class="px-4 py-3 text-center w-1/4">Verificación (Etapas)</th>
+                                                <th class="px-4 py-3 text-left">Observaciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <template x-for="(art, index) in articles" :key="art.id">
+                                                <tr>
+                                                    <td class="px-4 py-3 align-top">
+                                                        <div class="flex items-start gap-3">
+                                                            <div class="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 border border-gray-200 overflow-hidden flex items-center justify-center">
+                                                                <template x-if="art.imagen">
+                                                                    <img :src="art.imagen" class="w-full h-full object-cover">
+                                                                </template>
+                                                                <template x-if="!art.imagen">
+                                                                    <i class="ph ph-image text-xl text-gray-400"></i>
+                                                                </template>
+                                                            </div>
+                                                            <div>
+                                                                <div class="font-bold text-gray-800" x-text="(art.articulo_produccion_id ? art.articulo_produccion_id + ' - ' : '') + art.nombre"></div>
+                                                                <div class="text-xs text-gray-500 mb-1" x-text="art.descripcion"></div>
+                                                                <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold">Cant: <span x-text="art.cantidad"></span></span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 align-middle">
+                                                        <div class="flex flex-col items-center">
+                                                            <div class="mb-2">
+                                                                <span class="text-xs font-bold" :class="getRowProgress(art) === 100 ? 'text-green-600' : 'text-gray-600'" x-text="getRowProgress(art) + '%'"></span>
+                                                            </div>
+                                                            <div class="flex justify-center space-x-2">
+                                                            <template x-for="(check, i) in art.checks">
+                                                                <div class="flex flex-col items-center cursor-pointer group" @click="toggleCheck(index, i)">
+                                                                    <div class="w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shadow-sm mb-1"
+                                                                         :class="check ? (i===0?'bg-blue-500 border-blue-500':(i===1?'bg-purple-500 border-purple-500':'bg-orange-500 border-orange-500')) + ' text-white' : 'bg-white border-gray-300 text-gray-300 hover:border-gray-400'">
+                                                                        <i class="ph ph-check text-lg" x-show="check"></i>
+                                                                        <i class="ph ph-circle text-lg" x-show="!check"></i>
+                                                                    </div>
+                                                                    <span class="text-[10px] font-bold" :class="i===0?'text-blue-600':(i===1?'text-purple-600':'text-orange-600')" x-text="labels[i]"></span>
+                                                                </div>
+                                                            </template>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 align-top">
+                                                        <div class="space-y-2">
+                                                            <div class="relative">
+                                                                <i class="ph ph-note-pencil absolute top-2 left-2 text-gray-400 text-xs"></i>
+                                                                <input type="text" x-model="art.notas" placeholder="Agregar nota general..." class="w-full pl-7 text-xs py-1.5 rounded border-gray-300 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition">
+                                                            </div>
+                                                            <div class="relative">
+                                                                <i class="ph ph-warning absolute top-2 left-2 text-red-400 text-xs"></i>
+                                                                <input type="text" x-model="art.fallas" placeholder="Reportar falla o incidencia..." class="w-full pl-7 text-xs py-1.5 rounded border-red-200 bg-red-50 focus:ring-red-500 focus:border-red-500 text-red-800 placeholder-red-300 focus:bg-white transition">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
+                @endforeach
             </table>
-
-            <div class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between sm:px-6">
-                <div class="text-sm text-gray-700">
-                    Mostrando <span class="font-medium">1</span> a <span class="font-medium">4</span> de <span class="font-medium">12</span> proyectos
-                </div>
-                <div class="flex space-x-2">
-                    <button class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">Anterior</button>
-                    <button class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">Siguiente</button>
-                </div>
-            </div>
-
         </div>
     </div>
 

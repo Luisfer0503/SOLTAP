@@ -100,15 +100,15 @@
                         <div class="grid grid-cols-4 gap-2">
                             <div>
                                 <label class="text-[9px] text-gray-500 block">Alto (cm)</label>
-                                <input type="number" step="0.01" x-model="form.alto" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <input type="number" step="0.01" x-model="form.alto" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
                                 <label class="text-[9px] text-gray-500 block">Ancho (cm)</label>
-                                <input type="number" step="0.01" x-model="form.ancho" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <input type="number" step="0.01" x-model="form.ancho" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
                                 <label class="text-[9px] text-gray-500 block">Profundo (cm)</label>
-                                <input type="number" step="0.01" x-model="form.profundo" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <input type="number" step="0.01" x-model="form.profundo" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
                                 <label class="text-[9px] text-gray-500 block">Peso (kg)</label>
@@ -387,7 +387,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="text-xs text-gray-900">
-                                        <span x-text="item.alto"></span> x <span x-text="item.ancho"></span> x <span x-text="item.profundo"></span> m
+                                        <span x-text="item.alto"></span> x <span x-text="item.ancho"></span> x <span x-text="item.profundo"></span> cm
                                     </div>
                                     <div class="text-[10px] text-gray-500">Vol: <span x-text="item.cubicaje"></span> m³</div>
                                     <div class="text-[10px] text-gray-500">Peso: <span x-text="item.peso"></span> kg</div>
@@ -696,19 +696,19 @@
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
-                        <p class="text-[10px] text-blue-500 font-bold mb-2 uppercase">Dimensiones (Metros) y Peso (Kg)</p>
+                        <p class="text-[10px] text-blue-500 font-bold mb-2 uppercase">Dimensiones (cm) y Peso (Kg)</p>
                         <div class="grid grid-cols-4 gap-2">
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Alto (m)</label>
-                                <input type="number" step="0.01" x-model="form.alto" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <label class="text-[9px] text-gray-500 block">Alto (cm)</label>
+                                <input type="number" step="0.01" x-model="form.alto" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Ancho (m)</label>
-                                <input type="number" step="0.01" x-model="form.ancho" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <label class="text-[9px] text-gray-500 block">Ancho (cm)</label>
+                                <input type="number" step="0.01" x-model="form.ancho" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
-                                <label class="text-[9px] text-gray-500 block">Profundo (m)</label>
-                                <input type="number" step="0.01" x-model="form.profundo" @input="calcularCubicaje" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
+                                <label class="text-[9px] text-gray-500 block">Profundo (cm)</label>
+                                <input type="number" step="0.01" x-model="form.profundo" placeholder="0.00" class="w-full p-1 text-center text-xs border-gray-300 rounded">
                             </div>
                             <div>
                                 <label class="text-[9px] text-gray-500 block">Peso (kg)</label>
@@ -1023,6 +1023,12 @@
             tempTela: {
                     seleccion: ''
             },
+            
+            init() {
+                this.$watch('form.alto', () => this.calcularCubicaje());
+                this.$watch('form.ancho', () => this.calcularCubicaje());
+                this.$watch('form.profundo', () => this.calcularCubicaje());
+            },
 
             get combinacionesMadera() {
                 if (!this.db_materiales) return [];
@@ -1150,7 +1156,7 @@
                 const h = parseFloat(this.form.alto) || 0;
                 const w = parseFloat(this.form.ancho) || 0;
                 const d = parseFloat(this.form.profundo) || 0;
-                this.form.cubicaje = (h * w * d).toFixed(3);
+                this.form.cubicaje = ((h * w * d) / 1000000).toFixed(3); // cm³ a m³
             },
             
             get articulosFiltrados() {
@@ -1414,7 +1420,7 @@
                 this.form.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? [...item.cubiertas_seleccionadas] : [];
 
                 this.imagePreview = this.form.imagen || null;
-                this.form.id_articulo_produccion = ''; // Limpiar ID visible
+                // this.form.id_articulo_produccion = ''; // Comentado para mantener la info correcta al duplicar
                 delete this.form.id; // Al duplicar, quitamos el ID para que se cree uno nuevo
                 this.showModalEdicion = true;
             },
@@ -1547,6 +1553,9 @@
                     // Imagen (Base64)
                     if (item.imagen && item.imagen.startsWith('data:')) {
                         formData.append(`articulos[${index}][imagen_base64]`, item.imagen);
+                    } else if (item.imagen_ruta) {
+                        // Enviar la ruta de la imagen existente si no se cambió
+                        formData.append(`articulos[${index}][imagen_ruta]`, item.imagen_ruta);
                     }
 
                     // PDF (Archivo)

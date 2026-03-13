@@ -53,57 +53,38 @@ class ERPController extends Controller
 
       public function seguimientoProyectos()
       {
-    // Simulamos la fecha de hoy para el ejercicio
-    $hoy = \Carbon\Carbon::now();
-    
-    // MOCK DATA: En tu sistema real esto viene de BD (Modelo Proyecto::with('cliente')...)
-    $proyectos = collect([
-        (object)[
-            'id' => 101,
-            'nombre' => 'Remodelación Cocina Lomas',
-            'cliente' => 'Arq. Roberto Díaz',
-            'estatus' => 'Cotización Pendiente', // Estado crítico
-            'fecha_limite' => $hoy->copy()->addDay(), // ¡VENCE MAÑANA! (Alerta)
-            'monto_estimado' => 45000,
-            'progreso' => 20
-        ],
-        (object)[
-            'id' => 102,
-            'nombre' => 'Oficinas Coworking Centro',
-            'cliente' => 'Tech Solutions SA',
-            'estatus' => 'En Proceso',
-            'fecha_limite' => $hoy->copy()->addDays(5),
-            'monto_estimado' => 120000,
-            'progreso' => 60
-        ],
-        (object)[
-            'id' => 103,
-            'nombre' => 'Recámara Principal',
-            'cliente' => 'Ana Sofía Lopez',
-            'estatus' => 'Nuevo',
-            'fecha_limite' => $hoy->copy()->addDays(2),
-            'monto_estimado' => 0, // Aún no se sabe
-            'progreso' => 5
-        ],
-        (object)[
-            'id' => 104,
-            'nombre' => 'Lobby Hotel Grand',
-            'cliente' => 'Hotelera Internacional',
-            'estatus' => 'Cerrado / Ganado',
-            'fecha_limite' => $hoy->copy()->subDays(10),
-            'monto_estimado' => 350000,
-            'progreso' => 100
-        ],
-    ]);
+          $proyectos = DB::table('Proyectos')
+              ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+              ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+              ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+              ->select(
+                  'Proyectos.proyecto_id as id',
+                  'Proyectos.nombre',
+                  'Proyectos.estatus',
+                  'Proyectos.created_at',
+                  DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente")
+              )
+              ->orderBy('Proyectos.proyecto_id', 'desc')
+              ->get();
 
-    // Lógica para detectar urgencias (Regla: 1 día antes)
-    $urgentes = $proyectos->filter(function($p) use ($hoy) {
-        // Si no está cerrado Y la fecha es mañana
-        return $p->estatus !== 'Cerrado / Ganado' && 
-               \Carbon\Carbon::parse($p->fecha_limite)->isSameDay($hoy->copy()->addDay());
-    })->count();
+          // Eager load articles for these projects to display progress without expanding
+          $projectIds = $proyectos->pluck('id');
+          $articulos = DB::table('proyecto_articulos')
+              ->whereIn('proyecto_id', $projectIds)
+              ->select('id', 'proyecto_id', 'articulo_produccion_id', 'nombre', 'descripcion', 'cantidad', 'imagen')
+              ->get();
 
-    return view('ERP.seguimientoProyectos', compact('proyectos', 'urgentes'));
+          // Attach articles to projects
+          foreach ($proyectos as $p) {
+              $p->articulos = $articulos->where('proyecto_id', $p->id)->values()->map(function($art){
+                  if ($art->imagen) {
+                      $art->imagen = asset('storage/' . $art->imagen);
+                  }
+                  return $art;
+              });
+          }
+  
+          return view('ERP.seguimientoProyectos', compact('proyectos'));
       }
 
 
@@ -129,7 +110,8 @@ class ERPController extends Controller
                 DB::raw("COALESCE(P1.iva, P2.iva, 0) as iva_porcentaje"),
                 DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje"),
                 DB::raw("(SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) as tiene_cotizacion"),
-                DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes")
+                DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes"),
+                DB::raw("(SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) as tiene_pagos")
             )
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -211,7 +193,7 @@ class ERPController extends Controller
             // 2. Obtener artículos guardados
             $articulos = DB::table('proyecto_articulos')
                 ->where('proyecto_id', $proyecto_id)
-                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario')
+                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'cubicaje', 'peso', 'imagen')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
@@ -247,23 +229,31 @@ class ERPController extends Controller
 
             // 4. Guardar Plan de Pagos en BD (Si existen)
             if ($cotizacionId && !empty($pagos)) {
-                // Limpiar pagos previos de esta cotización para evitar duplicados
-                DB::table('plan_pagos')->where('cotizacion_id', $cotizacionId)->delete();
+                // Verificar si ya existen pagos realizados para no sobrescribir historial
+                $pagosRealizados = DB::table('plan_pagos')
+                    ->where('cotizacion_id', $cotizacionId)
+                    ->where('monto_pagado', '>', 0)
+                    ->exists();
 
-                $totalPagosPlan = count($pagos);
+                if (!$pagosRealizados) {
+                    // Limpiar pagos previos de esta cotización para evitar duplicados
+                    DB::table('plan_pagos')->where('cotizacion_id', $cotizacionId)->delete();
 
-                foreach ($pagos as $index => $pago) {
-                    DB::table('plan_pagos')->insert([
-                        'cotizacion_id' => $cotizacionId,
-                        'nombre' => $pago['nombre'],
-                        'numero_pago' => $index + 1, // 1, 2, 3...
-                        'total_pagos_plan' => $totalPagosPlan, // Total de divisiones (ej. 10)
-                        'porcentaje' => $pago['porcentaje'],
-                        'monto' => $pago['monto'],
-                        'estatus' => 'pendiente',
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
+                    $totalPagosPlan = count($pagos);
+
+                    foreach ($pagos as $index => $pago) {
+                        DB::table('plan_pagos')->insert([
+                            'cotizacion_id' => $cotizacionId,
+                            'nombre' => $pago['nombre'],
+                            'numero_pago' => $index + 1, // 1, 2, 3...
+                            'total_pagos_plan' => $totalPagosPlan, // Total de divisiones (ej. 10)
+                            'porcentaje' => $pago['porcentaje'],
+                            'monto' => $pago['monto'],
+                            'estatus' => 'pendiente',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                    }
                 }
             }
 
@@ -271,6 +261,208 @@ class ERPController extends Controller
             return $pdf->download('Remision_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cobranza()
+    {
+        // 1. Find the latest cotizacion_id for each project that has a payment plan.
+        $latestCotizacionesConPlan = DB::table('cotizaciones as c')
+            ->join('plan_pagos as pp', 'c.cotizacion_id', '=', 'pp.cotizacion_id')
+            ->select('c.proyecto_id', DB::raw('MAX(c.cotizacion_id) as cotizacion_id'))
+            ->groupBy('c.proyecto_id');
+
+        // 2. Get payment summaries for all payment plans
+        $paymentSummaries = DB::table('plan_pagos')
+            ->select(
+                'cotizacion_id',
+                DB::raw('SUM(monto_pagado) as total_pagado'),
+                DB::raw('SUM(monto) as total_plan')
+            )
+            ->groupBy('cotizacion_id');
+
+        // 3. Now, get the full project details using these cotizacion_ids and join summaries.
+        $proyectos = DB::table('Proyectos as pr')
+            ->joinSub($latestCotizacionesConPlan, 'latest_c', function ($join) {
+                $join->on('pr.proyecto_id', '=', 'latest_c.proyecto_id');
+            })
+            ->join('cotizaciones', 'latest_c.cotizacion_id', '=', 'cotizaciones.cotizacion_id')
+            ->joinSub($paymentSummaries, 'summaries', function ($join) {
+                $join->on('cotizaciones.cotizacion_id', '=', 'summaries.cotizacion_id');
+            })
+            ->leftJoin('Clientes', 'pr.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'pr.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->select(
+                'pr.proyecto_id',
+                'pr.nombre as nombre_proyecto',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                'cotizaciones.total as total_cotizacion',
+                'cotizaciones.cotizacion_id',
+                'cotizaciones.saldo_afavor',
+                'summaries.total_pagado',
+                'summaries.total_plan'
+            )
+            ->orderBy('pr.proyecto_id', 'desc')
+            ->get();
+
+        // 4. Calculate the pending balance
+        foreach ($proyectos as $proyecto) {
+            $proyecto->total_pagado = (float)($proyecto->total_pagado ?? 0);
+            $proyecto->total_plan = (float)($proyecto->total_plan ?? 0);
+            $proyecto->saldo_afavor = (float)($proyecto->saldo_afavor ?? 0);
+            $proyecto->saldo_pendiente = $proyecto->total_plan - $proyecto->total_pagado;
+        }
+
+        return view('ERP.cobranza', compact('proyectos'));
+    }
+
+    public function obtenerPlanPagos($cotizacion_id)
+    {
+        if (!$cotizacion_id || $cotizacion_id == 'undefined') {
+            return response()->json([]);
+        }
+
+        $plan = DB::table('plan_pagos')
+            ->where('cotizacion_id', $cotizacion_id)
+            ->orderBy('numero_pago', 'asc')
+            ->get();
+
+        return response()->json($plan);
+    }
+
+    public function registrarPago(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'pago_id' => 'required|exists:plan_pagos,id',
+            'monto_abono' => 'required|numeric|min:0.01',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $pagoId = $request->pago_id;
+            $montoAbono = (float) $request->monto_abono;
+            $fechaPago = now(); // La fecha es la actual del servidor
+
+            // 1. Obtener el pago inicial y la cotización asociada
+            $pagoInicial = DB::table('plan_pagos')->where('id', $pagoId)->first();
+
+            if (!$pagoInicial) {
+                return response()->json(['success' => false, 'message' => 'Pago no encontrado.'], 404);
+            }
+
+            // 2. Usar cualquier saldo a favor existente
+            $cotizacion = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+            $saldoAfavorExistente = (float)($cotizacion->saldo_afavor ?? 0);
+
+            if ($saldoAfavorExistente > 0) {
+                $montoAbono += $saldoAfavorExistente;
+                DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->update(['saldo_afavor' => 0]);
+            }
+
+            // 3. Obtener todos los pagos del plan ordenados
+            $planCompleto = DB::table('plan_pagos')
+                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
+                ->orderBy('numero_pago', 'asc')
+                ->get();
+            
+            $remanente = $montoAbono;
+            $procesar = false;
+
+            // 3. Distribuir el abono en "cascada"
+            foreach ($planCompleto as $pago) {
+                // Empezar a procesar desde el pago seleccionado en adelante
+                if ($pago->id == $pagoId) {
+                    $procesar = true;
+                }
+                if (!$procesar) continue;
+                if ($remanente <= 0) break;
+
+                $montoPendiente = (float)$pago->monto - (float)$pago->monto_pagado;
+                
+                // Si el pago ya está completo, saltar al siguiente (salvo que sea el último y sobre dinero)
+                if ($montoPendiente <= 0.001) continue;
+
+                $montoAplicar = min($remanente, $montoPendiente);
+                
+                $nuevoPagado = (float)$pago->monto_pagado + $montoAplicar;
+                $remanente -= $montoAplicar;
+                
+                // Determinar estatus
+                $esPagadoTotalmente = abs($nuevoPagado - (float)$pago->monto) < 0.01;
+                
+                DB::table('plan_pagos')
+                    ->where('id', $pago->id)
+                    ->update([
+                        'monto_pagado' => $nuevoPagado,
+                        'estatus' => $esPagadoTotalmente ? 'pagado' : 'parcial',
+                        'fecha_pago_real' => $fechaPago,
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            // 5. Si aún sobra dinero (remanente), guardarlo como saldo a favor en la cotización
+            if ($remanente > 0) {
+                DB::table('cotizaciones')
+                    ->where('cotizacion_id', $pagoInicial->cotizacion_id)
+                    ->update(['saldo_afavor' => $remanente]);
+            }
+
+            // Lógica para convertir Prospecto de CT a Cliente al realizar un pago
+            $datosProspecto = DB::table('cotizaciones')
+                ->join('Proyectos', 'cotizaciones.proyecto_id', '=', 'Proyectos.proyecto_id')
+                ->join('prospectos', 'Proyectos.prospecto_id', '=', 'prospectos.prospecto_id')
+                ->leftJoin('empresas', 'prospectos.empresa_id', '=', 'empresas.empresa_id')
+                ->where('cotizaciones.cotizacion_id', $pagoInicial->cotizacion_id)
+                ->select('Proyectos.proyecto_id', 'Proyectos.cliente_id', 'prospectos.prospecto_id', 'empresas.nombre as empresa_nombre')
+                ->first();
+
+            if ($datosProspecto && is_null($datosProspecto->cliente_id)) {
+                // Verificar si es prospecto de Casa Tapier (CT)
+                if ($datosProspecto->empresa_nombre && (stripos($datosProspecto->empresa_nombre, 'Casa Tapier') !== false || $datosProspecto->empresa_nombre == 'CT')) {
+                    
+                    // 1. Guardar en tabla Clientes
+                    $nuevoClienteId = DB::table('Clientes')->insertGetId([
+                        'prospecto_id' => $datosProspecto->prospecto_id
+                    ]);
+
+                    // 2. Actualizar Proyecto
+                    DB::table('Proyectos')
+                        ->where('proyecto_id', $datosProspecto->proyecto_id)
+                        ->update(['cliente_id' => $nuevoClienteId]);
+
+                    // 3. Actualizar Estatus del Prospecto
+                    $estatusCliente = DB::table('estatus')->where('nombre', 'Cliente')->value('estatus_id');
+                    if ($estatusCliente) {
+                        DB::table('prospectos')
+                            ->where('prospecto_id', $datosProspecto->prospecto_id)
+                            ->update([
+                                'estatus_id' => $estatusCliente,
+                                'updated_at' => now()
+                            ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            // Devolver el plan de pagos actualizado y el nuevo saldo a favor
+            $planActualizado = DB::table('plan_pagos')
+                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
+                ->orderBy('numero_pago', 'asc')
+                ->get();
+            
+            $cotizacionActualizada = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+
+            return response()->json(['success' => true, 'message' => 'Pago registrado correctamente.', 'plan' => $planActualizado, 'saldo_afavor' => (float)($cotizacionActualizada->saldo_afavor ?? 0)]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Error al registrar el pago: ' . $e->getMessage()], 500);
         }
     }
 
@@ -523,6 +715,9 @@ class ERPController extends Controller
                       $image_base64 = substr($item['imagen_base64'], strpos($item['imagen_base64'], ',') + 1);
                       $image_base64 = base64_decode($image_base64);
                       FacadeStorage::disk('public')->put($data['imagen'], $image_base64);
+                  } elseif (isset($item['imagen_ruta']) && !empty($item['imagen_ruta'])) {
+                      // Mantiene la imagen existente al duplicar o editar sin cambios
+                      $data['imagen'] = $item['imagen_ruta'];
                   }
 
                   // Manejo de PDF (Archivo real enviado por FormData)
@@ -818,6 +1013,8 @@ class ERPController extends Controller
 
               // Ajustar ruta de imagen para visualización
               if ($art->imagen) {
+                  // Guardamos la ruta relativa original para operaciones de guardado/duplicado
+                  $art->imagen_ruta = $art->imagen;
                   // Guardamos la URL completa en una propiedad temporal para el frontend
                   $art->imagen = asset('storage/' . $art->imagen);
               }

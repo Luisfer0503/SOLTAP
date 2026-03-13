@@ -311,26 +311,30 @@
         function ubicacionForm() {
             return {
                 estadoNombre: '',
-                municipio: '',
-                codigoPostal: '',
-                calle: '',
-                mapsUrl: '',
-                direccionDiferente: 'no',
-                direccionEntrega: '',
+                municipio: @json(old('Municipio', '')),
+                codigoPostal: @json(old('CodigoPostal', '')),
+                calle: @json(old('Calle', '')),
+                mapsUrl: @json(old('Maps', '')),
+                direccionDiferente: @json(old('DireccionDiferente', 'no')),
+                direccionEntrega: @json(old('DireccionEntrega', '')),
                 // guardar valor original de Maps para restaurar si el usuario deshace el cambio
                 originalMaps: '',
                 // campos de entrega (detalle)
-                direccionEstadoEntrega: '',
-                direccionMunicipioEntrega: '',
-                direccionCalleEntrega: '',
-                direccionEntregaHidden: '',
-                // Campos de entrega detallados
-                direccionEstadoEntrega: '',
-                direccionMunicipioEntrega: '',
-                direccionCalleEntrega: '',
-                direccionEntregaHidden: '',
+                direccionEstadoEntrega: @json(old('IdEstadoEntrega', '')),
+                direccionMunicipioEntrega: @json(old('MunicipioEntrega', '')),
+                direccionCalleEntrega: @json(old('CalleEntrega', '')),
+                direccionEntregaHidden: @json(old('DireccionEntrega', '')),
                 
                 init() {
+                    // Recuperar el nombre del estado si ya hay uno seleccionado (por validación fallida)
+                    const estadoSelect = document.querySelector('select[name="IdEstado"]');
+                    if (estadoSelect && estadoSelect.value) {
+                        const selectedOption = estadoSelect.options[estadoSelect.selectedIndex];
+                        if (selectedOption) {
+                            this.estadoNombre = selectedOption.getAttribute('data-nombre');
+                        }
+                    }
+
                     // guardar valor inicial de Maps (si hay alguno)
                     const mapsInput = document.querySelector('input[name="Maps"]');
                     this.originalMaps = (mapsInput && mapsInput.value) ? mapsInput.value : '';

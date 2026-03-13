@@ -37,6 +37,23 @@ class CRMController extends Controller
 
       public function guardarVendedor(Request $request)
        {
+            $messages = [
+                'nombre.required' => 'El nombre es obligatorio.',
+                'nombre.regex' => 'El nombre solo debe contener letras.',
+                'apellido_paterno.required' => 'El apellido paterno es obligatorio.',
+                'apellido_paterno.regex' => 'El apellido paterno solo debe contener letras.',
+                'apellido_materno.required' => 'El apellido materno es obligatorio.',
+                'apellido_materno.regex' => 'El apellido materno solo debe contener letras.',
+                'correo.required' => 'El correo electrónico es obligatorio.',
+                'correo.email' => 'El formato del correo no es válido.',
+                'correo.unique' => 'Este correo ya está registrado.',
+                'telefono.required' => 'El teléfono es obligatorio.',
+                'telefono.numeric' => 'El teléfono debe contener solo números.',
+                'empresa.required' => 'Debe seleccionar una empresa.',
+                'foto.required' => 'La fotografía es obligatoria.',
+                'foto.max' => 'La fotografía no debe pesar más de 3MB.',
+            ];
+            
             $request->validate([
                   'nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
                   'apellido_paterno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
@@ -45,7 +62,7 @@ class CRMController extends Controller
                   'telefono' => 'required|numeric',
                   'empresa' => 'required|exists:empresas,empresa_id',
                   'foto' => 'required|image|mimes:jpeg,png,jpg|max:3072'
-            ]);
+            ], $messages);
 
             $file = $request->file('foto');
             $filename = time() . '_' . $file->getClientOriginalName();
@@ -75,6 +92,21 @@ class CRMController extends Controller
 
         public function actualizarVendedor(Request $request, $id)
         {
+            $messages = [
+                'nombre.required' => 'El nombre es obligatorio.',
+                'nombre.regex' => 'El nombre solo debe contener letras.',
+                'apellido_paterno.required' => 'El apellido paterno es obligatorio.',
+                'apellido_paterno.regex' => 'El apellido paterno solo debe contener letras.',
+                'apellido_materno.required' => 'El apellido materno es obligatorio.',
+                'apellido_materno.regex' => 'El apellido materno solo debe contener letras.',
+                'correo.required' => 'El correo electrónico es obligatorio.',
+                'correo.email' => 'El formato del correo no es válido.',
+                'correo.unique' => 'Este correo ya está registrado por otro vendedor.',
+                'telefono.required' => 'El teléfono es obligatorio.',
+                'telefono.numeric' => 'El teléfono debe contener solo números.',
+                'empresa.required' => 'Debe seleccionar una empresa.',
+            ];
+
             $request->validate([
                 'nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\\s]+$/',
                 'apellido_paterno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\\s]+$/',
@@ -83,7 +115,7 @@ class CRMController extends Controller
                 'telefono' => 'required|numeric',
                 'empresa' => 'required|exists:empresas,empresa_id',
                 'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:6000'
-            ]);
+            ], $messages);
 
             $vendedor = DB::table('vendedores')->where('vendedor_id', $id)->first();
 
@@ -160,6 +192,31 @@ class CRMController extends Controller
 
       public function guardarProspecto(Request $request)
        {
+               $messages = [
+                  'Nombre.required' => 'El nombre es obligatorio.',
+                  'Nombre.regex' => 'El nombre solo debe contener letras.',
+                  'ApellidoPat.required' => 'El apellido paterno es obligatorio.',
+                  'ApellidoPat.regex' => 'El apellido paterno solo debe contener letras.',
+                  'ApellidoMat.required' => 'El apellido materno es obligatorio.',
+                  'ApellidoMat.regex' => 'El apellido materno solo debe contener letras.',
+                  'Correo.required' => 'El correo es obligatorio.',
+                  'Correo.email' => 'Ingrese un correo electrónico válido.',
+                  'Correo.unique' => 'Este correo ya está registrado.',
+                  'Telefono.required' => 'El teléfono es obligatorio.',
+                  'Telefono.numeric' => 'El teléfono debe ser numérico.',
+                  'IdEstado.required' => 'Seleccione un estado.',
+                  'Municipio.required' => 'El municipio es obligatorio.',
+                  'CodigoPostal.required' => 'El código postal es obligatorio.',
+                  'CodigoPostal.numeric' => 'El código postal debe ser numérico.',
+                  'Calle.required' => 'La calle es obligatoria.',
+                  'DireccionEntrega.required_if' => 'La dirección de entrega es obligatoria si indicó que es diferente.',
+                  'Fecha.required' => 'La fecha es obligatoria.',
+                  'Hora.required' => 'La hora es obligatoria.',
+                  'IdEmpresa.required' => 'Seleccione una empresa.',
+                  'IvaPorcentaje.required_if' => 'El porcentaje de IVA es requerido si marcó "Tiene IVA".',
+                  'DescuentoPorcentaje.required_if' => 'El porcentaje de descuento es requerido si marcó "Tiene Descuento".',
+               ];
+
                $request->validate([
                   'Nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
                   'ApellidoPat' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
@@ -184,7 +241,7 @@ class CRMController extends Controller
                   'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
                   'TieneDescuento' => 'nullable|in:si,no',
                   'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
-            ]);
+            ], $messages);
 
             DB::beginTransaction();
             try {
@@ -460,6 +517,28 @@ class CRMController extends Controller
 
       public function actualizarProspecto(Request $request, $id)
       {
+            $messages = [
+                  'Nombre.required' => 'El nombre es obligatorio.',
+                  'Nombre.regex' => 'El nombre solo debe contener letras.',
+                  'ApellidoPat.required' => 'El apellido paterno es obligatorio.',
+                  'ApellidoPat.regex' => 'El apellido paterno solo debe contener letras.',
+                  'ApellidoMat.required' => 'El apellido materno es obligatorio.',
+                  'ApellidoMat.regex' => 'El apellido materno solo debe contener letras.',
+                  'Correo.required' => 'El correo es obligatorio.',
+                  'Correo.email' => 'Ingrese un correo electrónico válido.',
+                  'Correo.unique' => 'Este correo ya está registrado por otro prospecto.',
+                  'Telefono.required' => 'El teléfono es obligatorio.',
+                  'Telefono.numeric' => 'El teléfono debe ser numérico.',
+                  'IdEstado.required' => 'Seleccione un estado.',
+                  'Municipio.required' => 'El municipio es obligatorio.',
+                  'CodigoPostal.required' => 'El código postal es obligatorio.',
+                  'Calle.required' => 'La calle es obligatoria.',
+                  'DireccionEntrega.required_if' => 'La dirección de entrega es obligatoria si indicó que es diferente.',
+                  'IdEmpresa.required' => 'Seleccione una empresa.',
+                  'IvaPorcentaje.required_if' => 'El porcentaje de IVA es requerido si marcó "Tiene IVA".',
+                  'DescuentoPorcentaje.required_if' => 'El porcentaje de descuento es requerido si marcó "Tiene Descuento".',
+            ];
+
             $request->validate([
                   'Nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
                   'ApellidoPat' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
@@ -482,7 +561,7 @@ class CRMController extends Controller
                   'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
                   'TieneDescuento' => 'nullable|in:si,no',
                   'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
-            ]);
+            ], $messages);
 
             $data = [
                 'nombre' => $request->Nombre,

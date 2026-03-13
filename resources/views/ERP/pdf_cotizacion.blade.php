@@ -1,273 +1,459 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Cotización #{{ str_pad($cotizacionId, 6, '0', STR_PAD_LEFT) }}</title>
-    <style>
-        @page { 
-            size: A4 landscape; 
-            margin: 1cm; 
-        }
-        
-        body { 
-            font-family: sans-serif; 
-            font-size: 11px; 
-            color: #333; 
-            line-height: 1.3; 
-        }
-        
-        /* Estructura */
-        .w-full { width: 100%; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-        .text-xs { font-size: 9px; color: #666; }
-        
-        /* Encabezado */
-        .header-table { 
-            width: 100%; 
-            border-bottom: 2px solid #2d3748; 
-            padding-bottom: 10px; 
-            margin-bottom: 20px; 
-        }
-        .company-name { 
-            font-size: 24px; 
-            font-weight: bold; 
-            color: #1a202c; 
-            text-transform: uppercase; 
-        }
-        .doc-title { 
-            font-size: 20px; 
-            color: #4a5568; 
-            font-weight: bold; 
-        }
-        
-        /* Cajas de Información */
-        .info-container {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        .info-box { 
-            background-color: #f7fafc; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 5px; 
-            padding: 10px; 
-            vertical-align: top;
-        }
-        .info-title { 
-            font-weight: bold; 
-            color: #2d3748; 
-            font-size: 11px; 
-            border-bottom: 1px solid #cbd5e0; 
-            padding-bottom: 4px; 
-            margin-bottom: 6px; 
-            text-transform: uppercase;
-        }
-        .info-row { margin-bottom: 3px; }
-        .label { font-weight: bold; color: #718096; margin-right: 5px; }
-        
-        /* Tabla de Artículos */
-        .items-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 20px; 
-        }
-        .items-table th { 
-            background-color: #2d3748; 
-            color: white; 
-            padding: 8px; 
-            text-align: left; 
-            font-size: 10px; 
-            text-transform: uppercase; 
-        }
-        .items-table td { 
-            border-bottom: 1px solid #e2e8f0; 
-            padding: 8px; 
-            vertical-align: middle; 
-        }
-        .items-table tr:nth-child(even) { background-color: #f8fafc; }
-        
-        /* Imágenes */
-        .product-img { 
-            width: 50px; 
-            height: 50px; 
-            object-fit: contain; 
-            border: 1px solid #e2e8f0; 
-            background: white; 
-            padding: 2px; 
-            border-radius: 3px; 
-        }
-        
-        /* Totales */
-        .totals-table { 
-            width: 300px; 
-            margin-left: auto; 
-            border-collapse: collapse; 
-        }
-        .totals-table td { padding: 5px 10px; }
-        .totals-table .t-label { text-align: right; font-weight: bold; color: #4a5568; }
-        .totals-table .t-amount { text-align: right; font-weight: bold; color: #2d3748; }
-        .total-final td { 
-            border-top: 2px solid #2d3748; 
-            font-size: 14px; 
-            background-color: #edf2f7; 
-            padding: 10px; 
-        }
-        
-        /* Footer */
-        .footer { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            text-align: center; 
-            font-size: 9px; 
-            color: #a0aec0; 
-            border-top: 1px solid #e2e8f0; 
-            padding-top: 10px; 
-        }
-    </style>
+<meta charset="UTF-8">
+
+<style>
+
+@page{
+margin: 1cm 1cm 3cm 1cm;
+}
+
+body{
+font-family: DejaVu Sans, Arial, sans-serif;
+font-size:11px;
+}
+
+/* HEADER */
+
+.header{
+text-align:center;
+}
+
+.header h1{
+font-size:16px;
+margin:0;
+}
+
+.header p{
+margin:2px;
+font-size:10px;
+}
+
+/* CLIENTE */
+
+.info{
+margin-top:10px;
+}
+
+.info table{
+width:100%;
+}
+
+.info td{
+padding:3px;
+}
+
+/* TABLA PRODUCTOS */
+
+.tabla{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+.tabla th{
+background-color: #e6e6e6;
+border:1px solid #000;
+padding:6px;
+font-size:10px;
+text-transform: uppercase;
+}
+
+.tabla td{
+border:1px solid #000;
+padding:6px;
+}
+
+thead{
+display:table-header-group;
+}
+
+tr{
+page-break-inside: avoid;
+}
+
+/* IMAGEN */
+
+.img{
+width:60px;
+height:60px;
+object-fit:contain;
+}
+
+/* TOTALES */
+
+.totalesGeneral{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+.totalesGeneral td{
+border:1px solid black;
+}
+
+.azul{
+color:blue;
+font-weight:bold;
+text-align:center;
+}
+
+.total{
+font-weight:bold;
+}
+
+.footer{
+margin-top:20px;
+font-size:10px;
+text-align:center;
+}
+
+.page-footer {
+    position: fixed;
+    bottom: -2.5cm;
+    left: 0px;
+    right: 0px;
+    height: 2.5cm;
+    text-align: center;
+    font-size: 10px;
+}
+</style>
+
 </head>
+
 <body>
 
-    <!-- Encabezado -->
-    <table class="header-table">
-        <tr>
-            <td width="60%" valign="bottom">
-                <!-- Puedes descomentar esto si tienes un logo en public/logo.png -->
-                <!-- <img src="{{ public_path('logo.png') }}" style="height: 40px; margin-bottom: 5px;"> -->
-                <div class="company-name">CASA TAPIER</div>
-                <div class="text-xs">Soluciones en Mobiliario y Diseño</div>
-            </td>
-            <td width="40%" valign="bottom" class="text-right">
-                <div class="doc-title">COTIZACIÓN</div>
-                <div style="color: #718096;">
-                    <strong>Folio:</strong> #{{ str_pad($cotizacionId, 6, '0', STR_PAD_LEFT) }}<br>
-                    <strong>Fecha:</strong> {{ date('d/m/Y') }}
-                </div>
-            </td>
-        </tr>
-    </table>
+<div class="page-footer">
+    <p style="margin:2px;">
+        Av. Ayuntamiento #68 Col. Manantiales San Pedro Cholula Pue. C.P. 72757
+    </p>
+    <p style="margin:2px;">
+        Tel: (221) 652 6360 / ventastapier@gmail.com
+    </p>
+</div>
 
-    <!-- Información Cliente y Proyecto -->
-    <table class="info-container" cellspacing="0" cellpadding="0">
-        <tr>
-            <td width="49%">
-                <div class="info-box">
-                    <div class="info-title">Información del Cliente</div>
-                    <div class="info-row"><span class="label">Cliente:</span> {{ $proyecto['cliente_nombre'] }}</div>
-                    <div class="info-row"><span class="label">Teléfono:</span> {{ $proyecto['telefono'] }}</div>
-                    <div class="info-row"><span class="label">Correo:</span> {{ $proyecto['correo'] }}</div>
-                    <div class="info-row"><span class="label">Dirección:</span> {{ $proyecto['direccion'] }}</div>
-                </div>
-            </td>
-            <td width="2%"></td>
-            <td width="49%">
-                <div class="info-box">
-                    <div class="info-title">Detalles del Proyecto</div>
-                    <div class="info-row"><span class="label">Proyecto:</span> {{ $proyecto['nombre_proyecto'] }}</div>
-                    <div class="info-row"><span class="label">ID Proyecto:</span> #{{ $proyecto['proyecto_id'] }}</div>
-                    <div class="info-row"><span class="label">Vendedor:</span> {{ $proyecto['vendedor_nombre'] }}</div>
-                    <div class="info-row"><span class="label">Validez:</span> 15 días hábiles</div>
-                </div>
-            </td>
-        </tr>
-    </table>
+<div class="header">
 
-    <!-- Tabla de Artículos -->
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th width="5%" class="text-center">#</th>
-                <th width="8%" class="text-center">Imagen</th>
-                <th width="12%">Diferenciador</th>
-                <th width="35%">Descripción del Artículo</th>
-                <th width="15%">Dimensiones</th>
-                <th width="5%" class="text-center">Cant.</th>
-                <th width="10%" class="text-right">Precio Unit.</th>
-                <th width="10%" class="text-right">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($articulos as $index => $item)
-            <tr>
-                <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">
-                    @php
-                        $imagePath = null;
-                        if (!empty($item['imagen'])) {
-                            // La imagen viene como URL completa (http://...), necesitamos la ruta local
-                            // Buscamos la parte que empieza con 'storage/'
-                            if (preg_match('/storage\/.*$/', $item['imagen'], $matches)) {
-                                $localPath = public_path($matches[0]);
-                                if (file_exists($localPath)) {
-                                    $imagePath = $localPath;
-                                }
-                            }
-                        }
-                    @endphp
-                    
-                    @if($imagePath)
-                        <img src="{{ $imagePath }}" class="product-img">
-                    @else
-                        <div style="color: #ccc; font-size: 9px; padding: 10px;">Sin img</div>
-                    @endif
-                </td>
-                <td>
-                    <div class="font-bold">{{ $item['id_articulo_produccion'] ?? 'N/A' }}</div>
-                </td>
-                <td>
-                    <div class="font-bold" style="font-size: 12px;">{{ $item['nombre'] }}</div>
-                    <div class="text-xs" style="margin-top: 2px;">{{ $item['descripcion'] }}</div>
-                </td>
-                <td>
-                    <div style="font-size: 10px;">
-                        <strong>Dim:</strong> {{ $item['alto'] }} x {{ $item['ancho'] }} x {{ $item['profundo'] }} m
-                    </div>
-                </td>
-                <td class="text-center font-bold" style="font-size: 12px;">{{ $item['cantidad'] }}</td>
-                <td class="text-right">${{ number_format($item['precio_unitario'], 2) }}</td>
-                <td class="text-right font-bold">${{ number_format($item['cantidad'] * $item['precio_unitario'], 2) }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+<h1>HOJA DE COTIZACIÓN CASA TAPIER</h1>
 
-    <!-- Totales -->
-    <table class="totals-table">
-        <tr>
-            <td class="t-label">Subtotal Artículos:</td>
-            <td class="t-amount">${{ number_format($totales['subtotal_articulos'], 2) }}</td>
-        </tr>
-        @if($totales['descuento'] > 0)
-        <tr>
-            <td class="t-label" style="color: #e53e3e;">Descuento:</td>
-            <td class="t-amount" style="color: #e53e3e;">- ${{ number_format($totales['descuento'], 2) }}</td>
-        </tr>
-        @endif
-        <tr>
-            <td class="t-label">Envío:</td>
-            <td class="t-amount">${{ number_format($totales['envio'], 2) }}</td>
-        </tr>
-        <tr>
-            <td class="t-label">Subtotal:</td>
-            <td class="t-amount">${{ number_format($totales['subtotal'], 2) }}</td>
-        </tr>
-        <tr>
-            <td class="t-label">IVA:</td>
-            <td class="t-amount">${{ number_format($totales['iva'], 2) }}</td>
-        </tr>
-        <tr class="total-final">
-            <td class="t-label">TOTAL A PAGAR:</td>
-            <td class="t-amount">${{ number_format($totales['total'], 2) }}</td>
-        </tr>
-    </table>
 
-    <!-- Footer -->
-    <div class="footer">
-        <p>Precios sujetos a cambio sin previo aviso. Tiempo de entrega a confirmar al momento del pedido.</p>
-        <p>Casa Tapier • Cotización generada automáticamente</p>
-    </div>
+<img src="{{ public_path('archivos/logo.png') }}" alt="Logo" style="width: 150px; margin-bottom: 5px;">
+
+</div>
+
+
+<div class="info">
+
+<table>
+
+<tr>
+<td><b>Nombre:</b> {{ $proyecto['cliente_nombre'] }}</td>
+<td><b>Fecha:</b> {{ date('d/m/Y') }}</td>
+</tr>
+
+<tr>
+<td><b>Teléfono:</b> {{ $proyecto['telefono'] }}</td>
+<td><b>Correo:</b> {{ $proyecto['correo'] }}</td>
+</tr>
+
+<tr>
+<td colspan="2">
+<b>Dirección:</b> {{ $proyecto['direccion'] }}
+</td>
+</tr>
+
+</table>
+
+</div>
+
+<center>
+<p style="margin-top:10px;font-size:10px;">
+ESTIMADO CLIENTE, A CONTINUACIÓN LE PRESENTAMOS LA COTIZACIÓN DE LOS PRODUCTOS SOLICITADOS A NUESTRO EQUIPO DE DISEÑO ESPERANDO SU PRONTA RESPUESTA.
+</p>
+</center>
+
+
+<table class="tabla">
+
+<thead>
+
+<tr>
+
+<th width="6%">Cant.</th>
+
+<th width="55%">
+Descripción del artículo. (Dimensiones en cm.  ↔↕↗)
+</th>
+
+<th width="15%">
+Imagen (Referencia)
+</th>
+
+<th width="12%">
+Precio Unitario
+</th>
+
+<th width="12%">
+Total
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+@php
+
+$totalCubicaje = 0;
+$totalPeso = 0;
+$totalArticulos = 0;
+
+@endphp
+
+@foreach($articulos as $item)
+
+@php
+
+$cubicaje = (float)$item['cubicaje'] * (float)$item['cantidad'];
+$peso = (float)$item['peso'] * (float)$item['cantidad'];
+
+$totalCubicaje += $cubicaje;
+$totalPeso += $peso;
+$totalArticulos += $item['cantidad'];
+
+@endphp
+
+<tr>
+
+<td align="center">
+{{ $item['cantidad'] }}
+</td>
+
+<td>
+
+<b>{{ $item['nombre'] }}</b>
+
+<br>
+
+<div style="font-size:9px;font-weight:bold;">
+
+{{ $item['alto'] }} x {{ $item['ancho'] }} x {{ $item['profundo'] }} cm
+
+&nbsp;&nbsp;&nbsp;
+
+{{ $item['cubicaje'] }} - {{ number_format($cubicaje,2) }}
+
+&nbsp;&nbsp;&nbsp;
+
+{{ $item['peso'] }} - {{ number_format($peso,2) }}
+
+</div>
+
+{{ $item['descripcion'] }}
+
+</td>
+
+<td align="center">
+
+@php
+
+$imagePath=null;
+
+if(!empty($item['imagen'])){
+if(preg_match('/storage\/.*$/',$item['imagen'],$m)){
+$local=public_path($m[0]);
+if(file_exists($local)){
+$imagePath=$local;
+}
+}
+}
+
+@endphp
+
+@if($imagePath)
+
+<img src="{{ $imagePath }}" class="img">
+
+@endif
+
+</td>
+
+<td align="right">
+
+$ {{ number_format($item['precio_unitario'],2) }}
+
+</td>
+
+<td align="right">
+
+$ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
+
+</td>
+
+</tr>
+
+@endforeach
+
+</tbody>
+
+</table>
+
+
+
+<!-- TOTALES -->
+
+<table class="totalesGeneral">
+
+<tr>
+
+<!-- COLUMNA IZQUIERDA -->
+
+<td width="55%">
+
+<table style="width:100%;border-collapse:collapse;">
+
+<tr>
+
+<td class="azul">
+
+{{ number_format($totalCubicaje,1) }}
+
+</td>
+
+<td class="azul">
+
+{{ number_format($totalPeso,0) }}
+
+</td>
+
+</tr>
+
+<tr>
+
+<td colspan="2" style="height:60px;"></td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:center;font-weight:bold;">
+{{ $totalArticulos }}
+</td>
+
+<td style="font-weight:bold;">
+ARTICULOS COTIZADOS
+</td>
+
+</tr>
+
+</table>
+
+</td>
+
+
+<!-- COLUMNA DERECHA -->
+
+<td width="45%">
+
+<table style="width:100%;border-collapse:collapse;">
+
+<tr>
+
+<td class="total">
+SUBTOTAL PRODUCTOS:
+</td>
+
+<td align="right">
+$ {{ number_format($totales['subtotal_articulos'],2) }}
+</td>
+
+</tr>
+
+@if(isset($totales['descuento']) && $totales['descuento'] > 0)
+<tr>
+
+<td class="total">
+ENVIO:
+</td>
+
+<td align="right">
+$ {{ number_format($totales['envio'],2) }}
+</td>
+
+</tr>
+
+<tr>
+
+<td class="total">
+DESCUENTO
+</td>
+
+<td align="right">
+$ {{ number_format($totales['descuento'],2) }}
+</td>
+
+</tr>
+
+<tr>
+
+<td class="total">
+SUBTOTAL:
+</td>
+
+<td align="right">
+$ {{ number_format($totales['subtotal'],2) }}
+</td>
+
+</tr>
+@endif
+
+<tr>
+
+<td class="total">
+IVA ({{ isset($totales['iva_porcentaje']) ? $totales['iva_porcentaje'] : 16 }}%)
+</td>
+
+<td align="right">
+$ {{ number_format($totales['iva'],2) }}
+</td>
+
+</tr>
+
+<tr>
+
+<td class="total">
+TOTAL A PAGAR:
+</td>
+
+<td align="right" class="total">
+$ {{ number_format($totales['total'],2) }}
+</td>
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+
+</table>
+
+
+
+<div class="footer">
+
+<p>
+AGRADECEMOS SU ATENCIÓN QUEDANDO A SU ENTERO SERVICIO.
+</p>
+
+<p>
+A CONTINUACIÓN DESCRIBIMOS LAS CONDICIONES DE COMPRA Y GARANTÍA DE NUESTROS PRODUCTOS.
+</p>
+
+</div>
 
 </body>
 </html>
