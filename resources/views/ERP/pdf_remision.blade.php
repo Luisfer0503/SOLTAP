@@ -11,38 +11,51 @@ margin: 1cm 1cm 3cm 1cm;
 
 body{
 font-family: DejaVu Sans, Arial, sans-serif;
-font-size:11px;
-margin: 0;
+font-size:10px;
+color:#000;
 }
 
 /* HEADER */
 
 .header{
 text-align:center;
+margin-bottom:5px;
 }
 
 .header h1{
-font-size:16px;
+font-size:10px;
 margin:0;
 }
 
-.header p{
-margin:2px;
-font-size:10px;
+.logo{
+width:180px;
+margin:1cm 0 5px 0;
 }
 
-/* CLIENTE */
+/* DATOS CLIENTE */
 
-.info{
-margin-top:10px;
-}
-
-.info table{
+.datos{
 width:100%;
+border-collapse:collapse;
+margin-top:5px;
+border-top:1px solid #000;
 }
 
-.info td{
-padding:3px;
+.datos td{
+border-bottom:1px solid #000;
+padding:4px;
+}
+
+.datos b{
+font-weight:bold;
+}
+
+/* MENSAJE */
+
+.mensaje{
+text-align:center;
+font-size:10px;
+margin:0.5cm 0;
 }
 
 /* TABLA PRODUCTOS */
@@ -50,52 +63,44 @@ padding:3px;
 .tabla{
 width:100%;
 border-collapse:collapse;
-margin-top:10px;
 }
 
 .tabla th{
-background-color: #e6e6e6;
 border:1px solid #000;
-padding:6px;
-font-size:10px;
-text-transform: uppercase;
+background:#e6e6e6;
+padding:5px;
+font-size:9px;
 }
 
 .tabla td{
 border:1px solid #000;
-padding:6px;
+padding:5px;
+font-size:9px;
+vertical-align:top;
 }
-
-thead{
-display:table-header-group;
-}
-
-tr{
-page-break-inside: avoid;
-}
-
-/* IMAGEN */
 
 .img{
-width:60px;
+width:70px;
 height:60px;
 object-fit:contain;
 }
 
-/* TOTALES */
+/* BLOQUE INFERIOR */
 
-.totalesGeneral{
+.resumen{
 width:100%;
 border-collapse:collapse;
-margin-top:10px;
+margin-top:5px;
 }
 
-.totalesGeneral td{
-border:1px solid black;
+.resumen td{
+border:1px solid #000;
+padding:5px;
+font-size:10px;
 }
 
 .azul{
-color:blue;
+color:#1b3fbf;
 font-weight:bold;
 text-align:center;
 }
@@ -105,78 +110,103 @@ font-weight:bold;
 }
 
 .footer{
-margin-top:20px;
-font-size:10px;
 text-align:center;
+margin-top:15px;
+font-size:10px;
 }
 
-.page-footer {
-    position: fixed;
-    bottom: -2.5cm;
-    left: 0px;
-    right: 0px;
-    height: 2.5cm;
-    text-align: center;
-    font-size: 10px;
+/* FOOTER FIJO */
+
+.page-footer{
+position:fixed;
+bottom:-2cm;
+left:0;
+right:0;
+text-align:center;
+font-size:10px;
 }
+.header{
+text-align:center;
+margin-bottom:5px;
+}
+
 </style>
-
 </head>
 
 <body>
 
-<div class="page-footer">
-    <p style="margin:2px;">
-        Av. Ayuntamiento #68 Col. Manantiales San Pedro Cholula Pue. C.P. 72757
-    </p>
-    <p style="margin:2px;">
-        Tel: (221) 652 6360 / ventastapier@gmail.com
-    </p>
+<div class="header">
+
+<h1>REMISION DE VENTA CASA TAPIER</h1>
+
 </div>
 
-<table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">
     <tr>
-        <!-- Espacio para el logo -->
-        <td style="width: 30%; vertical-align: top;">
-             <img src="{{ public_path('archivos/logo.png') }}" alt="Logo" style="width: 150px;"> 
+        <!-- 5% Espacio (Columna Cant.) -->
+        <td width="5%"></td>
+
+        <!-- 55% Logo (Columna Desc.) -->
+        <td width="55%" align="center" style="vertical-align: middle;">
+            <img src="{{ public_path('archivos/logo.png') }}" style="width:180px;">
         </td>
 
-        <!-- Información de la empresa -->
-        <td style="width: 40%; text-align: center; vertical-align: top;">
-            <h1 style="font-size:16px; margin:0;">REMISIÓN DE VENTA CASA TAPIER</h1>
-        </td>
-
-        <!-- Información de la remisión -->
-        <td style="width: 30%; text-align: right; vertical-align: top; font-size: 11px;">
-            <b>NO. DE REMISIÓN DE VENTA:</b> {{ $cotizacionId }}<br><br>
-            <b>NO. CLIENTE:</b> {{ $proyecto['proyecto_id'] }}
+        <!-- 40% Datos (Columna Precio + Total) -->
+        <td width="40%" style="vertical-align: middle;">
+            <div style="width: 100%; border: 1px solid #000;">
+                <!-- REMISION LABEL (NEGRO) -->
+                <div style="background-color: #000; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
+                    NO. DE REMISIÓN DE VENTA
+                </div>
+                <!-- NUMERO REMISION (BLANCO) -->
+                <div style="background-color: #fff; color: #000; text-align: center; font-weight: bold; padding: 5px; font-size: 12px;">
+                    {{ $cotizacionId }}
+                </div>
+                <!-- NUMERO CLIENTE (NEGRO) -->
+                <div style="background-color: #000; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px; border-top: 1px solid #000;">
+                </div>
+            </div>
         </td>
     </tr>
 </table>
 
-<div class="info">
-<table>
+
+<table class="datos">
+
 <tr>
-<td><b>Nombre:</b> {{ $proyecto['cliente_nombre'] }}</td>
-<td><b>Fecha:</b> {{ date('d/m/Y') }}</td>
+<td width="50%"><b>Nombre:</b> {{ $proyecto['cliente_nombre'] }}</td>
+<td width="50%"><b>Fecha:</b> {{ date('d/m/Y') }}</td>
 </tr>
+<tr>
+    <td colspan="2"><b>RFC:</b> {{ $rfc ?? '' }}</td>
+</tr>
+
 <tr>
 <td><b>Teléfono:</b> {{ $proyecto['telefono'] }}</td>
 <td><b>Correo:</b> {{ $proyecto['correo'] }}</td>
 </tr>
+
 <tr>
-<td colspan="2">
-<b>Dirección:</b> {{ $proyecto['direccion'] }}
-</td>
+<td colspan="2"><b>Dirección:</b> {{ $proyecto['direccion'] }}</td>
 </tr>
+
+<tr>
+    <td colspan="2">
+        @if(!empty($condiciones))
+            <b>Condiciones:</b> {{ $condiciones }}
+        @elseif(!empty($pagos) && count($pagos) > 0)
+            <b>Condiciones:</b> A {{ count($pagos) }} pagos.
+        @endif
+    </td>
+</tr>
+
 </table>
+
+
+<div class="mensaje">
+A CONTINUACIÓN SE MUESTRA LA DESCRIPCIÓN DE LOS ARTÍCULOS ADQUIRIDOS.
 </div>
 
-<center>
-<p style="margin-top:10px;font-size:10px;">
-A CONTINUACIÓN SE MUESTRA LA DESCRIPCIÓN DE PRODUCTOS ADQUIRIDOS.</p>
-</p>
-</center>
 
 
 <table class="tabla">
@@ -184,47 +214,17 @@ A CONTINUACIÓN SE MUESTRA LA DESCRIPCIÓN DE PRODUCTOS ADQUIRIDOS.</p>
 <thead>
 
 <tr>
-
-<th width="6%">Cant.</th>
-
-<th width="70%">
-Descripción del artículo. (Dimensiones en cm.  ↔↕↗)
-</th>
-
-<th width="12%">
-Precio Unitario
-</th>
-
-<th width="12%">
-Total
-</th>
-
+<th width="5%">Cant.</th>
+<th width="55%">Descripción del artículo (Dimensiones en cm. ↔↕↗)</th>
+<th width="20%">Precio Unitario</th>
+<th width="20%">Total</th>
 </tr>
 
 </thead>
 
 <tbody>
 
-@php
-
-$totalCubicaje = 0;
-$totalPeso = 0;
-$totalArticulos = 0;
-
-@endphp
-
 @foreach($articulos as $item)
-
-@php
-
-$cubicaje = (float)$item['cubicaje'] * (float)$item['cantidad'];
-$peso = (float)$item['peso'] * (float)$item['cantidad'];
-
-$totalCubicaje += $cubicaje;
-$totalPeso += $peso;
-$totalArticulos += $item['cantidad'];
-
-@endphp
 
 <tr>
 
@@ -238,34 +238,28 @@ $totalArticulos += $item['cantidad'];
 
 <br>
 
-<div style="font-size:9px;font-weight:bold;">
-
-{{ $item['alto'] }} x {{ $item['ancho'] }} x {{ $item['profundo'] }} cm
-
-&nbsp;&nbsp;&nbsp;
-
-{{ $item['cubicaje'] }} - {{ number_format($cubicaje,2) }}
-
-&nbsp;&nbsp;&nbsp;
-
-{{ $item['peso'] }} - {{ number_format($peso,2) }}
-
+<div style="width:100%;">
+<span style="float:left;">
+{{ 0 + number_format((float)$item['alto'], 2, '.', '') }} x {{ 0 + number_format((float)$item['ancho'], 2, '.', '') }} x {{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}
+</span>
+<span style="float:right; color:#1b3fbf; font-weight:bold;">
+{{ 0 + number_format((float)$item['cubicaje'], 2, '.', '') }} - {{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 2, '.', '') }}
+</span>
 </div>
+<div style="clear:both;"></div>
+
+<br>
 
 {{ $item['descripcion'] }}
 
 </td>
 
 <td align="right">
-
 $ {{ number_format($item['precio_unitario'],2) }}
-
 </td>
 
 <td align="right">
-
 $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
-
 </td>
 
 </tr>
@@ -278,50 +272,30 @@ $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
 
 
 
-<!-- TOTALES -->
-
-<table class="totalesGeneral">
+<table class="resumen">
 
 <tr>
 
-<!-- COLUMNA IZQUIERDA -->
-
-<td width="55%">
+<td width="60%">
 
 <table style="width:100%;border-collapse:collapse;">
 
 <tr>
-
-<td class="azul">
-
-{{ number_format($totalCubicaje,1) }}
-
-</td>
-
-<td class="azul">
-
-{{ number_format($totalPeso,0) }}
-
-</td>
-
+<td class="azul" colspan="2" style="text-align:right;">{{ number_format($totales['cubicaje'] ?? 0, 1) }} - {{ number_format($totales['peso'] ?? 0, 1) }}</td>
 </tr>
 
 <tr>
-
-<td colspan="2" style="height:60px;"></td>
-
+<td colspan="2" style="height:90px;"></td>
 </tr>
 
 <tr>
-
 <td style="text-align:center;font-weight:bold;">
-{{ $totalArticulos }}
+{{ $totales['articulos'] ?? 0 }}
 </td>
 
 <td style="font-weight:bold;">
-ARTICULOS COTIZADOS
+ARTÍCULOS COTIZADOS
 </td>
-
 </tr>
 
 </table>
@@ -329,84 +303,40 @@ ARTICULOS COTIZADOS
 </td>
 
 
-<!-- COLUMNA DERECHA -->
-
-<td width="45%">
+<td width="40%">
 
 <table style="width:100%;border-collapse:collapse;">
 
 <tr>
+<td class="total">SUBTOTAL PRODUCTOS:</td>
+<td align="right">$ {{ number_format($totales['subtotal_articulos'],2) }}</td>
+</tr>
 
-<td class="total">
-SUBTOTAL PRODUCTOS:
-</td>
-
-<td align="right">
-$ {{ number_format($totales['subtotal_articulos'],2) }}
-</td>
-
+<tr>
+<td class="total">ENVÍO:</td>
+<td align="right">$ {{ number_format($totales['envio'],2) }}</td>
 </tr>
 
 @if(isset($totales['descuento']) && $totales['descuento'] > 0)
 <tr>
-
-<td class="total">
-ENVIO:
-</td>
-
-<td align="right">
-$ {{ number_format($totales['envio'],2) }}
-</td>
-
-</tr>
-
-<tr>
-
-<td class="total">
-DESCUENTO
-</td>
-
-<td align="right">
-$ {{ number_format($totales['descuento'],2) }}
-</td>
-
-</tr>
-
-<tr>
-
-<td class="total">
-SUBTOTAL:
-</td>
-
-<td align="right">
-$ {{ number_format($totales['subtotal'],2) }}
-</td>
-
+<td class="total">DESCUENTO:</td>
+<td align="right">$ {{ number_format($totales['descuento'],2) }}</td>
 </tr>
 @endif
 
 <tr>
-
-<td class="total">
-IVA ({{ isset($totales['iva_porcentaje']) ? $totales['iva_porcentaje'] :0}}%)
-</td>
-
-<td align="right">
-$ {{ number_format($totales['iva'],2) }}
-</td>
-
+<td class="total">SUBTOTAL:</td>
+<td align="right">$ {{ number_format($totales['subtotal'],2) }}</td>
 </tr>
 
 <tr>
+<td class="total">IVA ({{ $totales['iva_porcentaje'] ?? 16 }}%)</td>
+<td align="right">$ {{ number_format($totales['iva'],2) }}</td>
+</tr>
 
-<td class="total">
-TOTAL A PAGAR:
-</td>
-
-<td align="right" class="total">
-$ {{ number_format($totales['total'],2) }}
-</td>
-
+<tr>
+<td class="total">TOTAL A PAGAR:</td>
+<td align="right"><b>$ {{ number_format($totales['total'],2) }}</b></td>
 </tr>
 
 </table>
@@ -416,28 +346,36 @@ $ {{ number_format($totales['total'],2) }}
 </tr>
 
 </table>
-
-
 
 <div class="footer">
+A continuación se firma el presente documento de conformidad por ambas partes, 
+aceptando la "Opción de pago", así como las condiciones y garantías dadas a conocer:
 
-<p>
-A continuación se firma el presente documento de conformidad por ambas partes, aceptando la "Opción de pago", así como las condiciones de compra y garantía dadas a conocer:</p>
+</div>
 
-<table style="width:100%; margin-top:50px;">
-<tr>
-<td style="text-align:center; width:45%;">
-    <img src="{{ public_path('archivos/logo.png') }}" alt="Logo" style="width: 100px; margin-bottom: 5px;"><br>
-----------------------------------------------------<br>
-CASA TAPIER S.A. DE C.V.
-</td>
-<td style="width:10%;"></td>
-<td style="text-align:center; width:45%;">
-----------------------------------------------------<br>
-Nombre completo y Firma del Cliente
-</td>
-</tr>
+
+
+<table style="width:100%; margin-top:2cm; border-collapse:collapse;">
+    <tr>
+        <td width="40%" align="center" style="padding-bottom: 5px;">
+            <img src="{{ public_path('archivos/logo.png') }}" style="width:160px;">
+        </td>
+        <td width="20%"></td>
+        <td width="40%"></td>
+    </tr>
+    <tr>
+        <td width="40%" align="center" style="border-top:1px solid #000; padding-top: 5px;">CASA TAPIER S.A. DE C.V.</td>
+        <td width="20%"></td>
+        <td width="40%" align="center" style="border-top:1px solid #000; padding-top: 5px;">Nombre completo y Firma del Cliente</td>
+    </tr>
 </table>
+
+
+
+<div class="page-footer">
+
+Av. Ayuntamiento #68 Col. Manantiales San Pedro Cholula Pue. C.P. 72757  
+Tel: (221) 652 6360 / ventastapier@gmail.com
 
 </div>
 

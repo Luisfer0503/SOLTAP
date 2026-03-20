@@ -56,12 +56,31 @@
                                         <label for="role" class="block text-sm font-bold text-gray-700 mb-1">Rol</label>
                                         <select name="role" id="role" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
                                             <option value="" disabled selected>Selecciona un rol</option>
-                                            <option value="Administrador" {{ old('role') == 'Administrador' ? 'selected' : '' }}>Administrador</option>
-                                            <option value="Diseño y Ventas Tapier" {{ old('role') == 'Diseño y Ventas Tapier' ? 'selected' : '' }}>Diseño y Ventas Tapier</option>
-                                            <option value="Coordinación Ventas Solferino" {{ old('role') == 'Coordinación Ventas Solferino' ? 'selected' : '' }}>Coordinación Ventas Solferino</option>
-                                            <option value="Diseño y Ventas Solferino" {{ old('role') == 'Diseño y Ventas Solferino' ? 'selected' : '' }}>Diseño y Ventas Solferino</option>
+                                            @foreach($roles as $rol)
+                                                <option value="{{ $rol->id }}" {{ old('role') == $rol->id ? 'selected' : '' }}>{{ $rol->nombre }}</option>
+                                            @endforeach
                                         </select>
                                         @error('role') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label for="area" class="block text-sm font-bold text-gray-700 mb-1">Área</label>
+                                        <select name="area" id="area" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="" disabled selected>Selecciona un área</option>
+                                            @foreach($areas as $area)
+                                                <option value="{{ $area->id }}" {{ old('area') == $area->id ? 'selected' : '' }}>{{ $area->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('area') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label for="departamento" class="block text-sm font-bold text-gray-700 mb-1">Departamento</label>
+                                        <select name="departamento" id="departamento" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="" disabled selected>Selecciona un departamento</option>
+                                            @foreach($departamentos as $depto)
+                                                <option value="{{ $depto->id }}" {{ old('departamento') == $depto->id ? 'selected' : '' }}>{{ $depto->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('departamento') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
                                         <label for="photo" class="block text-sm font-bold text-gray-700 mb-1">Foto de Perfil</label>
@@ -75,8 +94,8 @@
                                     </div>
                                     <div>
                                         <label for="password" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
-                                        <input type="password" name="password" id="password" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Mínimo 8 caracteres">
-                                        <p class="text-xs text-gray-500 mt-1">Será visible solo en este momento. Cópiala y compártela de forma segura.</p>
+                                        <input type="password" name="password" id="password" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Opcional - Mínimo 8 caracteres">
+                                        <p class="text-xs text-gray-500 mt-1">Si la dejas en blanco, el usuario deberá usar la opción "¿Primera vez?" en el login para elegir la suya.</p>
                                         @error('password') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
@@ -99,12 +118,15 @@
                                 <i class="ph ph-users mr-2 text-gray-500"></i> Usuarios Registrados
                             </h3>
                         </div>
+                        <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Foto</th>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Nombre</th>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Rol</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Área</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Departamento</th>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Correo</th>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fecha de Alta</th>
                                     <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Acciones</th>
@@ -123,7 +145,9 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $user->name }}</td>
-                                    <td class="px-6 py-4 text-sm text-gray-500">{{ $user->role }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">{{ $user->role_name ?? $user->role }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">{{ $user->area_name ?? $user->area }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">{{ $user->departamento_name ?? $user->departamento }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-500">{{ $user->email }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-500">{{ \Carbon\Carbon::parse($user->created_at)->format('d/m/Y') }}</td>
                                     <td class="px-6 py-4 text-right">
@@ -145,11 +169,12 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">No hay usuarios registrados.</td>
+                                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">No hay usuarios registrados.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             </div>

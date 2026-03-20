@@ -77,6 +77,12 @@ Route::get('/register', [AuthController::class, 'showRegistrationForm'])->name('
 Route::post('/register', [AuthController::class, 'register']);
 
 
+// Rutas de Recuperación de Contraseña
+Route::get('/forgot-password', [AuthController::class, 'showLinkRequestForm'])->middleware('guest')->name('password.request');
+Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->middleware('guest')->name('password.email');
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetForm'])->middleware('guest')->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'reset'])->middleware('guest')->name('password.update');
+
 Route::get('/users/{user}/edit', [AuthController::class, 'editUser'])->name('users.edit');
 Route::put('/users/{user}', [AuthController::class, 'updateUser'])->name('users.update');
 Route::delete('/users/{user}', [AuthController::class, 'destroyUser'])->name('users.destroy');
@@ -94,6 +100,22 @@ Route::post('/usuarios', [AuthController::class, 'storeUser'])->name('users.stor
 
 //logistica
 Route::get('logistica', [ERPController::class, 'logistica'])->name('logistica');
+Route::post('/erp/guardar-logistica-proyecto', [ERPController::class, 'guardarLogisticaProyecto'])->name('guardarLogisticaProyecto');
 
 
 // Otras rutas pueden ir aquí
+Route::post('/generarProduccionPdf', [ERPController::class, 'generarProduccionPdf'])->name('generarProduccionPdf');
+Route::get('/vistaProduccionProyecto/{id}', [ERPController::class, 'vistaProduccionProyecto'])->name('vistaProduccionProyecto');
+Route::post('/guardarInteraccionProduccion', [ERPController::class, 'guardarInteraccionProduccion'])->name('guardarInteraccionProduccion');
+Route::get('/escaner-produccion', [ERPController::class, 'escanerProduccion'])->name('escanerProduccion');
+Route::get('/reporteEstatusProyecto', [ERPController::class, 'reporteEstatusProyecto'])->name('reporteEstatusProyecto');
+Route::get('/erp/proyecto-interacciones/{id}', [ERPController::class, 'obtenerHistorialInteracciones']);
+
+Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');    
+Route::post('erp/guardarFalla', [ERPController::class, 'guardarFalla'])->name('guardarFalla');
+Route::get('/falla/{id}', [ERPController::class, 'detalleFalla'])->name('detalleFalla');
+Route::post('/falla/{id}/actualizar', [ERPController::class, 'actualizarFalla'])->name('actualizarFalla');
+Route::post('/falla/{id}/eliminar', [ERPController::class, 'eliminarFalla'])->name('eliminarFalla');    
+Route::get('/erp/articulos/{id}/fallas', [ERPController::class, 'obtenerFallasArticulo'])->name('obtenerFallasArticulo');
+Route::get('/erp/alta-estatus', [App\Http\Controllers\ERPController::class, 'altaEstatus'])->name('altaEstatus');
+Route::post('/erp/guardar-alta-estatus', [App\Http\Controllers\ERPController::class, 'guardarAltaEstatus'])->name('guardarAltaEstatus');

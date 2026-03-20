@@ -51,21 +51,28 @@ class ERPController extends Controller
       }
 
 
-      public function seguimientoProyectos()
+      public function seguimientoProyectos(Request $request)
       {
-          $proyectos = DB::table('Proyectos')
+          $query = DB::table('Proyectos')
               ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
               ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
               ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+              ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+              ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
               ->select(
                   'Proyectos.proyecto_id as id',
                   'Proyectos.nombre',
                   'Proyectos.estatus',
                   'Proyectos.created_at',
+                  DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as disenador"),
                   DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente")
-              )
-              ->orderBy('Proyectos.proyecto_id', 'desc')
-              ->get();
+              );
+
+          if ($request->has('proyecto_id')) {
+              $query->where('Proyectos.proyecto_id', $request->query('proyecto_id'));
+          }
+
+          $proyectos = $query->orderBy('Proyectos.proyecto_id', 'desc')->get();
 
           // Eager load articles for these projects to display progress without expanding
           $projectIds = $proyectos->pluck('id');
@@ -84,7 +91,88 @@ class ERPController extends Controller
               });
           }
   
-          return view('ERP.seguimientoProyectos', compact('proyectos'));
+          // Obtenemos los usuarios y sus áreas para los campos ORIGINÓ y RESOLVIÓ
+          $usuarios = DB::table('users')
+              ->leftJoin('areas', 'users.area', '=', 'areas.id')
+              ->select('users.id', 'users.name', 'areas.nombre as area_name')
+              ->orderBy('users.name', 'asc')
+              ->get();
+
+          $categoriasFallas = [];
+          if (\Illuminate\Support\Facades\Schema::hasTable('categorias_fallas')) {
+              $categoriasFallas = DB::table('categorias_fallas')->get();
+          }
+          
+          $subcategoriasFallas = [];
+          if (\Illuminate\Support\Facades\Schema::hasTable('subcategoria_fallas')) {
+              $subcategoriasFallas = DB::table('subcategoria_fallas')->get();
+          }
+
+          return view('ERP.seguimientoProyectos', compact('proyectos', 'usuarios', 'categoriasFallas', 'subcategoriasFallas'));
+      }
+
+      public function guardarFalla(Request $request)
+      {
+          try {
+              // El registro en proyecto_interacciones sí existe y se guardará como historial global
+
+              $reportePath = null;
+              if ($request->hasFile('reporte')) {
+                  $file = $request->file('reporte');
+                  $filename = time() . '_falla_' . $file->getClientOriginalName();
+                  FacadeStorage::disk('public')->put($filename, \File::get($file));
+                  $reportePath = $filename;
+              }
+
+              // Guardar el registro principal en la nueva tabla 'fallas'
+              $fallaId = DB::table('fallas')->insertGetId([
+                  'proyecto_id' => $request->proyecto_id,
+                  'articulo_id' => $request->articulo_id,
+                  'fecha' => $request->fecha,
+                  'sem' => $request->sem,
+                  'mes' => $request->mes,
+                  'cantidad' => $request->cantidad,
+                  'categoria_id' => $request->falla_categoria ?: null,
+                  'subcategoria_id' => $request->falla_subcategoria ?: null,
+                  'descripcion' => $request->descripcion,
+                  'hh_minutos' => $request->hh_minutos,
+                  'costo_hh' => $request->costo_hh,
+                  'costo_materiales' => $request->costo_materiales,
+                  'costo_total' => $request->costo_total,
+                  'origino' => $request->origino, 
+                  'resolvio' => $request->resolvio, 
+                  'materiales' => $request->materiales, 
+                  'reporte_imagen' => $reportePath,
+                  'registrado_por' => auth()->id(),
+                  'created_at' => now()
+              ]);
+
+              // Registro la interacción de la falla para el historial del proyecto.
+              if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                  $interaccion = DB::table('interacciones')->where('nombre', 'REPORTE DE FALLA')->first();
+                  $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'REPORTE DE FALLA') : 'REPORTE DE FALLA';
+
+                  $categoriaNombre = $request->falla_categoria;
+                  if (is_numeric($categoriaNombre) && \Illuminate\Support\Facades\Schema::hasTable('categorias_fallas')) {
+                      $cat = DB::table('categorias_fallas')->where('id', $categoriaNombre)->first();
+                      if ($cat) {
+                          $categoriaNombre = $cat->nombre;
+                      }
+                  }
+
+                  DB::table('proyecto_interacciones')->insert([
+                      'proyecto_id' => $request->proyecto_id,
+                      'interaccion_id' => $interaccionId,
+                      'comentarios' => "Reporte de falla en el artículo ID " . $request->articulo_id . ".\nCategoría: " . $categoriaNombre . ".\nDescripción: " . $request->descripcion . ".\nCosto Total Asignado: $" . $request->costo_total,
+                      'created_at' => now(),
+                      'updated_at' => now()
+                  ]);
+              }
+
+              return response()->json(['success' => true, 'message' => 'Falla reportada y guardada correctamente.']);
+          } catch (\Exception $e) {
+              return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+          }
       }
 
 
@@ -109,6 +197,8 @@ class ERPController extends Controller
                 DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
                 DB::raw("COALESCE(P1.iva, P2.iva, 0) as iva_porcentaje"),
                 DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje"),
+                'proyecto_detalles.rfc',
+                'proyecto_detalles.condiciones_pago',
                 DB::raw("(SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) as tiene_cotizacion"),
                 DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes"),
                 DB::raw("(SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) as tiene_pagos")
@@ -148,6 +238,20 @@ class ERPController extends Controller
             $totales = $data['totales'];
             $cotizacionId = $data['cotizacionId'];
 
+            // Registrar interacción de Creación de Cotización
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                $interaccion = DB::table('interacciones')->where('nombre', 'CREACIÓN DE COTIZACIÓN')->first();
+                $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'CREACIÓN DE COTIZACIÓN') : 'CREACIÓN DE COTIZACIÓN';
+
+                DB::table('proyecto_interacciones')->insert([
+                    'proyecto_id' => $proyecto['proyecto_id'],
+                    'interaccion_id' => $interaccionId,
+                    'comentarios' => 'Se generó el PDF de cotización por un total de $' . number_format((float)($totales['total'] ?? 0), 2),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
             // 3. Generar PDF usando la vista
             $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId'));
             
@@ -163,7 +267,15 @@ class ERPController extends Controller
         try {
             $proyecto_id = $request->input('proyecto_id');
             $pagos = $request->input('pagos'); // Recibir plan de pagos
+            $rfc = $request->input('rfc');
+            $condiciones = $request->input('condiciones');
             
+            // Guardar/Actualizar RFC y Condiciones en proyecto_detalles
+            DB::table('proyecto_detalles')->updateOrInsert(
+                ['detalles_id' => $proyecto_id],
+                ['rfc' => $rfc, 'condiciones_pago' => $condiciones]
+            );
+
             // 1. Obtener datos del proyecto (desde BD)
             $proyectoData = DB::table('Proyectos')
                 ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
@@ -173,13 +285,15 @@ class ERPController extends Controller
                 ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
                 ->select(
                     'Proyectos.proyecto_id',
+                    'Proyectos.cliente_id',
                     'Proyectos.nombre as nombre_proyecto',
                     DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
                     DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
                     DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
                     DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
                     'Proyectos.created_at as fecha',
-                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre")
+                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
+                    DB::raw("COALESCE(P1.iva, P2.iva, 0) as iva_porcentaje")
                 )
                 ->where('Proyectos.proyecto_id', $proyecto_id)
                 ->first();
@@ -210,11 +324,19 @@ class ERPController extends Controller
                 'descuento' => 0,
                 'subtotal' => 0,
                 'iva' => 0,
-                'total' => 0
+                'total' => 0,
+                'cubicaje' => 0,
+                'peso' => 0,
+                'articulos' => 0,
+                'iva_porcentaje' => (float)$proyectoData->iva_porcentaje
             ];
 
             foreach($articulos as $art){
-                $totales['subtotal_articulos'] += $art['cantidad'] * $art['precio_unitario'];
+                $cantidad = (float)$art['cantidad'];
+                $totales['subtotal_articulos'] += $cantidad * $art['precio_unitario'];
+                $totales['cubicaje'] += (float)$art['cubicaje'] * $cantidad;
+                $totales['peso'] += (float)$art['peso'] * $cantidad;
+                $totales['articulos'] += $cantidad;
             }
 
             $cotizacionId = 0;
@@ -257,11 +379,186 @@ class ERPController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos'));
+            $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos', 'rfc', 'condiciones'));
             return $pdf->download('Remision_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function generarProduccionPdf(Request $request)
+    {
+        try {
+            $proyecto_id = $request->input('proyecto_id');
+
+            // 1. Obtener datos del proyecto
+            $proyectoData = DB::table('Proyectos')
+                ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+                ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+                ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+                ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+                ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
+                ->select(
+                    'Proyectos.proyecto_id',
+                    'Proyectos.cliente_id',
+                    'Proyectos.nombre as nombre_proyecto',
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                    DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
+                    DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
+                    DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
+                    'Proyectos.created_at as fecha',
+                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre")
+                )
+                ->where('Proyectos.proyecto_id', $proyecto_id)
+                ->first();
+
+            if (!$proyectoData) {
+                return response()->json(['error' => 'Proyecto no encontrado'], 404);
+            }
+            
+            $proyecto = (array)$proyectoData;
+
+            // 2. Obtener artículos
+            $articulos = DB::table('proyecto_articulos')
+                ->where('proyecto_id', $proyecto_id)
+                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'cubicaje', 'peso', 'imagen')
+                ->get()
+                ->map(function($item){ return (array)$item; })
+                ->toArray();
+
+            $qrUrl = route('seguimientoProyectos', ['proyecto_id' => $proyecto_id]);
+            
+            // 3. Generar el código QR a través de la API y convertirlo en base64 para embeberlo en PDF
+            $qrImage = base64_encode(file_get_contents('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($qrUrl)));
+
+            $pdf = Pdf::loadView('ERP.pdf_produccion', compact('proyecto', 'articulos', 'qrImage'));
+            return $pdf->download('Produccion_' . $proyecto['nombre_proyecto'] . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function vistaProduccionProyecto($id)
+    {
+        $proyecto = DB::table('Proyectos')
+            ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+            ->select(
+                'Proyectos.proyecto_id',
+                'Proyectos.nombre',
+                'Proyectos.estatus',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
+                DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
+                DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion")
+            )
+            ->where('Proyectos.proyecto_id', $id)
+            ->first();
+
+        if (!$proyecto) {
+            return redirect()->back()->with('error', 'Proyecto no encontrado');
+        }
+
+        $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
+
+        $interacciones = [];
+        $historial = collect();
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('interacciones')) {
+            $interacciones = DB::table('interacciones')->get();
+            
+            // Crear un mapa para asociar el ID de la interacción con su nombre fácilmente
+            $interaccionesMap = [];
+            foreach ($interacciones as $int) {
+                $pk = $int->id ?? $int->interaccion_id ?? $int->nombre;
+                $interaccionesMap[$pk] = $int->nombre;
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                $historial = DB::table('proyecto_interacciones')
+                    ->where('proyecto_id', $id)
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(function($h) use ($interaccionesMap) {
+                        $h->interaccion_nombre = $interaccionesMap[$h->interaccion_id] ?? $h->interaccion_id;
+                        return $h;
+                    });
+            }
+        }
+
+        return view('ERP.vistaProduccionProyecto', compact('proyecto', 'articulos', 'interacciones', 'historial'));
+    }
+
+    public function escanerProduccion()
+    {
+        return view('ERP.escanerProduccion');
+    }
+
+    public function guardarInteraccionProduccion(Request $request)
+    {
+        $request->validate([
+            'proyecto_id' => 'required',
+            'interaccion_id' => 'required'
+        ]);
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                DB::table('proyecto_interacciones')->insert([
+                    'proyecto_id' => $request->proyecto_id,
+                    'interaccion_id' => $request->interaccion_id,
+                    'comentarios' => $request->comentarios,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function reporteEstatusProyecto()
+    {
+        $proyectos = DB::table('Proyectos')
+            ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->select(
+                'Proyectos.proyecto_id',
+                'Proyectos.nombre as nombre_proyecto',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                'Proyectos.estatus'
+            )
+            ->orderBy('Proyectos.proyecto_id', 'desc')
+            ->get();
+
+        $interacciones = DB::table('interacciones')->get();
+
+        return view('ERP.reporteEstatusProyecto', compact('proyectos', 'interacciones'));
+    }
+
+    public function obtenerHistorialInteracciones($proyecto_id)
+    {
+        $interaccionesTable = DB::table('interacciones')->get();
+        $interaccionesMap = [];
+        foreach ($interaccionesTable as $int) {
+            $pk = $int->id ?? $int->interaccion_id ?? $int->nombre;
+            $interaccionesMap[$pk] = $int->nombre;
+        }
+
+        $historial = DB::table('proyecto_interacciones')
+            ->where('proyecto_id', $proyecto_id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($h) use ($interaccionesMap) {
+                $h->interaccion_nombre = $interaccionesMap[$h->interaccion_id] ?? 'Interacción Desconocida';
+                $h->fecha_formateada = $h->created_at ? \Carbon\Carbon::parse($h->created_at)->timezone('America/Mexico_City')->format('d/m/Y h:i A') : 'Fecha desconocida';
+                return $h;
+            });
+
+        return response()->json($historial);
     }
 
     public function cobranza()
@@ -466,6 +763,66 @@ class ERPController extends Controller
         }
     }
 
+          public function altaEstatus()
+      {
+          // Validar que el usuario en sesión tenga el rol autorizado
+          $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+          if (!in_array($userRoleName, ['VENDEDOR/DISEÑADOR', 'ADMIN'])) {
+              return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista. Solo los vendedores/diseñadores y administradores pueden ingresar.');
+          }
+
+          $proyectos = DB::table('Proyectos')
+              ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+              ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+              ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+              ->select(
+                  'Proyectos.proyecto_id',
+                  'Proyectos.nombre as nombre_proyecto',
+                  DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre")
+              )
+              ->orderBy('Proyectos.proyecto_id', 'desc')
+              ->get();
+
+          // Extraer interacciones y filtrar solo de la 2 a la 7
+          $interacciones = collect();
+          if (\Illuminate\Support\Facades\Schema::hasTable('interacciones')) {
+              $interacciones = DB::table('interacciones')->get()->filter(function($int) {
+                  $id = $int->id ?? $int->interaccion_id;
+                  return $id >= 2 && $id <= 7;
+              })->values();
+          }
+
+          return view('ERP.altaEstatus', compact('proyectos', 'interacciones'));
+      }
+
+      public function guardarAltaEstatus(Request $request)
+      {
+          $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+          if (!in_array($userRoleName, ['VENDEDOR/DISEÑADOR', 'ADMIN'])) {
+              return response()->json(['success' => false, 'message' => 'No estás autorizado para realizar esta acción.'], 403);
+          }
+
+          $request->validate([
+              'proyecto_id' => 'required',
+              'interaccion_id' => 'required'
+          ]);
+
+          try {
+              if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                  DB::table('proyecto_interacciones')->insert([
+                      'proyecto_id' => $request->proyecto_id,
+                      'interaccion_id' => $request->interaccion_id,
+                      'comentarios' => $request->comentarios,
+                      'created_at' => now(),
+                      'updated_at' => now()
+                  ]);
+              }
+              return response()->json(['success' => true]);
+          } catch (\Exception $e) {
+              return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+          }
+      }
+
     public function guardarCotizacion(Request $request)
     {
         try {
@@ -531,43 +888,71 @@ class ERPController extends Controller
         return response()->json($cotizacion);
     }
 
-    public function logistica($proyecto_id = 1)
-{
-    // MOCK DATA: Simulación de datos traídos de la BD
-    $proyecto = (object)[
-        'id' => 1,
-        'nombre' => 'Oficinas Corporativo Santa Fe',
-        'cliente' => 'Tech Solutions SA',
-        'direccion' => 'Av. Santa Fe 450, Piso 12, CDMX',
-        'es_planta_baja' => false, // Este dato viene de cuando se dio de alta al prospecto/proyecto
-        'condiciones_acceso' => '' // Campo vacío para llenar aquí
-    ];
+    public function logistica()
+    {
+        $proyectos = DB::table('Proyectos')
+            ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+            ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
+            ->select(
+                'Proyectos.proyecto_id as id',
+                'Proyectos.nombre',
+                'Proyectos.estatus',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente"),
+                DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
+                DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
+                DB::raw('COALESCE(proyecto_detalles.es_planta_baja, 0) as es_planta_baja'),
+                DB::raw('COALESCE(proyecto_detalles.condiciones_acceso, "") as condiciones_acceso'),
+                DB::raw('COALESCE(proyecto_detalles.requiere_instalacion, 0) as requiere_instalacion'),
+                DB::raw('COALESCE(proyecto_detalles.requiere_desemplaye, 0) as requiere_desemplaye'),
+                DB::raw('COALESCE(proyecto_detalles.requiere_emplaye, 0) as requiere_emplaye'),
+                DB::raw('COALESCE(proyecto_detalles.requiere_maniobraje, 0) as requiere_maniobraje')
+            )
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('proyecto_articulos')
+                      ->whereColumn('proyecto_articulos.proyecto_id', 'Proyectos.proyecto_id');
+            })
+            ->orderBy('Proyectos.proyecto_id', 'desc')
+            ->get();
 
-    $articulos = [
-        (object)[
-            'id' => 101,
-            'nombre' => 'Escritorio Gerencial L',
-            'dimensiones' => '1.80 x 1.60m',
-            'peso' => 45.5,
-            'requiere_instalacion' => true, // JALADO DE GESTION ARTICULOS
-            'requiere_emplaye' => true,     // JALADO DE GESTION ARTICULOS
-            'comentarios_ventas' => 'El cliente pide cuidado especial con la cubierta de cristal.', // JALADO
-            'comentarios_logistica' => '' // NUEVO CAMPO
-        ],
-        (object)[
-            'id' => 102,
-            'nombre' => 'Silla Operativa Malla',
-            'dimensiones' => 'Estándar',
-            'peso' => 12.0,
-            'requiere_instalacion' => false,
-            'requiere_emplaye' => false,
-            'comentarios_ventas' => '',
-            'comentarios_logistica' => ''
-        ]
-    ];
+        // Traer artículos de los proyectos vigentes
+        $projectIds = $proyectos->pluck('id');
+        $articulos = DB::table('proyecto_articulos')
+            ->whereIn('proyecto_id', $projectIds)
+            ->select('id', 'proyecto_id', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'peso', 'cubicaje', 'cantidad', 'imagen')
+            ->get()
+            ->map(function ($art) {
+                if ($art->imagen) {
+                    $art->imagen = asset('storage/' . $art->imagen);
+                }
+                return $art;
+            });
 
-    return view('ERP.logistica', compact('proyecto', 'articulos'));
-}
+        return view('ERP.logistica', compact('proyectos', 'articulos'));
+    }
+
+    public function guardarLogisticaProyecto(Request $request)
+    {
+        try {
+            DB::table('proyecto_detalles')->updateOrInsert(
+                ['detalles_id' => $request->proyecto_id],
+                [ // Convert 'si'/'no' to 1/0 for the database
+                    'es_planta_baja' => ($request->es_planta_baja === 'si') ? 1 : 0,
+                    'condiciones_acceso' => $request->condiciones_acceso,
+                    'requiere_instalacion' => $request->requiere_instalacion ? 1 : 0,
+                    'requiere_desemplaye' => $request->requiere_desemplaye ? 1 : 0,
+                    'requiere_emplaye' => $request->requiere_emplaye ? 1 : 0,
+                    'requiere_maniobraje' => $request->requiere_maniobraje ? 1 : 0,
+                ]
+            );
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 
       public function obtenerProyectosCliente($id)
       {
@@ -701,10 +1086,6 @@ class ERPController extends Controller
                       'cantidad' => $item['cantidad'] ?? 1,
                       'tiene_division' => $item['tiene_division'] ?? 0,
                       'piezas_divididas' => $item['piezas_divididas'] ?? 0,
-                      'es_planta_baja' => $item['es_planta_baja'] ?? 'si',
-                      'condiciones_acceso' => $item['condiciones_acceso'] ?? null,
-                      'requiere_instalacion' => $item['requiere_instalacion'] ?? 0,
-                      'requiere_desemplaye' => $item['requiere_desemplaye'] ?? 0,
                       'created_at' => now(),
                       'updated_at' => now()
                   ];
@@ -765,6 +1146,22 @@ class ERPController extends Controller
                   ->whereNotIn('id', $incoming_ids)
                   ->delete();
 
+              // Registrar interacción de Artículos Registrados
+              if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                  $interaccion = DB::table('interacciones')->where('nombre', 'ARTÍCULOS REGISTRADOS')->first();
+                  $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'ARTÍCULOS REGISTRADOS') : 'ARTÍCULOS REGISTRADOS';
+
+                  $numArticulos = is_array($articulos) ? count($articulos) : 0;
+                  
+                  DB::table('proyecto_interacciones')->insert([
+                      'proyecto_id' => $proyecto_id,
+                      'interaccion_id' => $interaccionId,
+                      'comentarios' => 'Se registraron/actualizaron ' . $numArticulos . ' artículo(s) de producción.',
+                      'created_at' => now(),
+                      'updated_at' => now()
+                  ]);
+              }
+
               DB::commit();
               return response()->json(['success' => true, 'message' => 'Artículos guardados correctamente']);
           } catch (\Exception $e) {
@@ -773,6 +1170,51 @@ class ERPController extends Controller
           }
       }
 
+      public function obtenerFallasArticulo($id)
+      {
+          try {
+              $usuariosMap = DB::table('users')->pluck('name', 'id')->toArray();
+
+              $fallas = DB::table('fallas')
+                  ->leftJoin('categorias_fallas', 'fallas.categoria_id', '=', 'categorias_fallas.id')
+                  ->leftJoin('subcategoria_fallas', 'fallas.subcategoria_id', '=', 'subcategoria_fallas.id')
+                  ->where('fallas.articulo_id', $id)
+                  ->select(
+                      'fallas.*',
+                      'categorias_fallas.nombre as categoria_nombre',
+                      'subcategoria_fallas.nombre as subcategoria_nombre'
+                  )
+                  ->orderBy('fallas.created_at', 'desc')
+                  ->get()
+                  ->map(function ($falla) use ($usuariosMap) {
+                      $falla->fecha_hora_formateada = $falla->created_at 
+                          ? \Carbon\Carbon::parse($falla->created_at)->timezone('America/Mexico_City')->format('d/m/Y h:i A') 
+                          : $falla->fecha;
+
+                      $falla->materiales_lista = json_decode($falla->materiales, true) ?? [];
+                      
+                      $originoIds = json_decode($falla->origino, true);
+                      $originoIds = is_array($originoIds) ? $originoIds : [];
+                      $falla->origino_nombres = array_map(function($id) use ($usuariosMap) {
+                          return $usuariosMap[$id] ?? 'Desconocido';
+                      }, $originoIds);
+
+                      $resolvioIds = json_decode($falla->resolvio, true);
+                      $resolvioIds = is_array($resolvioIds) ? $resolvioIds : [];
+                      $falla->resolvio_nombres = array_map(function($id) use ($usuariosMap) {
+                          return $usuariosMap[$id] ?? 'Desconocido';
+                      }, $resolvioIds);
+
+                      $falla->registrado_por_nombre = $usuariosMap[$falla->registrado_por] ?? 'Desconocido';
+
+                      return $falla;
+                  });
+
+              return response()->json($fallas);
+          } catch (\Exception $e) {
+              return response()->json(['error' => $e->getMessage()], 500);
+          }
+      }
       public function guardarNuevaChapa(Request $request)
       {
           $validator = Validator::make($request->all(), [
@@ -899,14 +1341,20 @@ class ERPController extends Controller
           $proyecto = DB::table('Proyectos')
               ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
               ->leftJoin('Prospectos', 'Clientes.prospecto_id', '=', 'Prospectos.prospecto_id')
+              ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
               ->select(
                   'Proyectos.proyecto_id',
                   'Proyectos.nombre',
                   'Proyectos.estatus',
-                  DB::raw("CONCAT(COALESCE(Prospectos.nombre,''), ' ', COALESCE(Prospectos.apellido_paterno,''), ' ', COALESCE(Prospectos.apellido_materno,'')) as cliente_nombre")
+                  DB::raw("CONCAT(COALESCE(Prospectos.nombre,''), ' ', COALESCE(Prospectos.apellido_paterno,''), ' ', COALESCE(Prospectos.apellido_materno,'')) as cliente_nombre"),
+                  
+                  // Fetch project-level logistics details (Note: comma added here)
+                  DB::raw('COALESCE(proyecto_detalles.es_planta_baja, 0) as es_planta_baja'),
+                  DB::raw('COALESCE(proyecto_detalles.condiciones_acceso, "") as condiciones_acceso')
               )
               ->where('Proyectos.proyecto_id', $id)
               ->first();
+
 
           if (!$proyecto) {
               return redirect()->back()->with('error', 'Proyecto no encontrado');
@@ -919,13 +1367,22 @@ class ERPController extends Controller
 
           // Obtener materiales para cada artículo
           foreach ($articulos as $articulo) {
-              $articulo->materiales = DB::table('proyecto_articulo_materiales')
-                  ->where('proyecto_articulo_id', $articulo->id)
+              $articulo->materiales = DB::table('proyecto_articulo_materiales as pam')
+                  ->leftJoin('materiales as m', 'pam.material_id', '=', 'm.material_id')
+                  ->where('pam.proyecto_articulo_id', $articulo->id)
+                  ->select(
+                      'pam.tipo_material',
+                      'pam.descripcion as custom_descripcion',
+                      'm.nombre as material_nombre',
+                      'm.color as material_color',
+                      'm.imagen as material_imagen'
+                  )
                   ->get();
           }
 
           return view('ERP.detalleProyecto', compact('proyecto', 'articulos'));
       }
+
 
       public function obtenerArticulosProyecto($id)
       {
@@ -1001,14 +1458,8 @@ class ERPController extends Controller
               $art->categoria_articulo_id = $art->categoria_id;
               $art->id_articulo_produccion = $art->articulo_produccion_id;
 
-              // Mapeo de campos de BD a nombres esperados por el frontend
-              $art->categoria_articulo_id = $art->categoria_id;
-              $art->id_articulo_produccion = $art->articulo_produccion_id;
-
               // Casting explícito de campos booleanos/checkbox y mapeo de PDF
               $art->tiene_division = (bool) $art->tiene_division;
-              $art->requiere_instalacion = (bool) $art->requiere_instalacion;
-              $art->requiere_desemplaye = (bool) $art->requiere_desemplaye;
               $art->pdf = $art->pdf_archivo;
 
               // Ajustar ruta de imagen para visualización

@@ -48,12 +48,29 @@
                             <div>
                                 <label for="role" class="block text-sm font-bold text-gray-700 mb-1">Rol</label>
                                 <select name="role" id="role" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                    <option value="Administrador" {{ old('role', $user->role) == 'Administrador' ? 'selected' : '' }}>Administrador</option>
-                                    <option value="Diseño y Ventas Tapier" {{ old('role', $user->role) == 'Diseño y Ventas Tapier' ? 'selected' : '' }}>Diseño y Ventas Tapier</option>
-                                    <option value="Coordinación Ventas Solferino" {{ old('role', $user->role) == 'Coordinación Ventas Solferino' ? 'selected' : '' }}>Coordinación Ventas Solferino</option>
-                                    <option value="Diseño y Ventas Solferino" {{ old('role', $user->role) == 'Diseño y Ventas Solferino' ? 'selected' : '' }}>Diseño y Ventas Solferino</option>
+                                    @foreach($roles as $rol)
+                                        <option value="{{ $rol->id }}" {{ old('role', $user->role) == $rol->id ? 'selected' : '' }}>{{ $rol->nombre }}</option>
+                                    @endforeach
                                 </select>
                                 @error('role') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label for="area" class="block text-sm font-bold text-gray-700 mb-1">Área</label>
+                                <select name="area" id="area" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    @foreach($areas as $area)
+                                        <option value="{{ $area->id }}" {{ old('area', $user->area) == $area->id ? 'selected' : '' }}>{{ $area->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                @error('area') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label for="departamento" class="block text-sm font-bold text-gray-700 mb-1">Departamento</label>
+                                <select name="departamento" id="departamento" required class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    @foreach($departamentos as $depto)
+                                        <option value="{{ $depto->id }}" {{ old('departamento', $user->departamento) == $depto->id ? 'selected' : '' }}>{{ $depto->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                @error('departamento') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
                             </div>
                             <div>
                                 <label for="email" class="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>

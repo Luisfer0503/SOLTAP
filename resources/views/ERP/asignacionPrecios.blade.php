@@ -67,11 +67,18 @@
                                     </button>
                                 @endif
                                 
-                                <button @click="abrirModalPagos({{ $p->proyecto_id }}, '{{ $p->nombre_proyecto }}')" 
+                                <button @click="abrirModalPagos({{ json_encode($p) }})" 
                                         class="px-3 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                                         title="{{ ($p->tiene_cotizacion && $p->articulos_pendientes == 0) ? 'Generar Remisión' : 'Complete la cotización primero (Precios y Totales)' }}"
                                         {{ (!$p->tiene_cotizacion || $p->articulos_pendientes > 0) ? 'disabled' : '' }}>
                                     <i class="ph ph-file-text mr-1"></i> Remisión
+                                </button>
+                                
+                                <button @click="generarProduccionPdf({{ json_encode($p) }})" 
+                                        class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        title="Generar PDF Producción"
+                                        {{ (!$p->tiene_cotizacion || $p->articulos_pendientes > 0) ? 'disabled' : '' }}>
+                                    <i class="ph ph-factory mr-1"></i> Producción
                                 </button>
                             </div>
                         </td>
@@ -167,7 +174,6 @@
                                         <div x-text="`${item.peso}kg`"></div>
                                     </td>
                                     <td class="px-4 py-3 text-right">
-                                        <input type="number" x-model="item.precio_unitario" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
                                         <input type="number" x-model="item.precio_unitario" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
                                     </td>
                                     <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * (item.precio_unitario || 0))"></td>
@@ -186,13 +192,11 @@
                         </div>
                         <div class="flex justify-between items-center text-sm">
                             <span class="text-gray-600">Envío:</span>
-                            <input type="number" x-model="costoEnvio" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
                             <input type="number" x-model="costoEnvio" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                         </div>
                         
                         <!-- Botón para editar configuración -->
                         <div class="flex justify-end mt-1">
-                            <button @click="editarConfiguracion = !editarConfiguracion" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center">
                             <button @click="editarConfiguracion = !editarConfiguracion" :disabled="cotizacionBloqueada" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed">
                                 <i class="ph" :class="editarConfiguracion ? 'ph-lock-key' : 'ph-pencil-simple'"></i>
                                 <span class="ml-1" x-text="editarConfiguracion ? 'Bloquear Configuración' : 'Editar IVA/Descuento'"></span>
@@ -215,7 +219,6 @@
                                 <span class="font-bold text-gray-900" x-text="money(descuentoCalculado)"></span>
                             </template>
                             <template x-if="descuentoPorcentaje == 0">
-                                <input type="number" x-model="descuento" class="w-24 text-right text-sm border-gray-300 rounded py-1" placeholder="0">
                                 <input type="number" x-model="descuento" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                             </template>
                         </div>
@@ -248,7 +251,6 @@
             <!-- Modal Footer -->
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
                 <button @click="cerrarModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
-                <button @click="guardarCotizacion()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
                 <button @click="guardarCotizacion()" x-show="!cotizacionBloqueada" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
                     <i class="ph ph-floppy-disk mr-2"></i> Guardar
                 </button>
@@ -280,6 +282,16 @@
                         <label class="text-sm font-bold text-gray-700">Cantidad de Pagos:</label>
                         <input type="number" x-model="numeroPagos" @change="generarPagos()" min="1" max="10" class="w-20 text-center border-gray-300 rounded font-bold" :disabled="planBloqueado">
                     </div>
+                </div>
+
+                <div class="mb-4 bg-white p-4 rounded border border-gray-200">
+                    <label for="rfc_remision" class="block text-sm font-bold text-gray-700">RFC (Opcional)</label>
+                    <input type="text" id="rfc_remision" x-model="rfcRemision" placeholder="Ingrese el RFC del cliente" class="mt-1 w-full text-sm border-gray-300 rounded-lg uppercase focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="mb-4 bg-white p-4 rounded border border-gray-200">
+                    <label for="condiciones_remision" class="block text-sm font-bold text-gray-700">Condiciones de Pago (Opcional)</label>
+                    <textarea id="condiciones_remision" x-model="condicionesRemision" placeholder="Ej. Pago a 30 días, 50% anticipo..." class="mt-1 w-full text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" rows="2"></textarea>
                 </div>
 
                 <div x-show="planBloqueado" class="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded border border-yellow-200 text-sm font-bold flex items-center">
@@ -349,11 +361,14 @@
             listaPagos: [],
             proyectoPagos: null, // {id, nombre}
             planBloqueado: false,
+            rfcRemision: '',
+            condicionesRemision: '',
 
             async abrirCotizador(proyecto) {
                 this.proyecto = proyecto;
                 this.articulos = [];
                 this.costoEnvio = ''; // Inicializar vacío para obligar validación
+                this.rfcRemision = '';
                 this.descuento = 0;
                 this.ivaPorcentaje = parseFloat(proyecto.iva_porcentaje) || 0;
                 this.descuentoPorcentaje = parseFloat(proyecto.descuento_porcentaje) || 0;
@@ -445,6 +460,18 @@
                 return this.subtotalGeneral + this.iva;
             },
 
+            get totalCubicaje() {
+                return this.articulos.reduce((sum, item) => sum + ((parseFloat(item.cubicaje) || 0) * (parseInt(item.cantidad) || 0)), 0);
+            },
+
+            get totalPeso() {
+                return this.articulos.reduce((sum, item) => sum + ((parseFloat(item.peso) || 0) * (parseInt(item.cantidad) || 0)), 0);
+            },
+
+            get totalArticulos() {
+                return this.articulos.reduce((sum, item) => sum + (parseInt(item.cantidad) || 0), 0);
+            },
+
             money(value) {
                 return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
             },
@@ -455,13 +482,15 @@
                 return date.toLocaleDateString('es-MX');
             },
 
-            async abrirModalPagos(proyectoId, nombreProyecto) {
-                this.proyectoPagos = { id: proyectoId, nombre: nombreProyecto };
-                this.planBloqueado = false;
+            async abrirModalPagos(proyecto) {
+                this.proyectoPagos = { id: proyecto.proyecto_id, nombre: proyecto.nombre_proyecto };
+                this.planBloqueado = (proyecto.tiene_pagos > 0);
+                this.rfcRemision = proyecto.rfc || '';
+                this.condicionesRemision = proyecto.condiciones_pago || '';
                 
                 // Obtener el total de la cotización guardada
                 try {
-                    const response = await fetch(`{{ url('/erp/obtener-cotizacion') }}/${proyectoId}`);
+                    const response = await fetch(`{{ url('/erp/obtener-cotizacion') }}/${proyecto.proyecto_id}`);
                     if (response.ok) {
                         const cotizacion = await response.json();
                         if (cotizacion && cotizacion.total) {
@@ -606,7 +635,9 @@
 
                     const data = {
                         proyecto_id: this.proyectoPagos.id,
-                        pagos: this.listaPagos
+                        pagos: this.listaPagos,
+                        rfc: this.rfcRemision,
+                        condiciones: this.condicionesRemision
                     };
 
                     const response = await fetch('{{ route("generarRemisionPdf") }}', {
@@ -645,6 +676,44 @@
                 }
             },
 
+            async generarProduccionPdf(proyecto) {
+                try {
+                    const data = {
+                        proyecto_id: proyecto.proyecto_id
+                    };
+
+                    const response = await fetch('{{ route("generarProduccionPdf") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const nombreArchivo = proyecto.nombre_proyecto ? `Produccion_${proyecto.nombre_proyecto}.pdf` : 'Produccion.pdf';
+                        a.download = nombreArchivo;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } else {
+                        let mensajeError = 'Error al generar el PDF de Producción.';
+                        try {
+                            const res = await response.json();
+                            if (res.error) mensajeError += '\nDetalle: ' + res.error;
+                        } catch (err) {
+                            console.error(err);
+                        }
+                        alert(mensajeError);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Ocurrió un error: ' + (e.message || 'Error desconocido'));
+                }
+            },
+
             async imprimirPdf() {
                 if (!this.esCotizacionValida) {
                     alert('Por favor, complete todos los precios y el costo de envío para generar el PDF.');
@@ -670,7 +739,10 @@
                         iva: this.iva,
                         iva_porcentaje: this.ivaPorcentaje, // Enviamos el % por si se necesita en PDF
                         descuento_porcentaje: this.descuentoPorcentaje,
-                        total: this.totalPagar
+                        total: this.totalPagar,
+                        cubicaje: this.totalCubicaje,
+                        peso: this.totalPeso,
+                        articulos: this.totalArticulos
                     },
                     cotizacionId: saveResult.cotizacion_id
                 };

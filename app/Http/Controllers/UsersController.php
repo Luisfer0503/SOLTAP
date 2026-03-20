@@ -19,16 +19,25 @@ class UsersController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'role' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
+            'email' => ['required','string','email','max:255','unique:users','ends_with:@casatapier.com'],
+            'password' => 'nullable|string|min:8',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], [
+            'email.ends_with' => 'Solo se permiten correos con el dominio @casatapier.com.',
         ]);
 
         $user = new User();
         $user->name = $request->name;
         $user->email = $request->email;
         $user->role = $request->role;
-        $user->password = Hash::make($request->password);
+
+        // Si dejas la contraseña en blanco, se genera una aleatoria. 
+        // Así el usuario usará "Olvidé mi contraseña" para elegir la suya.
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        } else {
+            $user->password = Hash::make(\Illuminate\Support\Str::random(32));
+        }
 
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('profile-photos', 'public');

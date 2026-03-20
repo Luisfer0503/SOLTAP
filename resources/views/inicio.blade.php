@@ -21,6 +21,12 @@
 
         <div class="flex-1 overflow-y-auto p-8 relative">
             
+            @if(session('error'))
+                <div class="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-sm">
+                    <p class="font-bold"><i class="ph ph-warning-circle mr-2"></i> {{ session('error') }}</p>
+                </div>
+            @endif
+
             <div class="bg-white rounded-xl p-6 mb-8 border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center">
                 <div class="mb-4 md:mb-0">
                     <h2 class="text-2xl font-bold text-gray-800">¡Hola de nuevo, Luis! 👋</h2>

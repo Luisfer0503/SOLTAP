@@ -18,6 +18,12 @@
             <p class="text-gray-500 text-sm mt-1">Ingresa a tu cuenta para continuar</p>
         </div>
 
+        @if (session('status'))
+            <div class="mb-4 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-sm font-medium text-center">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login') }}">
             @csrf
 
@@ -30,7 +36,7 @@
                     </div>
                     <input type="email" name="email" id="email" required autofocus
                         class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                        placeholder="ejemplo@correo.com" value="{{ old('email') }}">
+                        placeholder="usuario@casatapier.com" value="{{ old('email') }}">
                 </div>
                 @error('email')
                     <span class="text-red-500 text-xs mt-1 block font-medium">{{ $message }}</span>
@@ -41,9 +47,7 @@
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-1">
                     <label for="password" class="block text-sm font-bold text-gray-700">Contraseña</label>
-                    @if (Route::has('password.request'))
-                        <a href="{{ route('password.request') }}" class="text-xs text-blue-600 hover:text-blue-800 font-bold">¿Olvidaste tu contraseña?</a>
-                    @endif
+                    <a href="{{ route('password.request') }}" class="text-xs text-blue-600 hover:text-blue-800 font-bold">¿Primera vez o la olvidaste? Elígela aquí</a>
                 </div>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -69,15 +73,6 @@
                 <i class="ph ph-sign-in mr-2 text-lg"></i> Iniciar Sesión
             </button>
         </form>
-
-        @if (Route::has('register'))
-        <div class="mt-8 text-center border-t border-gray-100 pt-6">
-            <p class="text-sm text-gray-600">
-                ¿No tienes una cuenta? 
-                <a href="{{ route('register') }}" class="text-blue-600 hover:text-blue-800 font-bold ml-1">Regístrate aquí</a>
-            </p>
-        </div>
-        @endif
     </div>
 
 </body>

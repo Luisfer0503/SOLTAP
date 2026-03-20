@@ -6,7 +6,7 @@
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-100">
         <header class="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm shrink-0">
             <h2 class="text-xl font-bold text-gray-800 flex items-center">
-                <i class="ph ph-chart-bar text-blue-600 mr-2"></i> Reporte de Estatus
+                <i class="ph ph-chart-bar text-blue-600 mr-2"></i> Reporte de Prospectos
             </h2>
             <div class="flex items-center space-x-4">
                 <a href="{{ route('altaProspectos') }}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center space-x-2 transition">
@@ -32,8 +32,8 @@
                 @endif
                 
                 <!-- Filtros -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                    <form action="{{ route('reporteEstatus') }}" method="GET" class="flex items-end gap-4">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <form action="{{ route('reporteEstatus') }}" method="GET" class="flex items-end gap-4 w-full md:w-auto">
                         <div class="flex-1 max-w-xs">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Estatus</label>
                             <select name="estatus_id" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
@@ -54,6 +54,16 @@
                             </a>
                         @endif
                     </form>
+
+                    <div class="bg-green-50 border border-green-200 px-5 py-3 rounded-lg flex items-center gap-4 w-full md:w-auto justify-end shadow-sm">
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-green-700 uppercase tracking-wide">Conversión (Prospecto a Cliente)</p>
+                            <p class="text-2xl font-black text-green-600">{{ number_format($tasaConversion, 1) }}%</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-green-800">
+                            <i class="ph ph-trend-up text-xl"></i>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tabla -->

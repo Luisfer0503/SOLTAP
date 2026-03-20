@@ -321,6 +321,19 @@ class CRMController extends Controller
                 if ($clienteId) {
                     $detallesData['cliente_id'] = $clienteId;
                 }
+                 // Registrar interacción de Alta de Prospecto
+                if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                    $interaccion = DB::table('interacciones')->where('nombre', 'ALTA DE PROSPECTO')->first();
+                    $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'ALTA DE PROSPECTO') : 'ALTA DE PROSPECTO';
+
+                    DB::table('proyecto_interacciones')->insert([
+                        'proyecto_id' => $proyectoId,
+                        'interaccion_id' => $interaccionId,
+                        'comentarios' => 'Registro inicial del prospecto en el sistema.',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
 
                 DB::table('proyecto_detalles')->insert($detallesData);
 
@@ -359,7 +372,16 @@ class CRMController extends Controller
           $resultados = $query->orderBy('p.fecha', 'desc')->get();
           $todosEstatus = DB::table('estatus')->orderBy('nombre')->get();
 
-          return view('CRM.reporteEstatus', compact('resultados', 'todosEstatus', 'estatusId'));
+          // Calcular la tasa de conversión global (Lead-to-Customer)
+          $totalProspectos = DB::table('prospectos')->count();
+          $totalClientes = DB::table('prospectos')
+              ->leftJoin('estatus', 'prospectos.estatus_id', '=', 'estatus.estatus_id')
+              ->where('estatus.nombre', 'Cliente')
+              ->count();
+              
+          $tasaConversion = $totalProspectos > 0 ? ($totalClientes / $totalProspectos) * 100 : 0;
+
+          return view('CRM.reporteEstatus', compact('resultados', 'todosEstatus', 'estatusId', 'tasaConversion'));
       }
 
       public function cambiarEstatusVentaNoConcluida($id)
@@ -616,6 +638,23 @@ class CRMController extends Controller
                         'vendedor_id' => $request->IdVendedor,
                         'tiempo_id' => $request->tiempo_id
                     ]);
+
+                // Registrar interacción de Asignación de Vendedor
+                if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                    $interaccion = DB::table('interacciones')->where('nombre', 'ASIGNACIÓN DE VENDEDOR')->first();
+                    $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'ASIGNACIÓN DE VENDEDOR') : 'ASIGNACIÓN DE VENDEDOR';
+
+                    $vendedor = DB::table('vendedores')->where('vendedor_id', $request->IdVendedor)->first();
+                    $nombreVendedor = $vendedor ? trim($vendedor->nombre . ' ' . $vendedor->apellido_paterno) : 'ID: ' . $request->IdVendedor;
+
+                    DB::table('proyecto_interacciones')->insert([
+                        'proyecto_id' => $request->proyecto_id,
+                        'interaccion_id' => $interaccionId,
+                        'comentarios' => 'Se asignó el proyecto al vendedor/diseñador: ' . $nombreVendedor,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
 
                 return redirect()->route('asignacionVendedor')->with('mensaje', 'Vendedor asignado correctamente');
             } catch (\Exception $e) {

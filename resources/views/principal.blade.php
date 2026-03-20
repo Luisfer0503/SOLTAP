@@ -25,7 +25,10 @@
                 @endif
                 <div>
                     <h4 class="text-white font-semibold text-sm">{{ Auth::user()->name }}</h4>
-                    <p class="text-xs text-slate-400">{{ Auth::user()->role ?? 'Usuario' }}</p>
+                    @php
+                        $userRoleName = \Illuminate\Support\Facades\DB::table('roles')->where('id', Auth::user()->role)->value('nombre') ?? Auth::user()->role;
+                    @endphp
+                    <p class="text-xs text-slate-400">{{ $userRoleName ?? 'Usuario' }}</p>
                 </div>
             </div>
             @endauth
@@ -54,12 +57,19 @@
                 <i class="ph ph-users text-lg mr-3"></i> Clientes
             </a>
             <a href="{{ route('reporteEstatus') }}" class="{{ request()->routeIs('reporteEstatus') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
-                <i class="ph ph-user-plus text-lg mr-3"></i> Reporte de Estatus
+                <i class="ph ph-user-plus text-lg mr-3"></i> Reporte de Prospectos
             </a>
             
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">ERP</p>
+            <a href="{{ route('reporteEstatusProyecto') }}" class="{{ request()->routeIs('reporteEstatusProyecto') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-clock-counter-clockwise text-lg mr-3"></i> Historial Proyectos
+            </a>
             <a href="{{ route('gestionArticulos') }}" class="{{ request()->routeIs('gestionArticulos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-package text-lg mr-3"></i> Alta de Artículos
+            </a>
+
+            <a href="{{ route('altaEstatus') }}" class="{{ request()->routeIs('altaEstatus') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-package text-lg mr-3"></i> Alta de Estatus
             </a>
                <a href="{{ route('seguimientoProyectos') }}" class="{{ request()->routeIs('seguimientoProyectos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-chart-line-up text-lg mr-3"></i> Seguimiento de Proyectos
@@ -75,7 +85,9 @@
                <a href="{{ route('logistica') }}" class="{{ request()->routeIs('logistica') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-truck text-lg mr-3"></i> Logística
             </a>
-
+            <a href="{{ route('escanerProduccion') }}" class="{{ request()->routeIs('escanerProduccion') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-qr-code text-lg mr-3"></i> Escáner Producción
+            </a>
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Administración</p>
             <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-users-three text-lg mr-3"></i> Gestión de Usuarios

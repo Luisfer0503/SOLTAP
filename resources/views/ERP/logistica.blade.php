@@ -28,16 +28,18 @@
             </div>
         </div>
 
-        <div class="relative w-full md:w-96">
+        <div class="relative w-full md:w-96" @click.away="showProyectos = false">
             <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
             <input type="text" 
                    x-model="searchProyecto" 
+                   @focus="showProyectos = true"
+                   @click="showProyectos = true"
                    placeholder="Buscar proyecto por nombre o cliente..." 
                    class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
             
-            <div x-show="searchProyecto" @click.away="searchProyecto = ''" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+            <div x-show="showProyectos" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
                 <template x-for="proyecto in filteredProyectos" :key="proyecto.id">
-                    <button @click="selectProyecto(proyecto); searchProyecto = ''" 
+                    <button @click="selectProyecto(proyecto); showProyectos = false; searchProyecto = proyecto.nombre" 
                             class="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition">
                         <div class="flex items-start">
                             <div class="flex-1">
@@ -56,110 +58,118 @@
             </div>
         </div>
 
-        <p class="text-sm text-gray-500 mt-3">Proyecto: <span class="font-bold text-gray-700" x-text="proyectoActual.nombre"></span> • <span class="text-gray-600" x-text="'Cliente: ' + proyectoActual.cliente"></span></p>
+        <p x-show="proyectoActual" class="text-sm text-gray-500 mt-3">
+            Proyecto: <span class="font-bold text-gray-700" x-text="proyectoActual?.nombre"></span> • 
+            <span class="text-gray-600" x-text="'Cliente: ' + proyectoActual?.cliente"></span>
+        </p>
     </header>
 
     <div class="flex-1 overflow-y-auto p-8">
         
-        <div x-show="tab === 'entregas'" x-transition:enter="transition ease-out duration-300">
+        <div x-show="tab === 'entregas' && !proyectoActual" class="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+            <i class="ph ph-truck text-6xl mb-4"></i>
+            <p class="text-lg font-medium">Seleccione un proyecto para gestionar su logística.</p>
+        </div>
+
+        <!-- Módulo de Entregas -->
+        <div x-show="tab === 'entregas' && proyectoActual" x-cloak x-transition:enter="transition ease-out duration-300">
             
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">
-                            Datos de Sitio
-                        </h3>
-                        
-                        <div class="mb-4">
-                            <label class="block text-xs font-bold text-gray-400 mb-1">Dirección de Entrega</label>
-                            <p class="text-sm text-gray-800 font-medium flex items-start">
-                                <i class="ph ph-map-pin text-gray-400 mr-2 mt-0.5"></i>
-                                {{ $proyecto->direccion }}
-                            </p>
-                        </div>
+            <!-- Panel Logístico Global del Proyecto -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2">
+                    Logística Global del Proyecto
+                </h3>
 
-                        <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                            <label class="block text-xs font-bold text-gray-500 mb-2">Validación de Acceso (Previa)</label>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-700">¿Es Planta Baja?</span>
-                                @if($proyecto->es_planta_baja)
-                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded flex items-center"><i class="ph ph-check mr-1"></i> Sí</span>
-                                @else
-                                    <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded flex items-center"><i class="ph ph-elevator mr-1"></i> No (Requiere Elevador/Escaleras)</span>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-red-600 mb-1 flex items-center">
-                                <i class="ph ph-warning-circle mr-1"></i> Excepciones / Condiciones de Acceso *
-                            </label>
-                            <textarea placeholder="Ej. El camión no entra en la calle, se requiere acarreo de 50m. Horario restringido..." 
-                                      class="w-full text-sm border-red-200 focus:border-red-500 focus:ring-red-500 rounded-lg bg-red-50" 
-                                      rows="4"></textarea>
-                            <p class="text-[10px] text-gray-400 mt-1">Este campo es obligatorio para generar la hoja de ruta.</p>
-                        </div>
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 mb-1">Dirección de Entrega</label>
+                        <p class="text-sm text-gray-800 font-medium flex items-start">
+                            <i class="ph ph-map-pin text-gray-400 mr-2 mt-0.5"></i>
+                            <span x-text="proyectoActual.direccion || 'No especificada'"></span>
+                        </p>
                     </div>
-
-                    <button class="w-full py-3 bg-blue-800 hover:bg-blue-900 text-white rounded-xl shadow-lg font-bold flex items-center justify-center transition">
-                        <i class="ph ph-file-pdf mr-2 text-xl"></i> Generar Orden de Entrega
-                    </button>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 mb-1">Vendedor Asignado</label>
+                        <p class="text-sm text-gray-800 font-medium flex items-start">
+                            <i class="ph ph-user-circle text-gray-400 mr-2 mt-0.5"></i>
+                            <span x-text="proyectoActual.vendedor_nombre || 'No asignado'"></span>
+                        </p>
+                    </div>
                 </div>
 
-                <div class="lg:col-span-2">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-gray-700">Checklist de Carga y Artículos</h3>
-                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">{{ count($articulos) }} Ítems</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <label class="block text-sm font-bold text-gray-700 mb-3">Validación de Acceso</label>
+                        <div class="flex gap-4 mb-3">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" x-model="logisticaForm.es_planta_baja" value="si" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Sí, es Planta Baja</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" x-model="logisticaForm.es_planta_baja" value="no" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">No (Requiere Escaleras...)</span>
+                            </label>
                         </div>
-
-                        <div class="divide-y divide-gray-100">
-                            @foreach($articulos as $item)
-                            <div class="p-6 hover:bg-gray-50 transition group">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div class="flex items-center">
-                                        <div class="h-10 w-10 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 mr-3">
-                                            <i class="ph ph-package text-xl"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-bold text-gray-800 text-sm">{{ $item->nombre }}</h4>
-                                            <p class="text-xs text-gray-500">{{ $item->dimensiones }} | {{ $item->peso }}kg</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex space-x-2">
-                                        @if($item->requiere_instalacion)
-                                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded flex items-center border border-yellow-200">
-                                                <i class="ph ph-wrench mr-1"></i> Instalación
-                                            </span>
-                                        @endif
-                                        @if($item->requiere_emplaye)
-                                            <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded flex items-center border border-purple-200">
-                                                <i class="ph ph-package mr-1"></i> Emplaye
-                                            </span>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-4 mt-4">
-                                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                        <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Notas de Producción/Ventas</p>
-                                        <p class="text-xs text-gray-600 italic">
-                                            {{ $item->comentarios_ventas ?: 'Sin comentarios registrados.' }}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-[10px] uppercase font-bold text-blue-600 mb-1">Observaciones Logística</label>
-                                        <input type="text" placeholder="Ej. Cargar en camión pequeño, desarmar antes..." 
-                                               class="w-full text-xs border-gray-300 rounded focus:border-blue-500 focus:ring-blue-500">
-                                    </div>
-                                </div>
-                            </div>
-                            @endforeach
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Condiciones de Acceso / Excepciones</label>
+                            <textarea x-model="logisticaForm.condiciones_acceso" class="w-full text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" rows="2" placeholder="Ej. Escaleras estrechas, horario restringido..."></textarea>
                         </div>
                     </div>
+
+                    <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <label class="block text-sm font-bold text-gray-700 mb-3">Requerimientos de Entrega</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="logisticaForm.requiere_emplaye" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Requiere Emplaye</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="logisticaForm.requiere_desemplaye" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Requiere Desemplaye</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="logisticaForm.requiere_instalacion" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Requiere Instalación</span>
+                            </label>
+                               <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="logisticaForm.requiere_maniobraje" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Requiere Maniobraje</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-end">
+                    <button @click="guardarLogistica()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow flex items-center transition">
+                        <i class="ph ph-floppy-disk mr-2"></i> Guardar Logística del Proyecto
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Artículos -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-gray-700">Artículos del Proyecto</h3>
+                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold" x-text="articulosProyecto.length + ' Ítems'"></span>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <template x-for="item in articulosProyecto" :key="item.id">
+                        <div class="p-6 hover:bg-gray-50 transition flex items-start">
+                            <div class="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 mr-4 shrink-0 overflow-hidden border border-gray-200">
+                                <template x-if="item.imagen">
+                                    <img :src="item.imagen" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="!item.imagen">
+                                    <i class="ph ph-package text-2xl"></i>
+                                </template>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-sm" x-text="item.nombre"></h4>
+                                <p class="text-xs text-gray-500" x-text="`${item.alto}x${item.ancho}x${item.profundo}cm | ${item.peso}kg | Cantidad: ${item.cantidad}`"></p>
+                                <p class="text-xs text-gray-400 mt-1" x-text="item.descripcion"></p>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -180,9 +190,9 @@
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Seleccionar Artículo a Retornar</label>
                                 <select class="w-full rounded-lg border-gray-300 bg-gray-50 text-sm focus:ring-orange-500">
                                     <option value="">Seleccione...</option>
-                                    @foreach($articulos as $item)
-                                        <option value="{{ $item->id }}">{{ $item->nombre }} (ID: {{ $item->id }})</option>
-                                    @endforeach
+                                    <template x-for="item in todosArticulos" :key="item.id">
+                                        <option :value="item.id" x-text="`${item.nombre} (Proyecto ID: ${item.proyecto_id})`"></option>
+                                    </template>
                                 </select>
                             </div>
 
@@ -262,60 +272,75 @@
 <script>
     function logisticaApp() {
         return {
-            tab: 'entregas', // 'entregas' o 'retornos'
+            tab: 'entregas',
             searchProyecto: '',
-            proyectoActual: {
-                id: 1,
-                nombre: 'Oficinas Corporativo Santa Fe',
-                cliente: 'Tech Solutions SA',
-                direccion: 'Av. Santa Fe 450, Piso 12, CDMX',
-                estatus: 'Activo',
-                es_planta_baja: false
+            showProyectos: false,
+            proyectoActual: null,
+            proyectos: @json($proyectos),
+            todosArticulos: @json($articulos),
+            articulosProyecto: [],
+            logisticaForm: {
+                proyecto_id: null,
+                es_planta_baja: 'si',
+                condiciones_acceso: '', // Initialize with default values
+                requiere_instalacion: false,
+                requiere_desemplaye: false,
+                requiere_emplaye: false
             },
-            proyectos: [
-                {
-                    id: 1,
-                    nombre: 'Oficinas Corporativo Santa Fe',
-                    cliente: 'Tech Solutions SA',
-                    direccion: 'Av. Santa Fe 450, Piso 12, CDMX',
-                    estatus: 'Activo'
-                },
-                {
-                    id: 2,
-                    nombre: 'Departamento Polanco',
-                    cliente: 'Juan García Ruiz',
-                    direccion: 'Blvd. Paseo de la Reforma 505, Polanco',
-                    estatus: 'Activo'
-                },
-                {
-                    id: 3,
-                    nombre: 'Casa Campestre Querétaro',
-                    cliente: 'María González López',
-                    direccion: 'Rancho Los Alamos, Querétaro',
-                    estatus: 'En Entrega'
-                },
-                {
-                    id: 4,
-                    nombre: 'Boutique Centro Histórico',
-                    cliente: 'Moda Boutique SA',
-                    direccion: 'Madero 25, Centro, CDMX',
-                    estatus: 'Activo'
-                }
-            ],
             
             get filteredProyectos() {
                 if (!this.searchProyecto) return this.proyectos;
                 const search = this.searchProyecto.toLowerCase();
                 return this.proyectos.filter(p => 
-                    p.nombre.toLowerCase().includes(search) || 
-                    p.cliente.toLowerCase().includes(search)
+                    (p.nombre && p.nombre.toLowerCase().includes(search)) || 
+                    (p.cliente && p.cliente.toLowerCase().includes(search))
                 );
             },
             
             selectProyecto(proyecto) {
                 this.proyectoActual = proyecto;
-                // Aquí irría la lógica para recargar los datos del proyecto seleccionado
-                // window.location.href = `/logistica/${proyecto.id}`;
+                this.articulosProyecto = this.todosArticulos.filter(a => a.proyecto_id == proyecto.id);
+                this.logisticaForm = {
+                    proyecto_id: proyecto.id,
+                    es_planta_baja: proyecto.es_planta_baja == 1 ? 'si' : 'no', // Convert 1/0 from DB to 'si'/'no' for radio buttons
+                    condiciones_acceso: proyecto.condiciones_acceso || '',
+                    requiere_instalacion: proyecto.requiere_instalacion == 1,
+                    requiere_desemplaye: proyecto.requiere_desemplaye == 1,
+                    requiere_emplaye: proyecto.requiere_emplaye == 1,
+                    requiere_maniobraje: proyecto.requiere_maniobraje == 1,
+                };
+            },
+
+            async guardarLogistica() {
+                try {
+                    const response = await fetch('{{ route("guardarLogisticaProyecto") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(this.logisticaForm)
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Información de logística guardada correctamente.');
+                        // Reflejar localmente en la lista
+                        const idx = this.proyectos.findIndex(p => p.id === this.proyectoActual.id);
+                        if(idx !== -1) {
+                            this.proyectos[idx].es_planta_baja = this.logisticaForm.es_planta_baja;
+                            this.proyectos[idx].condiciones_acceso = this.logisticaForm.condiciones_acceso;
+                            this.proyectos[idx].requiere_instalacion = this.logisticaForm.requiere_instalacion ? 1 : 0;
+                            this.proyectos[idx].requiere_desemplaye = this.logisticaForm.requiere_desemplaye ? 1 : 0;
+                            this.proyectos[idx].requiere_emplaye = this.logisticaForm.requiere_emplaye ? 1 : 0;
+                            this.proyectos[idx].requiere_maniobraje = this.logisticaForm.requiere_maniobraje ? 1 : 0;
+                        }
+                    } else {
+                        alert('Error al guardar: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error de conexión.');
+                }
             }
         }
     }

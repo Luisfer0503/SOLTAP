@@ -92,7 +92,7 @@
 
                     <div class="mb-3">
                         <label class="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
-                        <textarea x-model="form.descripcion" rows="5" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos extensos..."></textarea>
+                        <textarea x-model="form.descripcion" rows="5" class="w-full rounded bg-gray-50 border-gray-300 text-xs" placeholder="Detalles técnicos del articulo..."></textarea>
                     </div>
 
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
@@ -123,8 +123,8 @@
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Cantidad Total</label>
-                            <input type="number" x-model="form.cantidad" min="1" class="w-full rounded bg-white border-gray-300 text-center text-sm font-bold">
+                            <label class="block text-sm font-black text-black mb-1">Cantidad Total</label>
+                            <input type="number" x-model="form.cantidad" min="1" class="w-full rounded bg-white border-2 border-black text-center text-lg font-black py-2 shadow-sm focus:ring-black focus:border-black">
                         </div>
                         <div class="flex flex-col justify-center">
                             <label class="flex items-center cursor-pointer mb-1">
@@ -279,20 +279,7 @@
                         <div class="bg-white p-3 rounded-lg border border-blue-200">
                             <label class="flex items-center cursor-pointer">
                                 <input type="checkbox" x-model="form.usa_herreria" class="w-5 h-5 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-3 text-sm font-bold text-gray-700">Requiere Herrería</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="mb-4 pt-2">
-                        <div class="flex flex-col space-y-2">
-                            <label class="flex items-center">
-                                <input type="checkbox" x-model="form.requiere_instalacion" class="rounded text-blue-600 w-3 h-3">
-                                <span class="ml-2 text-xs text-gray-600">Requiere Instalación</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="checkbox" x-model="form.requiere_desemplaye" class="rounded text-blue-600 w-3 h-3">
-                                <span class="ml-2 text-xs text-gray-600">Requiere Desemplaye</span>
+                                <span class="ml-3 text-sm font-bold text-gray-700">Herrería</span>
                             </label>
                         </div>
                     </div>
@@ -306,38 +293,11 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Archivo PDF (Planos/Guías)</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Archivo PDF (Planos)</label>
                         <input type="file" @change="handlePdf" accept=".pdf" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                         <template x-if="form.pdf">
                             <p class="text-xs text-green-600 mt-1 font-bold" x-text="'Archivo cargado: ' + form.pdf.name"></p>
                         </template>
-                    </div>
-
-                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 flex items-center">
-                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2 text-xs">3</span>
-                        Validación de Acceso
-                    </h3>
-
-                    <div class="bg-red-50 border-2 border-red-200 p-4 rounded-lg mb-4">
-                        <div class="mb-4">
-                            <label class="block text-sm font-bold text-gray-700 mb-3">¿Es Planta Baja?</label>
-                            <div class="flex gap-3">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" x-model="form.es_planta_baja" value="si" class="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500">
-                                    <span class="ml-2 text-sm font-semibold text-green-700">Sí - Es Planta Baja</span>
-                                </label>
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" x-model="form.es_planta_baja" value="no" class="w-4 h-4 text-red-600 rounded focus:ring-2 focus:ring-red-500">
-                                    <span class="ml-2 text-sm font-semibold text-red-700">No - Requiere Escaleras/Ascensor</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div x-show="form.es_planta_baja === 'no'" x-transition>
-                            <label class="block text-sm font-bold text-gray-700 mb-2">Excepciones o Condiciones Especiales de Acceso <span class="text-red-600">*</span></label>
-                            <textarea x-model="form.condiciones_acceso" rows="3" :required="form.es_planta_baja === 'no'" placeholder="Describe cualquier limitación de acceso, restricciones de movimiento, o condiciones especiales..." class="w-full px-3 py-2 rounded border-2 border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm font-semibold text-gray-800"></textarea>
-                            <p class="text-xs text-red-600 mt-1">Este campo es obligatorio para documentar accesibilidad</p>
-                        </div>
                     </div>
 
                     <button type="submit" class="w-full py-3 bg-gray-900 text-white rounded-lg font-bold shadow-md hover:bg-black transition flex justify-center items-center">
@@ -349,12 +309,20 @@
         </div>
 
         <div class="w-3/5 bg-gray-100 p-8 overflow-y-auto">
-            <h3 class="text-lg font-bold text-gray-700 mb-4">Listado de Artículos (<span x-text="articulos.length"></span>)</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-700">Listado de Artículos (<span x-text="articulos.length"></span>)</h3>
+                <button x-show="haySeleccionados" @click="abrirModalDuplicarBloque()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition flex items-center text-sm" x-cloak>
+                    <i class="ph ph-copy mr-2"></i> Duplicar Bloque
+                </button>
+            </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            <th class="px-4 py-3 text-center w-12">
+                                <input type="checkbox" :checked="todosSeleccionados" @change="toggleSeleccionarTodo()" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer">
+                            </th>
                             <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Articulo</th>
                             <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Dimensiones</th>
                             <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Materiales</th>
@@ -363,7 +331,10 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <template x-for="(item, index) in articulos" :key="index">
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50" :class="{'bg-purple-50': item.seleccionado}">
+                                <td class="px-4 py-3 text-center">
+                                    <input type="checkbox" x-model="item.seleccionado" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer">
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center">
                                         <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden mr-3">
@@ -723,8 +694,8 @@
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Cantidad Total</label>
-                            <input type="number" x-model="form.cantidad" min="1" class="w-full rounded bg-white border-gray-300 text-center text-sm font-bold">
+                            <label class="block text-sm font-black text-black mb-1">Cantidad Total</label>
+                            <input type="number" x-model="form.cantidad" min="1" class="w-full rounded bg-white border-2 border-black text-center text-lg font-black py-2 shadow-sm focus:ring-black focus:border-black">
                         </div>
                         <div class="flex flex-col justify-center">
                             <label class="flex items-center cursor-pointer mb-1">
@@ -879,19 +850,6 @@
                         </div>
                     </div>
 
-                    <div class="mb-4 pt-2">
-                        <div class="flex flex-col space-y-2">
-                            <label class="flex items-center">
-                                <input type="checkbox" x-model="form.requiere_instalacion" class="rounded text-blue-600 w-3 h-3">
-                                <span class="ml-2 text-xs text-gray-600">Requiere Instalación</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="checkbox" x-model="form.requiere_desemplaye" class="rounded text-blue-600 w-3 h-3">
-                                <span class="ml-2 text-xs text-gray-600">Requiere Desemplaye</span>
-                            </label>
-                        </div>
-                    </div>
-
                     <div class="mb-4">
                         <label class="block text-xs font-bold text-gray-700 mb-1">Imagen de Referencia del Artículo</label>
                         <input type="file" @change="fileChosen" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
@@ -908,33 +866,6 @@
                         </template>
                     </div>
 
-                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6 flex items-center">
-                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-2 text-xs">3</span>
-                        Validación de Acceso
-                    </h3>
-
-                    <div class="bg-red-50 border-2 border-red-200 p-4 rounded-lg mb-4">
-                        <div class="mb-4">
-                            <label class="block text-sm font-bold text-gray-700 mb-3">¿Es Planta Baja?</label>
-                            <div class="flex gap-3">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" x-model="form.es_planta_baja" value="si" class="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500">
-                                    <span class="ml-2 text-sm font-semibold text-green-700">Sí - Es Planta Baja</span>
-                                </label>
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" x-model="form.es_planta_baja" value="no" class="w-4 h-4 text-red-600 rounded focus:ring-2 focus:ring-red-500">
-                                    <span class="ml-2 text-sm font-semibold text-red-700">No - Requiere Escaleras/Ascensor</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div x-show="form.es_planta_baja === 'no'" x-transition>
-                            <label class="block text-sm font-bold text-gray-700 mb-2">Excepciones o Condiciones Especiales de Acceso <span class="text-red-600">*</span></label>
-                            <textarea x-model="form.condiciones_acceso" rows="3" :required="form.es_planta_baja === 'no'" placeholder="Describe cualquier limitación de acceso, restricciones de movimiento, o condiciones especiales..." class="w-full px-3 py-2 rounded border-2 border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 text-sm font-semibold text-gray-800"></textarea>
-                            <p class="text-xs text-red-600 mt-1">Este campo es obligatorio para documentar accesibilidad</p>
-                        </div>
-                    </div>
-
                     <div class="flex gap-3">
                         <button type="button" @click="cerrarModalEdicion()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition">
                             Cancelar
@@ -945,6 +876,36 @@
                     </div>
 
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Duplicar Bloque -->
+    <div x-show="showModalDuplicarBloque" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;" x-cloak>
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.stop>
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 p-4 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-white flex items-center">
+                    <i class="ph ph-copy mr-2"></i> Duplicar Bloque de Artículos
+                </h2>
+                <button type="button" @click="cerrarModalDuplicarBloque()" class="text-white hover:text-purple-100 text-xl">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Ingresa el nuevo diferenciador que se aplicará a los artículos seleccionados:</p>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Nuevo Diferenciador</label>
+                    <input type="text" x-model="nuevoDiferenciadorBloque" @keydown.enter.prevent="duplicarBloque()" placeholder="ej. Planta2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase font-bold">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" @click="cerrarModalDuplicarBloque()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition">Cancelar</button>
+                    <button type="button" @click="duplicarBloque()" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition flex items-center justify-center">
+                        <i class="ph ph-check mr-2"></i> Duplicar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -987,11 +948,8 @@
                 tipo_melamina: '',
                 tipo_tela: '',
                 tipo_cubierta: '',
-                requiere_instalacion: false,
-                requiere_desemplaye: false,
-                es_planta_baja: 'si',
-                condiciones_acceso: '',
-                pdf: null
+                pdf: null,
+                seleccionado: false
             },
             imagePreview: null,
             articulos: [],
@@ -999,6 +957,8 @@
             tipoMaterialSeleccionado: null,
             showModalEdicion: false,
             indexEdicion: null,
+            showModalDuplicarBloque: false,
+            nuevoDiferenciadorBloque: '',
             formularioMaterial: {
                 imagenPreview: null,
                 nombre: '',
@@ -1028,6 +988,50 @@
                 this.$watch('form.alto', () => this.calcularCubicaje());
                 this.$watch('form.ancho', () => this.calcularCubicaje());
                 this.$watch('form.profundo', () => this.calcularCubicaje());
+            },
+
+            get haySeleccionados() {
+                return this.articulos.some(a => a.seleccionado);
+            },
+
+            get todosSeleccionados() {
+                return this.articulos.length > 0 && this.articulos.every(a => a.seleccionado);
+            },
+
+            toggleSeleccionarTodo() {
+                const estado = !this.todosSeleccionados;
+                this.articulos.forEach(a => a.seleccionado = estado);
+            },
+
+            abrirModalDuplicarBloque() {
+                this.nuevoDiferenciadorBloque = '';
+                this.showModalDuplicarBloque = true;
+            },
+
+            cerrarModalDuplicarBloque() {
+                this.showModalDuplicarBloque = false;
+            },
+
+            duplicarBloque() {
+                if (!this.nuevoDiferenciadorBloque.trim()) {
+                    alert('Por favor ingrese un diferenciador válido.');
+                    return;
+                }
+                const seleccionados = this.articulos.filter(a => a.seleccionado);
+                const duplicados = seleccionados.map(item => {
+                    const copy = { ...item };
+                    copy.maderas_seleccionadas = Array.isArray(item.maderas_seleccionadas) ? [...item.maderas_seleccionadas] : [];
+                    copy.melaminas_seleccionadas = Array.isArray(item.melaminas_seleccionadas) ? [...item.melaminas_seleccionadas] : [];
+                    copy.telas_seleccionadas = Array.isArray(item.telas_seleccionadas) ? [...item.telas_seleccionadas] : [];
+                    copy.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? [...item.cubiertas_seleccionadas] : [];
+                    delete copy.id; 
+                    copy.id_articulo_produccion = this.nuevoDiferenciadorBloque.trim();
+                    copy.seleccionado = false; 
+                    return copy;
+                });
+                this.articulos.unshift(...duplicados);
+                this.articulos.forEach(a => a.seleccionado = false);
+                this.cerrarModalDuplicarBloque();
             },
 
             get combinacionesMadera() {
@@ -1214,10 +1218,6 @@
                     errores.push('Debe seleccionar al menos un material (Madera, Melamina, Tela, Cubierta o Herrería).');
                 }
 
-                if (this.form.es_planta_baja === 'no' && !this.form.condiciones_acceso) {
-                    errores.push('Debe especificar las condiciones de acceso si no es planta baja.');
-                }
-
                 return errores;
             },
 
@@ -1235,6 +1235,7 @@
                 nuevoItem.telas_seleccionadas = [...this.form.telas_seleccionadas];
                 nuevoItem.cubiertas_seleccionadas = [...this.form.cubiertas_seleccionadas];
                 nuevoItem.imagen = this.imagePreview; 
+                nuevoItem.seleccionado = false;
                 
                 this.articulos.unshift(nuevoItem); 
                 
@@ -1258,9 +1259,8 @@
                 this.form.melaminas_seleccionadas = [];
                 this.form.telas_seleccionadas = [];
                 this.form.cubiertas_seleccionadas = [];
-                this.form.es_planta_baja = 'si';
-                this.form.condiciones_acceso = '';
                 this.form.pdf = null;
+                this.form.seleccionado = false;
                 this.imagePreview = null;
                 // No reseteamos los materiales para agilizar carga de muebles similares
             },
@@ -1497,6 +1497,7 @@
                         item.telas_seleccionadas = Array.isArray(item.telas_seleccionadas) ? item.telas_seleccionadas : [];
                         item.cubiertas_seleccionadas = Array.isArray(item.cubiertas_seleccionadas) ? item.cubiertas_seleccionadas : [];
                         item.cantidad = item.cantidad || 1;
+                        item.seleccionado = false;
                         // La imagen ya viene como URL completa desde el controlador
                         return item;
                     });
@@ -1545,10 +1546,6 @@
                     formData.append(`articulos[${index}][cantidad]`, item.cantidad || 1);
                     formData.append(`articulos[${index}][tiene_division]`, item.tiene_division ? 1 : 0);
                     formData.append(`articulos[${index}][piezas_divididas]`, item.piezas_divididas || 0);
-                    formData.append(`articulos[${index}][es_planta_baja]`, item.es_planta_baja);
-                    formData.append(`articulos[${index}][condiciones_acceso]`, item.condiciones_acceso || '');
-                    formData.append(`articulos[${index}][requiere_instalacion]`, item.requiere_instalacion ? 1 : 0);
-                    formData.append(`articulos[${index}][requiere_desemplaye]`, item.requiere_desemplaye ? 1 : 0);
                     
                     // Imagen (Base64)
                     if (item.imagen && item.imagen.startsWith('data:')) {
