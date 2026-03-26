@@ -100,49 +100,37 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                         <label class="block text-sm font-bold text-gray-700 mb-3">Validación de Acceso</label>
-                        <div class="flex gap-4 mb-3">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" x-model="logisticaForm.es_planta_baja" value="si" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Sí, es Planta Baja</span>
-                            </label>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" x-model="logisticaForm.es_planta_baja" value="no" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">No (Requiere Escaleras...)</span>
-                            </label>
+                        <div class="mb-3">
+                            <span class="block text-xs font-bold text-gray-400 mb-1">¿Es Planta Baja?</span>
+                            <p class="text-sm text-gray-800 font-medium" x-text="proyectoActual.es_planta_baja == 1 ? 'Sí, es Planta Baja' : 'No (Requiere Escaleras...)'"></p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Condiciones de Acceso / Excepciones</label>
-                            <textarea x-model="logisticaForm.condiciones_acceso" class="w-full text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" rows="2" placeholder="Ej. Escaleras estrechas, horario restringido..."></textarea>
+                            <div class="w-full text-sm border border-gray-200 bg-white rounded p-2 text-gray-700 min-h-[3rem]" x-text="proyectoActual.condiciones_acceso || 'Ninguna especificada.'"></div>
                         </div>
                     </div>
 
                     <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                         <label class="block text-sm font-bold text-gray-700 mb-3">Requerimientos de Entrega</label>
                         <div class="space-y-2">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" x-model="logisticaForm.requiere_emplaye" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Requiere Emplaye</span>
+                            <label class="flex items-center">
+                                <input type="checkbox" disabled :checked="proyectoActual.requiere_emplaye == 1" class="w-4 h-4 rounded text-blue-600 border-gray-300 bg-gray-200 cursor-not-allowed">
+                                <span class="ml-2 text-sm text-gray-600">Requiere Emplaye</span>
                             </label>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" x-model="logisticaForm.requiere_desemplaye" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Requiere Desemplaye</span>
+                            <label class="flex items-center">
+                                <input type="checkbox" disabled :checked="proyectoActual.requiere_desemplaye == 1" class="w-4 h-4 rounded text-blue-600 border-gray-300 bg-gray-200 cursor-not-allowed">
+                                <span class="ml-2 text-sm text-gray-600">Requiere Desemplaye</span>
                             </label>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" x-model="logisticaForm.requiere_instalacion" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Requiere Instalación</span>
+                            <label class="flex items-center">
+                                <input type="checkbox" disabled :checked="proyectoActual.requiere_instalacion == 1" class="w-4 h-4 rounded text-blue-600 border-gray-300 bg-gray-200 cursor-not-allowed">
+                                <span class="ml-2 text-sm text-gray-600">Requiere Instalación</span>
                             </label>
-                               <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" x-model="logisticaForm.requiere_maniobraje" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Requiere Maniobraje</span>
+                            <label class="flex items-center">
+                                <input type="checkbox" disabled :checked="proyectoActual.requiere_maniobraje == 1" class="w-4 h-4 rounded text-blue-600 border-gray-300 bg-gray-200 cursor-not-allowed">
+                                <span class="ml-2 text-sm text-gray-600">Requiere Maniobraje</span>
                             </label>
                         </div>
                     </div>
-                </div>
-
-                <div class="mt-4 flex justify-end">
-                    <button @click="guardarLogistica()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow flex items-center transition">
-                        <i class="ph ph-floppy-disk mr-2"></i> Guardar Logística del Proyecto
-                    </button>
                 </div>
             </div>
 
@@ -163,10 +151,15 @@
                                     <i class="ph ph-package text-2xl"></i>
                                 </template>
                             </div>
-                            <div>
+                            <div class="flex-1">
                                 <h4 class="font-bold text-gray-800 text-sm" x-text="item.nombre"></h4>
                                 <p class="text-xs text-gray-500" x-text="`${item.alto}x${item.ancho}x${item.profundo}cm | ${item.peso}kg | Cantidad: ${item.cantidad}`"></p>
                                 <p class="text-xs text-gray-400 mt-1" x-text="item.descripcion"></p>
+                            </div>
+                            <div class="ml-auto pl-4 flex-shrink-0">
+                                <button @click="abrirModalRetorno(item)" class="px-3 py-1.5 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded text-xs font-bold transition flex items-center shadow-sm">
+                                    <i class="ph ph-arrow-u-up-left mr-1 text-lg"></i> Retornar
+                                </button>
                             </div>
                         </div>
                     </template>
@@ -177,68 +170,6 @@
         <div x-show="tab === 'retornos'" x-cloak>
             <div class="max-w-4xl mx-auto">
                 
-                <div class="bg-white rounded-xl shadow-md border border-gray-200 mb-8 overflow-hidden">
-                    <div class="bg-orange-50 px-6 py-4 border-b border-orange-100 flex items-center">
-                        <i class="ph ph-arrow-u-up-left text-orange-600 text-xl mr-2"></i>
-                        <h3 class="text-lg font-bold text-orange-800">Registrar Nuevo Retorno</h3>
-                    </div>
-                    
-                    <form class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Seleccionar Artículo a Retornar</label>
-                                <select class="w-full rounded-lg border-gray-300 bg-gray-50 text-sm focus:ring-orange-500">
-                                    <option value="">Seleccione...</option>
-                                    <template x-for="item in todosArticulos" :key="item.id">
-                                        <option :value="item.id" x-text="`${item.nombre} (Proyecto ID: ${item.proyecto_id})`"></option>
-                                    </template>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Destinatario (Cliente/Origen)</label>
-                                <div class="relative">
-                                    <i class="ph ph-user absolute left-3 top-2.5 text-gray-400"></i>
-                                    <input type="text" placeholder="Persona que devuelve" class="pl-10 w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Persona que Recibe (Interno)</label>
-                                <div class="relative">
-                                    <i class="ph ph-identification-badge absolute left-3 top-2.5 text-gray-400"></i>
-                                    <input type="text" placeholder="Staff a cargo" class="pl-10 w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Ubicación Interna (Destino)</label>
-                                <select class="w-full rounded-lg border-gray-300 focus:ring-orange-500">
-                                    <option>Almacén General - Nave A</option>
-                                    <option>Taller de Reparaciones</option>
-                                    <option>Showroom</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Motivo</label>
-                                <select class="w-full rounded-lg border-gray-300 focus:ring-orange-500">
-                                    <option>Defecto de Fábrica</option>
-                                    <option>Daño en Traslado</option>
-                                    <option>Cambio de Modelo</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end">
-                            <button type="button" class="px-6 py-2 bg-orange-600 text-white font-bold rounded-lg shadow hover:bg-orange-700 transition flex items-center">
-                                <i class="ph ph-floppy-disk mr-2"></i> Guardar Retorno
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
                 <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Retornos Activos</h4>
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -251,14 +182,19 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td class="px-6 py-4 text-sm text-gray-900">Silla Eames (Dañada)</td>
-                                <td class="px-6 py-4 text-sm text-gray-500">Juan Almacén</td>
-                                <td class="px-6 py-4 text-sm text-gray-500">10 Feb 2026</td>
-                                <td class="px-6 py-4 text-center">
-                                    <span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">En Revisión</span>
-                                </td>
-                            </tr>
+                            <template x-if="retornos.length === 0">
+                                <tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No hay retornos registrados.</td></tr>
+                            </template>
+                            <template x-for="retorno in retornos" :key="retorno.id">
+                                <tr>
+                                    <td class="px-6 py-4 text-sm font-bold text-gray-900" x-text="retorno.articulo_nombre || 'Artículo N/A'"></td>
+                                    <td class="px-6 py-4 text-sm text-gray-600" x-text="retorno.destinatario"></td>
+                                    <td class="px-6 py-4 text-sm text-gray-500" x-text="retorno.fecha_formateada"></td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800" x-text="retorno.estatus"></span>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -266,6 +202,63 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Modal Retorno -->
+    <div x-show="mostrarModalRetorno" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;" x-cloak>
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden" @click.away="mostrarModalRetorno = false">
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold flex items-center"><i class="ph ph-arrow-u-up-left mr-2"></i> Reportar Retorno de Artículo</h3>
+                <button @click="mostrarModalRetorno = false" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-6 bg-gray-50 overflow-y-auto max-h-[80vh]">
+                <form @submit.prevent="guardarRetorno">
+                    <div class="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <h4 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2 text-orange-700">Información Automática (Identificación para Logística)</h4>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="block text-xs font-bold text-gray-400 uppercase">Proyecto</span>
+                                <span class="font-semibold text-gray-800" x-text="formRetorno.proyecto_nombre"></span>
+                            </div>
+                            <div>
+                                <span class="block text-xs font-bold text-gray-400 uppercase">Diseñador Responsable</span>
+                                <span class="font-semibold text-gray-800" x-text="formRetorno.disenador_nombre"></span>
+                            </div>
+                            <div class="col-span-2">
+                                <span class="block text-xs font-bold text-gray-400 uppercase">Artículo a Retornar</span>
+                                <span class="font-semibold text-gray-800 text-base" x-text="formRetorno.articulo_nombre"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">Especificación de Destinatario y Ubicación Interna</h4>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Entregar a (Destinatario) <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formRetorno.destinatario" required class="w-full border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="Nombre de quien recibe el retorno...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Nave / Área / Ubicación Interna <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formRetorno.ubicacion_interna" required class="w-full border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="Ej. Nave 2, Almacén General, Área de Reparación...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Personal a cargo (Recepción/Envío logístico) <span class="text-red-500">*</span></label>
+                            <input type="text" x-model="formRetorno.persona_logistica" required class="w-full border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="Nombre del responsable de logística...">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" @click="mostrarModalRetorno = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
+                        <button type="submit" class="px-6 py-2 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition shadow-md flex items-center" :disabled="guardandoRetorno">
+                            <i class="ph ph-floppy-disk mr-2" x-show="!guardandoRetorno"></i>
+                            <i class="ph ph-spinner animate-spin mr-2" x-show="guardandoRetorno"></i>
+                            <span x-text="guardandoRetorno ? 'Guardando...' : 'Confirmar Retorno'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -278,15 +271,20 @@
             proyectoActual: null,
             proyectos: @json($proyectos),
             todosArticulos: @json($articulos),
-            articulosProyecto: [],
-            logisticaForm: {
+            retornos: @json($retornos ?? []),
+            mostrarModalRetorno: false,
+            guardandoRetorno: false,
+            formRetorno: {
                 proyecto_id: null,
-                es_planta_baja: 'si',
-                condiciones_acceso: '', // Initialize with default values
-                requiere_instalacion: false,
-                requiere_desemplaye: false,
-                requiere_emplaye: false
+                proyecto_nombre: '',
+                disenador_nombre: '',
+                articulo_id: null,
+                articulo_nombre: '',
+                destinatario: '',
+                ubicacion_interna: '',
+                persona_logistica: ''
             },
+            articulosProyecto: [],
             
             get filteredProyectos() {
                 if (!this.searchProyecto) return this.proyectos;
@@ -300,47 +298,40 @@
             selectProyecto(proyecto) {
                 this.proyectoActual = proyecto;
                 this.articulosProyecto = this.todosArticulos.filter(a => a.proyecto_id == proyecto.id);
-                this.logisticaForm = {
-                    proyecto_id: proyecto.id,
-                    es_planta_baja: proyecto.es_planta_baja == 1 ? 'si' : 'no', // Convert 1/0 from DB to 'si'/'no' for radio buttons
-                    condiciones_acceso: proyecto.condiciones_acceso || '',
-                    requiere_instalacion: proyecto.requiere_instalacion == 1,
-                    requiere_desemplaye: proyecto.requiere_desemplaye == 1,
-                    requiere_emplaye: proyecto.requiere_emplaye == 1,
-                    requiere_maniobraje: proyecto.requiere_maniobraje == 1,
+            },
+            
+            abrirModalRetorno(articulo) {
+                this.formRetorno = {
+                    proyecto_id: this.proyectoActual.id,
+                    proyecto_nombre: this.proyectoActual.nombre,
+                    disenador_nombre: this.proyectoActual.vendedor_nombre || 'No asignado',
+                    articulo_id: articulo.id,
+                    articulo_nombre: articulo.nombre,
+                    destinatario: '',
+                    ubicacion_interna: '',
+                    persona_logistica: ''
                 };
+                this.mostrarModalRetorno = true;
             },
 
-            async guardarLogistica() {
+            async guardarRetorno() {
+                this.guardandoRetorno = true;
                 try {
-                    const response = await fetch('{{ route("guardarLogisticaProyecto") }}', {
+                    const response = await fetch('{{ route("guardarRetorno") }}', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify(this.logisticaForm)
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify(this.formRetorno)
                     });
-                    const result = await response.json();
-                    if (result.success) {
-                        alert('Información de logística guardada correctamente.');
-                        // Reflejar localmente en la lista
-                        const idx = this.proyectos.findIndex(p => p.id === this.proyectoActual.id);
-                        if(idx !== -1) {
-                            this.proyectos[idx].es_planta_baja = this.logisticaForm.es_planta_baja;
-                            this.proyectos[idx].condiciones_acceso = this.logisticaForm.condiciones_acceso;
-                            this.proyectos[idx].requiere_instalacion = this.logisticaForm.requiere_instalacion ? 1 : 0;
-                            this.proyectos[idx].requiere_desemplaye = this.logisticaForm.requiere_desemplaye ? 1 : 0;
-                            this.proyectos[idx].requiere_emplaye = this.logisticaForm.requiere_emplaye ? 1 : 0;
-                            this.proyectos[idx].requiere_maniobraje = this.logisticaForm.requiere_maniobraje ? 1 : 0;
-                        }
-                    } else {
-                        alert('Error al guardar: ' + result.message);
-                    }
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        alert('Retorno registrado correctamente.');
+                        this.mostrarModalRetorno = false;
+                        window.location.reload();
+                    } else { alert('Error: ' + (data.message || 'Desconocido')); }
                 } catch (error) {
-                    console.error(error);
-                    alert('Error de conexión.');
-                }
+                    console.error(error); alert('Error de conexión');
+                } finally { this.guardandoRetorno = false; }
             }
         }
     }

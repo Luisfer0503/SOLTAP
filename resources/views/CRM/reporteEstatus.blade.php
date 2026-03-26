@@ -86,23 +86,23 @@
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-3 font-medium text-gray-900">{{ $row->proyecto ?: 'Sin Proyecto' }}</td>
                                         <td class="px-6 py-3 text-gray-600">{{ $row->prospecto }}</td>
-                                        <td class="px-6 py-3 text-gray-500">{{ \Carbon\Carbon::parse($row->fecha_registro)->format('d/m/Y H:i') }}</td>
+                                        <td class="px-6 py-3 text-gray-500">{{ $row->fecha_registro ? \Carbon\Carbon::parse($row->fecha_registro)->format('d/m/Y') : '-' }}</td>
                                         <td class="px-6 py-3 text-green-600 font-medium">
-                                            {{ $row->estatus === 'Cliente' ? \Carbon\Carbon::parse($row->fecha_actualizacion)->format('d/m/Y') : '-' }}
+                                            {{ strtolower($row->estatus) === 'cliente' && $row->fecha_actualizacion ? \Carbon\Carbon::parse($row->fecha_actualizacion)->format('d/m/Y') : '-' }}
                                         </td>
                                         <td class="px-6 py-3 text-red-600 font-medium">
-                                            {{ $row->estatus === 'Venta no concluida' ? \Carbon\Carbon::parse($row->fecha_actualizacion)->format('d/m/Y') : '-' }}
+                                            {{ strtolower($row->estatus) === 'venta no concluida' && $row->fecha_actualizacion ? \Carbon\Carbon::parse($row->fecha_actualizacion)->format('d/m/Y') : '-' }}
                                         </td>
                                         <td class="p-1 align-middle" style="height: 1px;">
                                             <div class="w-full h-full min-h-[40px] flex items-center justify-center font-bold text-white text-xs uppercase tracking-wide rounded shadow-sm
-                                                {{ $row->estatus === 'Cliente' ? 'bg-green-600' : 
-                                                  ($row->estatus === 'Venta no concluida' ? 'bg-red-600' : 
-                                                  ($row->estatus === 'Prospecto' ? 'bg-blue-600' : 'bg-orange-500')) }}">
+                                                {{ strtolower($row->estatus) === 'cliente' ? 'bg-green-600' : 
+                                                  (strtolower($row->estatus) === 'venta no concluida' ? 'bg-red-600' : 
+                                                  (strtolower($row->estatus) === 'prospecto' ? 'bg-blue-600' : 'bg-orange-500')) }}">
                                                 {{ $row->estatus }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-3 text-center">
-                                            @if($row->estatus !== 'Venta no concluida' && $row->estatus !== 'Cliente')
+                                            @if(strtolower($row->estatus) !== 'venta no concluida' && strtolower($row->estatus) !== 'cliente')
                                                 <form action="{{ route('cambiarEstatusVentaNoConcluida', $row->prospecto_id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de marcar este prospecto como Venta No Concluida?');">
                                                     @csrf
                                                     <button type="submit" class="text-xs font-medium text-red-600 hover:text-red-800 hover:underline transition">

@@ -69,6 +69,8 @@ Route::post('generarCotizacionPdf', [ERPController::class, 'generarCotizacionPdf
 Route::post('generarRemisionPdf', [ERPController::class, 'generarRemisionPdf'])->name('generarRemisionPdf');
 Route::get('/erp/obtener-cotizacion/{id}', [App\Http\Controllers\ERPController::class, 'obtenerCotizacion']);
 Route::post('guardarCotizacion', [ERPController::class, 'guardarCotizacion'])->name('guardarCotizacion');
+Route::post('/erp/autorizar-cotizacion-interna', [App\Http\Controllers\ERPController::class, 'autorizarCotizacionInterna'])->name('autorizarCotizacionInterna');
+Route::post('/erp/ajustar-cotizacion-interna', [App\Http\Controllers\ERPController::class, 'ajustarCotizacionInterna'])->name('ajustarCotizacionInterna');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -119,3 +121,7 @@ Route::post('/falla/{id}/eliminar', [ERPController::class, 'eliminarFalla'])->na
 Route::get('/erp/articulos/{id}/fallas', [ERPController::class, 'obtenerFallasArticulo'])->name('obtenerFallasArticulo');
 Route::get('/erp/alta-estatus', [App\Http\Controllers\ERPController::class, 'altaEstatus'])->name('altaEstatus');
 Route::post('/erp/guardar-alta-estatus', [App\Http\Controllers\ERPController::class, 'guardarAltaEstatus'])->name('guardarAltaEstatus');
+
+Route::post('/erp/logistica/retorno', [App\Http\Controllers\ERPController::class, 'guardarRetorno'])->name('guardarRetorno');
+Route::post('/erp/guardar-verificacion-articulos', [App\Http\Controllers\ERPController::class, 'guardarVerificacionArticulos']);
+Route::get('/erp/proyecto-historial-pdf/{id}', [ERPController::class, 'imprimirHistorialProyecto'])->name('proyecto.historial.pdf');

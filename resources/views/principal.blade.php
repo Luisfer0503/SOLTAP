@@ -26,8 +26,27 @@
                 <div>
                     <h4 class="text-white font-semibold text-sm">{{ Auth::user()->name }}</h4>
                     @php
-                        $userRoleName = \Illuminate\Support\Facades\DB::table('roles')->where('id', Auth::user()->role)->value('nombre') ?? Auth::user()->role;
-                    @endphp
+
+                                        $userRoleName = \Illuminate\Support\Facades\DB::table('roles')->where('id', Auth::user()->role)->value('nombre') ?? Auth::user()->role;
+                    $role = strtoupper($userRoleName);
+                    
+                    $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN/SUP. HERRERÍA', 'COORD. INSTALACIÓN/SUP. HERRERÍA'];
+                    $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
+
+                    $canAccessCRM = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO']);
+                    
+                    $canAccessERP = in_array($role, ['ADMIN', 'VENDEDOR/DISEÑADOR']);
+                    $canAccessSeguimiento = $canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan) || in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']) ;
+                    $canAccessAsignacionPrecios = $canAccessERP || in_array($role, ['COORD. DV SOLFERINO', 'COORD. DV&MKT', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
+                    $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION']);
+                    $canAccessLogistica = in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
+                    $canAccessEscaner = $canAccessERP || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan);
+                    
+                    $canAccessHistorialProyectos = $canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT']);
+                    $canAccessInicio = $canAccessCRM || $canAccessERP || $canAccessHistorialProyectos || $canAccessSeguimiento || $canAccessAsignacionPrecios || $canAccessCobranza || $canAccessLogistica || $canAccessEscaner;
+                    $showCRMHeader = $canAccessCRM;
+                    $showERPHeader = $canAccessERP || $canAccessHistorialProyectos || $canAccessSeguimiento || $canAccessAsignacionPrecios || $canAccessCobranza || $canAccessLogistica || $canAccessEscaner;
+                @endphp
                     <p class="text-xs text-slate-400">{{ $userRoleName ?? 'Usuario' }}</p>
                 </div>
             </div>
@@ -40,10 +59,15 @@
         <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;"> @csrf </form>
         <nav class="flex-1 overflow-y-auto py-4">
             
+            @if($showCRMHeader)
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">CRM</p>
+            @endif
+        
             <a href="{{ route('inicio') }}" class="{{ request()->routeIs('inicio') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-house text-lg mr-3"></i> Inicio
             </a>
+
+            @if($canAccessCRM)
             <a href="{{ route('altaProspectos') }}" class="{{ request()->routeIs('altaProspectos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-user-plus text-lg mr-3"></i> Nuevo Prospecto
             </a>
@@ -59,11 +83,19 @@
             <a href="{{ route('reporteEstatus') }}" class="{{ request()->routeIs('reporteEstatus') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-user-plus text-lg mr-3"></i> Reporte de Prospectos
             </a>
+            @endif
             
+            @if($showERPHeader)
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">ERP</p>
+            @endif
+            
+            @if($canAccessHistorialProyectos)
             <a href="{{ route('reporteEstatusProyecto') }}" class="{{ request()->routeIs('reporteEstatusProyecto') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-clock-counter-clockwise text-lg mr-3"></i> Historial Proyectos
             </a>
+            @endif
+            
+            @if($canAccessERP)
             <a href="{{ route('gestionArticulos') }}" class="{{ request()->routeIs('gestionArticulos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-package text-lg mr-3"></i> Alta de Artículos
             </a>
@@ -71,27 +103,44 @@
             <a href="{{ route('altaEstatus') }}" class="{{ request()->routeIs('altaEstatus') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-package text-lg mr-3"></i> Alta de Estatus
             </a>
+            @endif
+            
+            @if($canAccessSeguimiento)
                <a href="{{ route('seguimientoProyectos') }}" class="{{ request()->routeIs('seguimientoProyectos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-chart-line-up text-lg mr-3"></i> Seguimiento de Proyectos
             </a>
+            @endif
 
+            @if($canAccessAsignacionPrecios)
                <a href="{{ route('asignacionPrecios') }}" class="{{ request()->routeIs('asignacionPrecios') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-tag text-lg mr-3"></i> Asignación de Precios
             </a>
+            @endif
+            
+            @if($canAccessCobranza)
             <a href="{{ route('cobranza') }}" class="{{ request()->routeIs('cobranza') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-tag text-lg mr-3"></i> Cobranza
             </a>
+            @endif
 
+            @if($canAccessLogistica)
                <a href="{{ route('logistica') }}" class="{{ request()->routeIs('logistica') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-truck text-lg mr-3"></i> Logística
             </a>
+            @endif
+            
+            @if($canAccessEscaner)
             <a href="{{ route('escanerProduccion') }}" class="{{ request()->routeIs('escanerProduccion') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-qr-code text-lg mr-3"></i> Escáner Producción
             </a>
+            @endif
+            
+            @if(in_array($role, ['ADMIN']))
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Administración</p>
             <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-users-three text-lg mr-3"></i> Gestión de Usuarios
             </a>
+            @endif
 
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Cuenta</p>
             <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition">

@@ -2,6 +2,11 @@
 
 @section('contenido')
 
+    @php
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        $puedeAutorizar = in_array($userRoleName, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'VENDEDOR/DISEÑADOR']);
+    @endphp
+
     <style>
         /* Ocultar flechas (spinners) en inputs numéricos */
         input[type=number]::-webkit-inner-spin-button, 
@@ -174,7 +179,7 @@
                                         <div x-text="`${item.peso}kg`"></div>
                                     </td>
                                     <td class="px-4 py-3 text-right">
-                                        <input type="number" x-model="item.precio_unitario" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
+                                        <input type="number" x-model="item.precio_unitario" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
                                     </td>
                                     <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * (item.precio_unitario || 0))"></td>
                                 </tr>
@@ -192,12 +197,12 @@
                         </div>
                         <div class="flex justify-between items-center text-sm">
                             <span class="text-gray-600">Envío:</span>
-                            <input type="number" x-model="costoEnvio" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
+                            <input type="number" x-model="costoEnvio" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                         </div>
                         
                         <!-- Botón para editar configuración -->
                         <div class="flex justify-end mt-1">
-                            <button @click="editarConfiguracion = !editarConfiguracion" :disabled="cotizacionBloqueada" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed">
+                            <button @click="editarConfiguracion = !editarConfiguracion" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed">
                                 <i class="ph" :class="editarConfiguracion ? 'ph-lock-key' : 'ph-pencil-simple'"></i>
                                 <span class="ml-1" x-text="editarConfiguracion ? 'Bloquear Configuración' : 'Editar IVA/Descuento'"></span>
                             </button>
@@ -209,7 +214,7 @@
                                 <div x-show="editarConfiguracion || descuentoPorcentaje > 0" class="ml-1 flex items-center">
                                     <span x-show="!editarConfiguracion" x-text="'(' + descuentoPorcentaje + '%)'" class="text-xs text-gray-500"></span>
                                     <div x-show="editarConfiguracion" class="flex items-center">
-                                        <input type="number" x-model="descuentoPorcentaje" class="w-12 text-right text-xs border-gray-300 rounded py-0.5 px-1 focus:ring-blue-500 focus:border-blue-500" placeholder="0">
+                                        <input type="number" x-model="descuentoPorcentaje" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-12 text-right text-xs border-gray-300 rounded py-0.5 px-1 focus:ring-blue-500 focus:border-blue-500" placeholder="0">
                                         <span class="text-xs text-gray-500 ml-0.5">%</span>
                                     </div>
                                 </div>
@@ -219,7 +224,7 @@
                                 <span class="font-bold text-gray-900" x-text="money(descuentoCalculado)"></span>
                             </template>
                             <template x-if="descuentoPorcentaje == 0">
-                                <input type="number" x-model="descuento" :disabled="cotizacionBloqueada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
+                                <input type="number" x-model="descuento" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                             </template>
                         </div>
                         <div class="border-t border-gray-100 pt-2 flex justify-between text-sm">
@@ -232,7 +237,7 @@
                                 <div class="ml-1 flex items-center">
                                     <span x-show="!editarConfiguracion" x-text="'(' + ivaPorcentaje + '%)'" class="text-xs text-gray-500"></span>
                                     <div x-show="editarConfiguracion" class="flex items-center">
-                                        <input type="number" x-model="ivaPorcentaje" class="w-12 text-right text-xs border-gray-300 rounded py-0.5 px-1 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="number" x-model="ivaPorcentaje" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-12 text-right text-xs border-gray-300 rounded py-0.5 px-1 focus:ring-blue-500 focus:border-blue-500">
                                         <span class="text-xs text-gray-500 ml-0.5">%</span>
                                     </div>
                                 </div>
@@ -251,13 +256,28 @@
             <!-- Modal Footer -->
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
                 <button @click="cerrarModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
-                <button @click="guardarCotizacion()" x-show="!cotizacionBloqueada" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
+                @if($puedeAutorizar)
+                <button @click="autorizarCotizacion()" x-show="!cotizacionAutorizada" class="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" :disabled="autorizando">
+                    <i class="ph ph-check-circle mr-2" x-show="!autorizando"></i>
+                    <i class="ph ph-spinner animate-spin mr-2" x-show="autorizando"></i>
+                    <span x-text="autorizando ? 'Autorizando...' : 'Autorizar'"></span>
+                </button>
+                <div x-show="cotizacionAutorizada" class="px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg font-bold flex items-center shadow-sm">
+                    <i class="ph ph-shield-check mr-2 text-lg"></i> Autorizada
+                </div>
+                <button @click="ajustarCotizacion()" x-show="cotizacionAutorizada && !cotizacionBloqueada" class="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition shadow-sm flex items-center" :disabled="ajustando">
+                    <i class="ph ph-pencil-simple mr-2" x-show="!ajustando"></i>
+                    <i class="ph ph-spinner animate-spin mr-2" x-show="ajustando"></i>
+                    <span x-text="ajustando ? 'Desbloqueando...' : 'Ajustar'"></span>
+                </button>
+                @endif
+                <button @click="guardarCotizacion()" x-show="!cotizacionBloqueada && !cotizacionAutorizada" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center">
                     <i class="ph ph-floppy-disk mr-2"></i> Guardar
                 </button>
                 <button @click="imprimirPdf()" 
-                        :disabled="!esCotizacionValida"
+                        :disabled="!esCotizacionValida || !cotizacionAutorizada"
                         class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-lg flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        :title="esCotizacionValida ? 'Generar y descargar PDF' : 'Complete todos los precios y el costo de envío para habilitar'">
+                        :title="!cotizacionAutorizada ? 'Debe autorizar internamente la cotización para habilitar el PDF' : (esCotizacionValida ? 'Generar y descargar PDF' : 'Complete todos los precios y el costo de envío para habilitar')">
                     <i class="ph ph-file-pdf mr-2"></i> Generar PDF
                 </button>
             </div>
@@ -353,6 +373,8 @@
             descuentoPorcentaje: 0,
             editarConfiguracion: false,
             cotizacionBloqueada: false,
+            cotizacionAutorizada: false,
+            cotizacionActualId: null,
             
             // Variables para Modal Pagos
             mostrarModalPagos: false,
@@ -363,6 +385,8 @@
             planBloqueado: false,
             rfcRemision: '',
             condicionesRemision: '',
+            autorizando: false,
+            ajustando: false,
 
             async abrirCotizador(proyecto) {
                 this.proyecto = proyecto;
@@ -374,6 +398,8 @@
                 this.descuentoPorcentaje = parseFloat(proyecto.descuento_porcentaje) || 0;
                 this.editarConfiguracion = false;
                 this.cotizacionBloqueada = (proyecto.tiene_pagos > 0);
+                this.cotizacionAutorizada = false;
+                this.cotizacionActualId = null;
                 this.mostrarModal = true;
                 
                 // Cargar artículos
@@ -395,6 +421,8 @@
                             if (this.descuentoPorcentaje == 0) {
                                 this.descuento = parseFloat(cotizacion.descuento) || 0;
                             }
+                            this.cotizacionActualId = cotizacion.cotizacion_id;
+                            this.cotizacionAutorizada = (cotizacion.autorizado == 1);
                         }
                     }
                 } catch (error) {
@@ -605,10 +633,13 @@
                     });
                     
                     if (response.ok) {
+                        const result = await response.json();
+                        this.cotizacionActualId = result.cotizacion_id;
                         if (!silent) {
                             alert('Información guardada correctamente.');
+                            this.cotizacionAutorizada = false; // Se reinicia para forzar nueva autorización de los cambios
                         }
-                        return await response.json();
+                        return result;
                     } else {
                         alert('Error al guardar la información.');
                         return null;
@@ -617,6 +648,73 @@
                     console.error(e);
                     alert('Error de conexión');
                     return null;
+                }
+            },
+
+            async autorizarCotizacion() {
+                if (!this.proyecto) return;
+                if (!this.esCotizacionValida) {
+                    alert('Debe completar todos los precios y el costo de envío antes de autorizar.');
+                    return;
+                }
+                if (!confirm('¿Está seguro de autorizar internamente esta cotización?')) return;
+                
+                this.autorizando = true;
+                try {
+                    // Guardar antes de autorizar para asegurar que la base de datos tiene la versión actual de la pantalla
+                    const saveResult = await this.guardarCotizacion(true);
+                    if (!saveResult || !saveResult.success) {
+                        alert('Error al guardar la cotización previo a la autorización.');
+                        this.autorizando = false;
+                        return;
+                    }
+
+                    const response = await fetch('{{ route("autorizarCotizacionInterna") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ proyecto_id: this.proyecto.proyecto_id })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        alert('Cotización autorizada y registrada en el historial correctamente.');
+                        this.cotizacionAutorizada = true;
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo autorizar la cotización.'));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error de conexión al autorizar la cotización.');
+                } finally {
+                    this.autorizando = false;
+                }
+            },
+
+            async ajustarCotizacion() {
+                if (!this.proyecto) return;
+                if (!confirm('¿Está seguro de querer ajustar la cotización? Esto se registrará en el historial y deberá ser autorizada nuevamente.')) return;
+                
+                this.ajustando = true;
+                try {
+                    const response = await fetch('{{ route("ajustarCotizacionInterna") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ proyecto_id: this.proyecto.proyecto_id })
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        this.cotizacionAutorizada = false;
+                        alert('Cotización desbloqueada. Puede realizar sus ajustes.');
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo desbloquear la cotización.'));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error de conexión al intentar ajustar la cotización.');
+                } finally {
+                    this.ajustando = false;
                 }
             },
 
@@ -719,12 +817,8 @@
                     alert('Por favor, complete todos los precios y el costo de envío para generar el PDF.');
                     return;
                 }
-
-                // Primero, guardar la cotización de forma silenciosa
-                const saveResult = await this.guardarCotizacion(true);
-
-                if (!saveResult || !saveResult.success) {
-                    alert('Error al guardar la cotización antes de generar el PDF. Por favor, intente de nuevo.');
+                if (!this.cotizacionAutorizada) {
+                    alert('Debe autorizar la cotización internamente antes de generar el PDF.');
                     return;
                 }
 
@@ -744,7 +838,7 @@
                         peso: this.totalPeso,
                         articulos: this.totalArticulos
                     },
-                    cotizacionId: saveResult.cotizacion_id
+                    cotizacionId: this.cotizacionActualId
                 };
 
                 // Enviar a backend para generar PDF

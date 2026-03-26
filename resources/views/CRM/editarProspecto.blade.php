@@ -78,6 +78,23 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                                 <input type="text" name="ApellidoMat" value="{{ old('ApellidoMat', $prospecto->apellido_materno) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
+                            <input type="date" name="FechaNacimiento" value="{{ old('FechaNacimiento', $prospecto->fecha_nacimiento) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
+                            <select name="Sexo" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Seleccionar...</option>
+                                <option value="Masculino" @selected(old('Sexo', $prospecto->sexo) == 'Masculino')>Masculino</option>
+                                <option value="Femenino" @selected(old('Sexo', $prospecto->sexo) == 'Femenino')>Femenino</option>
+                                <option value="Otro" @selected(old('Sexo', $prospecto->sexo) == 'Otro')>Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ocupación</label>
+                            <input type="text" name="Ocupacion" value="{{ old('Ocupacion', $prospecto->ocupacion) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. Arquitecto, Empresario...">
+                        </div>
                         </div>
                     </div>
 
@@ -233,7 +250,7 @@
                                 </div>
                                 <div x-show="tieneIva === 'si'" x-transition>
                                     <div class="relative">
-                                        <input type="number" name="IvaPorcentaje" value="{{ old('IvaPorcentaje', $prospecto->iva) }}" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="16">
+                                        <input type="number" name="IvaPorcentaje" value="{{ old('IvaPorcentaje', $prospecto->iva) }}" step="0.01" min="0" max="100" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="16" :disabled="tieneIva === 'no'">
                                         <span class="absolute right-3 top-2.5 text-gray-500">%</span>
                                     </div>
                                 </div>
@@ -254,7 +271,7 @@
                                 </div>
                                 <div x-show="tieneDescuento === 'si'" x-transition>
                                     <div class="relative">
-                                        <input type="number" name="DescuentoPorcentaje" value="{{ old('DescuentoPorcentaje', $prospecto->descuento) }}" step="0.01" min="1" max="25" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="0">
+                                        <input type="number" name="DescuentoPorcentaje" value="{{ old('DescuentoPorcentaje', $prospecto->descuento) }}" step="0.01" min="0" max="100" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 pr-8" placeholder="0" :disabled="tieneDescuento === 'no'">
                                         <span class="absolute right-3 top-2.5 text-gray-500">%</span>
                                     </div>
                                 </div>

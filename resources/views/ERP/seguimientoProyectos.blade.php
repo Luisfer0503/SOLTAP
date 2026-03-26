@@ -2,6 +2,15 @@
 
 @section('contenido')
 
+@php
+    $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+    $role = strtoupper($userRoleName);
+    $isAdmin = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION']);
+    $isProduccion = in_array($role, ['COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS']);
+    $isLogistica = in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
+    $isDvCasaTapier = in_array($role, ['COORD. DV&MKT']);
+    $isDvSolferino = in_array($role, ['COORD. DV SOLFERINO']);
+@endphp
 <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50" x-data="seguimientoApp()">
 
     <header class="bg-white border-b px-8 py-5 shadow-sm z-10">
@@ -58,13 +67,30 @@
                         ...a, 
                         notas: '', 
                         fallas: '', 
-                        checks: [false, false, false] 
+                        checks: [a.produccion == 1, a.dyv == 1, a.logistica == 1] 
                     })),
                     projectId: {{ $p->id }},
                     progressP: 0,
                     progressDV: 0,
                     progressL: 0,
+                    empresa: '{{ $p->empresa_nombre ?? '' }}',
+                    isAdmin: {{ $isAdmin ? 'true' : 'false' }},
+                    isProduccion: {{ $isProduccion ? 'true' : 'false' }},
+                    isLogistica: {{ $isLogistica ? 'true' : 'false' }},
+                    isDvCasaTapier: {{ $isDvCasaTapier ? 'true' : 'false' }},
+                    isDvSolferino: {{ $isDvSolferino ? 'true' : 'false' }},
+                    canSeeProduccion() { return this.isAdmin || this.isProduccion; },
+                    canSeeLogistica() { return this.isAdmin || this.isLogistica; },
+                    canSeeDV() {
+                        if (this.isAdmin) return true;
+                        let emp = this.empresa ? this.empresa.toLowerCase() : '';
+                        if (emp.includes('solferino')) return this.isDvSolferino;
+                        return this.isDvCasaTapier;
+                    },
                     labels: ['P', 'DV', 'L'],
+                    selectedInteraccion: '',
+                    guardandoInteraccion: false,
+                    guardandoVerificacion: false,
                     init() {
                         this.calculateProgress();
                     },
@@ -86,6 +112,50 @@
                     getRowProgress(art) {
                         let checked = art.checks.filter(Boolean).length;
                         return Math.round((checked / 3) * 100);
+                    },
+                    async guardarInteraccion() {
+                        if (!this.selectedInteraccion) return;
+                        this.guardandoInteraccion = true;
+                        try {
+                            const response = await fetch('{{ route("guardarInteraccionProduccion") }}', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                body: JSON.stringify({ proyecto_id: this.projectId, interaccion_id: this.selectedInteraccion, comentarios: 'Actualización de estatus rápido.' })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                alert('Interacción guardada correctamente.');
+                                this.selectedInteraccion = '';
+                            } else {
+                                alert('Error al guardar: ' + (data.message || 'Desconocido'));
+                            }
+                        } catch (error) {
+                            console.error(error); alert('Error de conexión');
+                        } finally { this.guardandoInteraccion = false; }
+                    },
+                    async guardarVerificacion() {
+                        this.guardandoVerificacion = true;
+                        const payload = this.articles.map(a => ({
+                            id: a.id,
+                            produccion: a.checks[0],
+                            dyv: a.checks[1],
+                            logistica: a.checks[2]
+                        }));
+                        try {
+                            const response = await fetch('{{ url('/erp/guardar-verificacion-articulos') }}', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                body: JSON.stringify({ proyecto_id: this.projectId, articulos: payload })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                alert('Verificaciones guardadas correctamente.');
+                            } else {
+                                alert('Error al guardar: ' + (data.message || 'Desconocido'));
+                            }
+                        } catch (error) {
+                            console.error(error); alert('Error de conexión');
+                        } finally { this.guardandoVerificacion = false; }
                     }
                 }">
                         <tr class="hover:bg-gray-50 transition border-b border-gray-100 cursor-pointer" @click="toggleRow()">
@@ -106,21 +176,21 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap align-middle">
                             <div class="flex flex-col space-y-1 w-40">
-                                <div class="flex items-center justify-between text-xs">
+                                <div class="flex items-center justify-between text-xs" x-show="canSeeProduccion()">
                                     <span class="font-bold text-blue-600 w-6">P</span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressP}%`"></div>
                                     </div>
                                     <span class="w-8 text-right font-bold text-gray-600" x-text="progressP + '%'"></span>
                                 </div>
-                                <div class="flex items-center justify-between text-xs">
+                                <div class="flex items-center justify-between text-xs" x-show="canSeeDV()">
                                     <span class="font-bold text-purple-600 w-6">DV</span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressDV}%`"></div>
                                     </div>
                                     <span class="w-8 text-right font-bold text-gray-600" x-text="progressDV + '%'"></span>
                                 </div>
-                                <div class="flex items-center justify-between text-xs">
+                                <div class="flex items-center justify-between text-xs" x-show="canSeeLogistica()">
                                     <span class="font-bold text-orange-600 w-6">L</span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-orange-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressL}%`"></div>
@@ -149,9 +219,22 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex justify-end space-x-2">
+                            <div class="flex justify-end items-center space-x-3">
                                 
-                                <a href="{{ route('detalleProyecto', $p->id) }}" class="text-blue-500 hover:text-blue-700 p-1 rounded bg-white inline-flex items-center justify-center" title="Ver Detalles">
+                                <div class="flex items-center space-x-1" @click.stop>
+                                    <select x-model="selectedInteraccion" class="text-xs border-gray-300 rounded py-1 pl-2 pr-6 focus:ring-indigo-500 focus:border-indigo-500 w-36">
+                                        <option value="">Añadir estatus...</option>
+                                        <template x-for="int in interacciones" :key="int.id || int.interaccion_id">
+                                            <option :value="int.id || int.interaccion_id" x-text="int.nombre"></option>
+                                        </template>
+                                    </select>
+                                    <button @click="guardarInteraccion()" class="p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition" title="Guardar Interacción" :disabled="!selectedInteraccion || guardandoInteraccion">
+                                        <i class="ph ph-check" x-show="!guardandoInteraccion"></i>
+                                        <i class="ph ph-spinner animate-spin" x-show="guardandoInteraccion"></i>
+                                    </button>
+                                </div>
+
+                                <a href="{{ route('detalleProyecto', $p->id) }}" @click.stop class="text-blue-500 hover:text-blue-700 p-1 rounded bg-white inline-flex items-center justify-center border border-gray-200 shadow-sm" title="Ver Detalles">
                                     <i class="ph ph-eye text-lg"></i>
                                 </a>
                             </div>
@@ -175,7 +258,16 @@
                                         <thead class="bg-gray-100 text-xs text-gray-500 uppercase">
                                             <tr>
                                                 <th class="px-4 py-3 text-left w-1/3">Artículo</th>
-                                                <th class="px-4 py-3 text-center w-1/4">Verificación (Etapas)</th>
+                                                <th class="px-4 py-3 text-center w-1/4">
+                                                    <div class="flex items-center justify-center gap-2">
+                                                        <span>Verificación (Etapas)</span>
+                                                        <button @click.stop="guardarVerificacion()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-2 py-1 rounded shadow-sm flex items-center transition" :disabled="guardandoVerificacion" title="Guardar cambios de etapas">
+                                                            <i class="ph ph-floppy-disk mr-1" x-show="!guardandoVerificacion"></i>
+                                                            <i class="ph ph-spinner animate-spin mr-1" x-show="guardandoVerificacion"></i>
+                                                            Guardar
+                                                        </button>
+                                                    </div>
+                                                </th>
                                                 <th class="px-4 py-3 text-left">Observaciones</th>
                                             </tr>
                                         </thead>
@@ -206,7 +298,7 @@
                                                             </div>
                                                             <div class="flex justify-center space-x-2">
                                                             <template x-for="(check, i) in art.checks">
-                                                                <div class="flex flex-col items-center cursor-pointer group" @click="toggleCheck(index, i)">
+                                                                <div class="flex flex-col items-center cursor-pointer group" @click="toggleCheck(index, i)" x-show="(i===0 && canSeeProduccion()) || (i===1 && canSeeDV()) || (i===2 && canSeeLogistica())">
                                                                     <div class="w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shadow-sm mb-1"
                                                                          :class="check ? (i===0?'bg-blue-500 border-blue-500':(i===1?'bg-purple-500 border-purple-500':'bg-orange-500 border-orange-500')) + ' text-white' : 'bg-white border-gray-300 text-gray-300 hover:border-gray-400'">
                                                                         <i class="ph ph-check text-lg" x-show="check"></i>
@@ -497,6 +589,7 @@
             usuarios: @json($usuarios ?? []),
             categoriasFallas: @json($categoriasFallas ?? []),
             subcategoriasFallas: @json($subcategoriasFallas ?? []),
+            interacciones: @json($interacciones ?? []),
             costoHora: 46.07,
             modalFallaOpen: false,
             guardandoFalla: false,

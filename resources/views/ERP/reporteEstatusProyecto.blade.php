@@ -53,7 +53,11 @@
                             <h3 class="text-2xl font-bold text-gray-900" x-text="proyectoSeleccionado?.nombre_proyecto"></h3>
                             <p class="text-gray-500 mt-1">Cliente: <span class="font-semibold text-gray-700" x-text="proyectoSeleccionado?.cliente_nombre"></span></p>
                         </div>
-                        <span class="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-full border border-gray-200" x-text="proyectoSeleccionado?.estatus || 'Sin Estatus'"></span>
+                        <div class="flex flex-col items-end gap-3">
+                            <button @click="imprimirHistorialPdf()" class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold shadow-sm hover:bg-red-700 transition flex items-center text-sm">
+                                <i class="ph ph-file-pdf mr-2 text-lg"></i> Imprimir Historial
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Formulario Nueva Interacción -->
@@ -104,7 +108,10 @@
                             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
                                 <div class="flex justify-between items-start mb-2 pl-2">
-                                    <span class="font-bold text-gray-800 text-md" x-text="item.interaccion_nombre"></span>
+                                    <div>
+                                        <span class="font-bold text-gray-800 text-md" x-text="item.interaccion_nombre"></span>
+                                        <span class="text-xs text-gray-500 ml-2 font-medium bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full" x-show="item.usuario_nombre"><i class="ph ph-user mr-1"></i><span x-text="item.usuario_nombre"></span></span>
+                                    </div>
                                     <span class="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded" x-text="item.fecha_formateada"></span>
                                 </div>
                                 <p class="text-sm text-gray-600 pl-2 mt-2" x-show="item.comentarios" x-text="item.comentarios"></p>
@@ -157,6 +164,13 @@
                 } finally {
                     this.cargandoHistorial = false;
                 }
+            },
+
+            imprimirHistorialPdf() {
+                if (!this.proyectoSeleccionado) return;
+                let baseUrl = "{{ route('proyecto.historial.pdf', ['id' => 'ID_PROYECTO']) }}";
+                const url = baseUrl.replace('ID_PROYECTO', this.proyectoSeleccionado.proyecto_id);
+                window.open(url, '_blank');
             },
 
             async guardarInteraccion() {

@@ -20,6 +20,12 @@ class CRMController extends Controller
 
       public function altaVendedores()
       {
+            $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+            $role = strtoupper($userRoleName);
+            if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+                return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+            }
+
             $consulta = DB::select("SELECT vendedor_id FROM vendedores ORDER BY vendedor_id DESC LIMIT 1");
             $cuantos = count($consulta);
             $sigue = ($cuantos == 0) ? 1 : $consulta[0]->vendedor_id + 1;
@@ -83,6 +89,12 @@ class CRMController extends Controller
 
         public function editarVendedor($id)
         {
+            $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+            $role = strtoupper($userRoleName);
+            if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+                return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+            }
+
             $vendedor = DB::selectOne("SELECT * FROM vendedores WHERE vendedor_id = ?", [$id]);
             if (!$vendedor) return redirect()->route('altaVendedores')->with('mensaje', 'Vendedor no encontrado');
 
@@ -168,6 +180,12 @@ class CRMController extends Controller
 
       public function altaProspectos()
       {
+            $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+            $role = strtoupper($userRoleName);
+            if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+                return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+            }
+
             $consulta = DB::select("SELECT prospecto_id FROM Prospectos ORDER BY prospecto_id DESC LIMIT 1");
             $cuantos = count($consulta);
             $sigue = ($cuantos == 0) ? 1 : $consulta[0]->prospecto_id + 1;
@@ -215,6 +233,11 @@ class CRMController extends Controller
                   'IdEmpresa.required' => 'Seleccione una empresa.',
                   'IvaPorcentaje.required_if' => 'El porcentaje de IVA es requerido si marcó "Tiene IVA".',
                   'DescuentoPorcentaje.required_if' => 'El porcentaje de descuento es requerido si marcó "Tiene Descuento".',
+                  'FechaNacimiento.required' => 'La fecha de nacimiento es obligatoria.',
+                  'FechaNacimiento.date' => 'Ingrese una fecha de nacimiento válida.',
+                  'Sexo.required' => 'El sexo es obligatorio.',
+                  'Sexo.in' => 'Seleccione una opción de sexo válida.',
+                  'Ocupacion.required' => 'La ocupación es obligatoria.',
                ];
 
                $request->validate([
@@ -238,9 +261,12 @@ class CRMController extends Controller
                   'Descripcion' => 'nullable|string',
                   'TieneEnvio' => 'nullable|in:si,no',
                   'TieneIva' => 'nullable|in:si,no',
-                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
+                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:0|max:100',
                   'TieneDescuento' => 'nullable|in:si,no',
-                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
+                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:0|max:100',
+                  'FechaNacimiento' => 'required|date',
+                  'Sexo' => 'required|in:Masculino,Femenino,Otro',
+                  'Ocupacion' => 'required|string|max:100',
             ], $messages);
 
             DB::beginTransaction();
@@ -249,6 +275,9 @@ class CRMController extends Controller
                 $prospecto->nombre = $request->Nombre;
                 $prospecto->apellido_paterno = $request->ApellidoPat;
                 $prospecto->apellido_materno = $request->ApellidoMat;
+                $prospecto->fecha_nacimiento = $request->FechaNacimiento;
+                $prospecto->sexo = $request->Sexo;
+                $prospecto->ocupacion = $request->Ocupacion;
                 $prospecto->correo = $request->Correo;
                 $prospecto->telefono = $request->Telefono;
                 $prospecto->estado_id = $request->IdEstado;
@@ -329,6 +358,7 @@ class CRMController extends Controller
                     DB::table('proyecto_interacciones')->insert([
                         'proyecto_id' => $proyectoId,
                         'interaccion_id' => $interaccionId,
+                        'user_id' => auth()->id(),
                         'comentarios' => 'Registro inicial del prospecto en el sistema.',
                         'created_at' => now(),
                         'updated_at' => now()
@@ -347,6 +377,12 @@ class CRMController extends Controller
 
       public function reporteEstatus(Request $request)
       {
+          $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+          $role = strtoupper($userRoleName);
+          if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+              return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+          }
+
           $estatusId = $request->input('estatus_id');
           
           $query = DB::table('prospectos as p')
@@ -406,6 +442,12 @@ class CRMController extends Controller
 
     public function asignacionVendedor(Request $request)
      {
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        $role = strtoupper($userRoleName);
+        if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
         // Obtener todos los prospectos (sin filtrar por estatus) para facilitar búsqueda
         $prospectos = DB::select("SELECT p.prospecto_id AS id, p.nombre, p.apellido_paterno, p.apellido_materno, CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo, p.telefono, p.correo, COALESCE(es.nombre,'') AS estatus, CONCAT(COALESCE(p.calle,''), ', ', COALESCE(p.municipio,''), ', ', COALESCE(e.nombre,'')) AS direccion, COALESCE(em.nombre,'') AS empresa, (SELECT c.cliente_id FROM clientes c WHERE c.prospecto_id = p.prospecto_id LIMIT 1) as cliente_id, COALESCE((SELECT pr.nombre FROM Proyectos pr WHERE pr.prospecto_id = p.prospecto_id ORDER BY pr.proyecto_id DESC LIMIT 1),'') AS proyecto FROM prospectos p LEFT JOIN estados e ON p.estado_id = e.estado_id LEFT JOIN estatus es ON p.estatus_id = es.estatus_id LEFT JOIN empresas em ON p.empresa_id = em.empresa_id ORDER BY p.prospecto_id DESC");
         
@@ -447,6 +489,12 @@ class CRMController extends Controller
 
     public function clientes()
     {
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        $role = strtoupper($userRoleName);
+        if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
         // Página de gestión de clientes - listado y posibilidad de agregar proyectos
         $clientes = DB::select("SELECT c.cliente_id AS id, c.prospecto_id, p.nombre, p.apellido_paterno, p.apellido_materno, p.empresa_id, p.maps, p.enfoque_id, p.canal_id, p.calle, p.municipio, p.estado_id, COALESCE(em.nombre,'') AS empresa_nombre, CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo FROM Clientes c LEFT JOIN prospectos p ON c.prospecto_id = p.prospecto_id LEFT JOIN empresas em ON p.empresa_id = em.empresa_id ORDER BY c.cliente_id DESC");
         $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
@@ -519,6 +567,12 @@ class CRMController extends Controller
 
       public function editarProspecto($id)
       {
+            $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+            $role = strtoupper($userRoleName);
+            if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT'])) {
+                return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+            }
+
             $prospecto = DB::selectOne("SELECT * FROM prospectos WHERE prospecto_id = ?", [$id]);
             if (!$prospecto) return redirect()->route('altaProspectos')->with('error', 'Prospecto no encontrado');
 
@@ -559,6 +613,11 @@ class CRMController extends Controller
                   'IdEmpresa.required' => 'Seleccione una empresa.',
                   'IvaPorcentaje.required_if' => 'El porcentaje de IVA es requerido si marcó "Tiene IVA".',
                   'DescuentoPorcentaje.required_if' => 'El porcentaje de descuento es requerido si marcó "Tiene Descuento".',
+                  'FechaNacimiento.required' => 'La fecha de nacimiento es obligatoria.',
+                  'FechaNacimiento.date' => 'Ingrese una fecha de nacimiento válida.',
+                  'Sexo.required' => 'El sexo es obligatorio.',
+                  'Sexo.in' => 'Seleccione una opción de sexo válida.',
+                  'Ocupacion.required' => 'La ocupación es obligatoria.',
             ];
 
             $request->validate([
@@ -580,15 +639,21 @@ class CRMController extends Controller
                   'Descripcion' => 'nullable|string',
                   'TieneEnvio' => 'nullable|in:si,no',
                   'TieneIva' => 'nullable|in:si,no',
-                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:1|max:25',
+                  'IvaPorcentaje' => 'required_if:TieneIva,si|nullable|numeric|min:0|max:100',
                   'TieneDescuento' => 'nullable|in:si,no',
-                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:1|max:25',
+                  'DescuentoPorcentaje' => 'required_if:TieneDescuento,si|nullable|numeric|min:0|max:100',
+                  'FechaNacimiento' => 'required|date',
+                  'Sexo' => 'required|in:Masculino,Femenino,Otro',
+                  'Ocupacion' => 'required|string|max:100',
             ], $messages);
 
             $data = [
                 'nombre' => $request->Nombre,
                 'apellido_paterno' => $request->ApellidoPat,
                 'apellido_materno' => $request->ApellidoMat,
+                'fecha_nacimiento' => $request->FechaNacimiento,
+                'sexo' => $request->Sexo,
+                'ocupacion' => $request->Ocupacion,
                 'correo' => $request->Correo,
                 'telefono' => $request->Telefono,
                 'estado_id' => $request->IdEstado,
@@ -650,6 +715,7 @@ class CRMController extends Controller
                     DB::table('proyecto_interacciones')->insert([
                         'proyecto_id' => $request->proyecto_id,
                         'interaccion_id' => $interaccionId,
+                        'user_id' => auth()->id(),
                         'comentarios' => 'Se asignó el proyecto al vendedor/diseñador: ' . $nombreVendedor,
                         'created_at' => now(),
                         'updated_at' => now()
