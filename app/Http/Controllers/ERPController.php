@@ -535,6 +535,7 @@ class ERPController extends Controller
     {
         try {
             $proyecto_id = $request->input('proyecto_id');
+            $articulos_ids = $request->input('articulos_ids');
 
             // 1. Obtener datos del proyecto
             $proyectoData = DB::table('Proyectos')
@@ -564,12 +565,33 @@ class ERPController extends Controller
             $proyecto = (array)$proyectoData;
 
             // 2. Obtener artículos
-            $articulos = DB::table('proyecto_articulos')
-                ->where('proyecto_id', $proyecto_id)
+            $queryArticulos = DB::table('proyecto_articulos')->where('proyecto_id', $proyecto_id);
+            
+            if (!empty($articulos_ids) && is_array($articulos_ids)) {
+                $queryArticulos->whereIn('id', $articulos_ids);
+            }
+
+            $articulos = $queryArticulos
                 ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'cubicaje', 'peso', 'imagen')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
+                
+            if (empty($articulos)) {
+                return response()->json(['error' => 'No hay artículos seleccionados para generar el documento.'], 404);
+            }
+
+            // Verificar y crear columna de control de impresión si no existe
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_produccion')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                    $table->boolean('impreso_produccion')->default(0);
+                });
+            }
+
+            // Marcar los artículos como impresos
+            if (!empty($articulos_ids) && is_array($articulos_ids)) {
+                DB::table('proyecto_articulos')->whereIn('id', $articulos_ids)->update(['impreso_produccion' => 1]);
+            }
 
             $qrUrl = route('seguimientoProyectos', ['proyecto_id' => $proyecto_id]);
             
@@ -1756,6 +1778,13 @@ class ERPController extends Controller
 
       public function obtenerArticulosProyecto($id)
       {
+          // Verificar y crear columna de control de impresión si no existe para la lectura actual
+          if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_produccion')) {
+              \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                  $table->boolean('impreso_produccion')->default(0);
+              });
+          }
+
           $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
           
           // Optimización: Cargar todos los materiales de estos artículos en una sola consulta

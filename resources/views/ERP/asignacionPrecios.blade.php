@@ -84,9 +84,9 @@
                                         <i class="ph ph-file-text mr-1"></i> Remisión
                                     </button>
                                     
-                                    <button @click="generarProduccionPdf(p)" 
+                                    <button @click="abrirModalProduccion(p)" 
                                             class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                            title="Generar PDF Producción"
+                                            title="Generar PDF Producción (Selección)"
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
                                         <i class="ph ph-factory mr-1"></i> Producción
                                     </button>
@@ -371,6 +371,70 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Selección Artículos Producción -->
+    <div x-show="mostrarModalProduccion" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;" x-transition>
+        <div class="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center"><i class="ph ph-factory mr-2"></i> Orden de Producción - Seleccionar Artículos</h3>
+                <button @click="mostrarModalProduccion = false" class="text-indigo-200 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-6 bg-gray-50 overflow-y-auto max-h-[70vh]">
+                <p class="text-sm text-gray-600 mb-4">Seleccione los artículos que desea enviar a la orden de producción. Los artículos que ya han sido enviados previamente aparecerán bloqueados; si desea volver a imprimirlos, use la opción de desbloquear.</p>
+                
+                <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-center w-12">Select</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Artículo</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Cant.</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Estatus</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <template x-for="(item, index) in articulosProduccion" :key="index">
+                                <tr :class="{'bg-gray-50': item.impreso && !item.desbloqueado}">
+                                    <td class="px-4 py-3 text-center">
+                                        <input type="checkbox" x-model="item.seleccionado" :disabled="item.impreso && !item.desbloqueado" class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-4 h-4">
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="text-sm font-bold text-gray-900" x-text="item.nombre"></div>
+                                        <div class="text-xs text-gray-500" x-text="item.id_articulo_produccion || 'Sin código'"></div>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm font-bold text-gray-800" x-text="item.cantidad"></td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span x-show="item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800"><i class="ph ph-check-circle mr-1"></i> Impreso</span>
+                                        <span x-show="!item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800"><i class="ph ph-clock mr-1"></i> Pendiente</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button x-show="item.impreso" @click="toggleDesbloqueo(item)" class="text-xs font-bold px-3 py-1 rounded transition shadow-sm" :class="item.desbloqueado ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                                            <i class="ph" :class="item.desbloqueado ? 'ph-lock-open' : 'ph-lock-key'"></i>
+                                            <span x-text="item.desbloqueado ? 'Bloquear' : 'Desbloquear'"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="articulosProduccion.length === 0">
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-500 text-sm italic">Cargando artículos o el proyecto no tiene artículos registrados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button @click="mostrarModalProduccion = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
+                <button @click="imprimirSeleccionadosPdf()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-lg flex items-center disabled:opacity-50" :disabled="generandoPdf || articulosProduccion.filter(a => a.seleccionado).length === 0">
+                    <i class="ph ph-printer mr-2" x-show="!generandoPdf"></i>
+                    <i class="ph ph-spinner animate-spin mr-2" x-show="generandoPdf"></i>
+                    <span x-text="generandoPdf ? 'Generando PDF...' : 'Generar PDF (' + articulosProduccion.filter(a => a.seleccionado).length + ')'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
@@ -401,6 +465,12 @@
             condicionesRemision: '',
             autorizando: false,
             ajustando: false,
+            
+            // Variables Producción
+            mostrarModalProduccion: false,
+            proyectoProduccion: null,
+            articulosProduccion: [],
+            generandoPdf: false,
 
             get proyectosFiltrados() {
                 if (this.filtro === '') {
@@ -800,10 +870,48 @@
                 }
             },
 
-            async generarProduccionPdf(proyecto) {
+            async abrirModalProduccion(proyecto) {
+                this.proyectoProduccion = proyecto;
+                this.articulosProduccion = [];
+                this.mostrarModalProduccion = true;
+                
+                try {
+                    const response = await fetch(`{{ url('/erp/articulos-proyecto') }}/${proyecto.proyecto_id}`);
+                    const data = await response.json();
+                    this.articulosProduccion = data.map(item => {
+                        const impreso = item.impreso_produccion == 1;
+                        return {
+                            ...item,
+                            impreso: impreso,
+                            seleccionado: !impreso, // Auto-select si están pendientes
+                            desbloqueado: false
+                        };
+                    });
+                } catch (error) {
+                    console.error(error);
+                    alert('Error cargando artículos para producción.');
+                }
+            },
+
+            toggleDesbloqueo(item) {
+                item.desbloqueado = !item.desbloqueado;
+                if (!item.desbloqueado) {
+                    item.seleccionado = false;
+                }
+            },
+
+            async imprimirSeleccionadosPdf() {
+                const seleccionados = this.articulosProduccion.filter(a => a.seleccionado).map(a => a.id);
+                if (seleccionados.length === 0) {
+                    alert('Debe seleccionar al menos un artículo para imprimir.');
+                    return;
+                }
+
+                this.generandoPdf = true;
                 try {
                     const data = {
-                        proyecto_id: proyecto.proyecto_id
+                        proyecto_id: this.proyectoProduccion.proyecto_id,
+                        articulos_ids: seleccionados
                     };
 
                     const response = await fetch('{{ route("generarProduccionPdf") }}', {
@@ -817,11 +925,22 @@
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        const nombreArchivo = proyecto.nombre_proyecto ? `Produccion_${proyecto.nombre_proyecto}.pdf` : 'Produccion.pdf';
+                        const nombreArchivo = this.proyectoProduccion.nombre_proyecto ? `Produccion_${this.proyectoProduccion.nombre_proyecto}.pdf` : 'Produccion.pdf';
                         a.download = nombreArchivo;
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
+                        
+                        // Actualizar estado localmente para reflejar la modificación de la BD
+                        this.articulosProduccion.forEach(a => {
+                            if (a.seleccionado) {
+                                a.impreso = true;
+                                a.desbloqueado = false;
+                                a.seleccionado = false;
+                            }
+                        });
+                        
+                        this.mostrarModalProduccion = false;
                     } else {
                         let mensajeError = 'Error al generar el PDF de Producción.';
                         try {
@@ -835,6 +954,8 @@
                 } catch (e) {
                     console.error(e);
                     alert('Ocurrió un error: ' + (e.message || 'Error desconocido'));
+                } finally {
+                    this.generandoPdf = false;
                 }
             },
 

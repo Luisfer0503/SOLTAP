@@ -2,22 +2,6 @@
 
 @section('contenido')
     <main class="flex-1 flex flex-col">
-        
-        <header class="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm z-10">
-            <div class="flex items-center w-1/3">
-                <i class="ph ph-list text-2xl text-gray-400 mr-4 cursor-pointer"></i>
-                <div class="relative w-full">
-                    <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
-                    <input type="text" placeholder="Search for a job, task or resume" class="w-full pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-gray-600 outline-none">
-                </div>
-            </div>
-            <div class="flex items-center space-x-4">
-                <button class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-md shadow-lg transition">
-                    <i class="ph ph-user-plus text-xl"></i>
-                </button>
-                <button class="p-2 text-gray-400 hover:text-gray-600"><i class="ph ph-squares-four text-xl"></i></button>
-            </div>
-        </header>
 
         <div class="flex-1 overflow-y-auto p-8 relative">
             
@@ -35,7 +19,7 @@
                 
                 <div class="h-16 px-6 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center">
                     <div class="flex items-center text-gray-500 font-bold tracking-widest uppercase">
-                        <img src="{{asset('archivos/logo.png')}}" alt="Logo Casa Tapier" class="h-28 w-auto mr-3 object-contain">
+                        <img src="{{asset('archivos/logosshctmm.png')}}" alt="Logo Casa Tapier" class="h-28 w-auto mr-3 object-contain">
                     </div>
                 </div>
             </div>

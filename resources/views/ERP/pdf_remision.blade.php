@@ -174,20 +174,20 @@ margin-bottom:5px;
 <table class="datos">
 
 <tr>
-<td width="50%"><b>Nombre:</b> {{ $proyecto['cliente_nombre'] }}</td>
-<td width="50%"><b>Fecha:</b> {{ date('d/m/Y') }}</td>
+<td width="50%"><b>Nombre:</b> <span style="color:#1b3fbf;">{{ $proyecto['cliente_nombre'] }}</span></td>
+<td width="50%"><b>Fecha:</b> <span style="color:#1b3fbf;">{{ date('d/m/Y') }}</span></td>
 </tr>
 <tr>
-    <td colspan="2"><b>RFC:</b> {{ $rfc ?? '' }}</td>
-</tr>
-
-<tr>
-<td><b>Teléfono:</b> {{ $proyecto['telefono'] }}</td>
-<td><b>Correo:</b> {{ $proyecto['correo'] }}</td>
+    <td colspan="2"><b>RFC:</b> <span style="color:#1b3fbf;">{{ $rfc ?? '' }}</span></td>
 </tr>
 
 <tr>
-<td colspan="2"><b>Dirección:</b> {{ $proyecto['direccion'] }}</td>
+<td><b>Teléfono:</b> <span style="color:#1b3fbf;">{{ $proyecto['telefono'] }}</span></td>
+<td><b>Correo:</b> <span style="color:#1b3fbf;">{{ $proyecto['correo'] }}</span></td>
+</tr>
+
+<tr>
+<td colspan="2"><b>Dirección:</b> <span style="color:#1b3fbf;">{{ $proyecto['direccion'] }}</span></td>
 </tr>
 
 <tr>
@@ -240,7 +240,7 @@ A CONTINUACIÓN SE MUESTRA LA DESCRIPCIÓN DE LOS ARTÍCULOS ADQUIRIDOS.
 
 <div style="width:100%;">
 <span style="float:left;">
-{{ 0 + number_format((float)$item['alto'], 2, '.', '') }} x {{ 0 + number_format((float)$item['ancho'], 2, '.', '') }} x {{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}
+L/A {{ 0 + number_format((float)$item['ancho'], 2, '.', '') }} x ALT {{ 0 + number_format((float)$item['alto'], 2, '.', '') }} x PRO {{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}
 </span>
 <span style="float:right; color:#1b3fbf; font-weight:bold;">
 {{ 0 + number_format((float)$item['cubicaje'], 2, '.', '') }} - {{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 2, '.', '') }}
@@ -309,34 +309,34 @@ ARTÍCULOS COTIZADOS
 
 <tr>
 <td class="total">SUBTOTAL PRODUCTOS:</td>
-<td align="right">$ {{ number_format($totales['subtotal_articulos'],2) }}</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['subtotal_articulos'],2) }}</td>
 </tr>
 
 <tr>
 <td class="total">ENVÍO:</td>
-<td align="right">$ {{ number_format($totales['envio'],2) }}</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['envio'],2) }}</td>
 </tr>
 
 @if(isset($totales['descuento']) && $totales['descuento'] > 0)
 <tr>
 <td class="total">DESCUENTO:</td>
-<td align="right">$ {{ number_format($totales['descuento'],2) }}</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['descuento'],2) }}</td>
 </tr>
 @endif
 
 <tr>
 <td class="total">SUBTOTAL:</td>
-<td align="right">$ {{ number_format($totales['subtotal'],2) }}</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['subtotal'],2) }}</td>
 </tr>
 
 <tr>
 <td class="total">IVA ({{ $totales['iva_porcentaje'] ?? 16 }}%)</td>
-<td align="right">$ {{ number_format($totales['iva'],2) }}</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['iva'],2) }}</td>
 </tr>
 
 <tr>
 <td class="total">TOTAL A PAGAR:</td>
-<td align="right"><b>$ {{ number_format($totales['total'],2) }}</b></td>
+<td align="right" style="color:#1b3fbf;"><b>$ {{ number_format($totales['total'],2) }}</b></td>
 </tr>
 
 </table>
