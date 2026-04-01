@@ -85,9 +85,9 @@ class ERPController extends Controller
           $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
           $role = strtoupper($userRoleName);
 
-          $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN / SUP. HERRERÍA', 'COORD. INSTALACION / SUP. HERRERIA'];
-          $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
-          if (!in_array($role, array_merge(['ADMIN', 'VENDEDOR/DISEÑADOR', 'DIRECCIÓN', 'DIRECCION'], $rolesProduccionCoords, $rolesProduccionScan))) {
+          $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN / SUP. HERRERÍA', 'COORD. INSTALACION / SUP. HERRERIA', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
+          $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION'];          
+          if (!in_array($role, array_merge(['ADMIN', 'VENDEDOR/DISEÑADOR', 'DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT', 'COORD. DV SOLFERINO'], $rolesProduccionCoords, $rolesProduccionScan))) {
               return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
           }
 
@@ -98,6 +98,13 @@ class ERPController extends Controller
                   $query->whereRaw('1 = 0'); // Restricción: Solo puede visualizar información del proyecto que escanea
               }
           }
+
+          // Restricción: Solo mostrar proyectos que tengan artículos asignados
+          $query->whereExists(function ($q) {
+              $q->select(DB::raw(1))
+                ->from('proyecto_articulos')
+                ->whereColumn('proyecto_articulos.proyecto_id', 'Proyectos.proyecto_id');
+          });
 
           $proyectos = $query->orderBy('Proyectos.proyecto_id', 'desc')->get();
 
@@ -501,6 +508,22 @@ class ERPController extends Controller
                 }
             }
 
+            // Registrar interacción de Generación de Remisión
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                $interaccion = DB::table('interacciones')->where('nombre', 'SE GENERO EL PDF DE REMISION')->first();
+                if ($interaccion) {
+                    $interaccionId = $interaccion->id ?? $interaccion->interaccion_id;
+                    DB::table('proyecto_interacciones')->insert([
+                        'proyecto_id' => $proyecto_id,
+                        'interaccion_id' => $interaccionId,
+                        'user_id' => auth()->id(),
+                        'comentarios' => 'Se generó el PDF de remisión.',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+
             $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos', 'rfc', 'condiciones'));
             return $pdf->download('Remision_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
@@ -552,6 +575,22 @@ class ERPController extends Controller
             
             // 3. Generar el código QR a través de la API y convertirlo en base64 para embeberlo en PDF
             $qrImage = base64_encode(file_get_contents('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($qrUrl)));
+
+            // Registrar interacción de Generación de PDF de Producción
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                $interaccion = DB::table('interacciones')->where('nombre', 'SE GENERO EL PDF DEL ACTA DE PRODUCCION')->first();
+                if ($interaccion) {
+                    $interaccionId = $interaccion->id ?? $interaccion->interaccion_id;
+                    DB::table('proyecto_interacciones')->insert([
+                        'proyecto_id' => $proyecto_id,
+                        'interaccion_id' => $interaccionId,
+                        'user_id' => auth()->id(),
+                        'comentarios' => 'Se generó el PDF del acta de producción.',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
 
             $pdf = Pdf::loadView('ERP.pdf_produccion', compact('proyecto', 'articulos', 'qrImage'));
             return $pdf->download('Produccion_' . $proyecto['nombre_proyecto'] . '.pdf');
@@ -617,8 +656,8 @@ class ERPController extends Controller
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
-        $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN / SUP. HERRERÍA', 'COORD. INSTALACION / SUP. HERRERIA'];
-        $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
+        $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN / SUP. HERRERÍA', 'COORD. INSTALACION / SUP. HERRERIA', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
+        $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION'];
         if (!in_array($role, array_merge(['ADMIN', 'VENDEDOR/DISEÑADOR'], $rolesProduccionCoords, $rolesProduccionScan))) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
@@ -654,7 +693,10 @@ class ERPController extends Controller
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
-        if (!in_array($role, ['ADMIN', 'VENDEDOR/DISEÑADOR', 'DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT'])) {
+        
+        $canAccess = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT']) || ($role === 'VENDEDOR/DISEÑADOR' && strtoupper(auth()->user()->name) === 'SAUL APARICIO TORRES');
+
+        if (!$canAccess) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
 
@@ -1856,5 +1898,94 @@ class ERPController extends Controller
 
         $pdf = Pdf::loadView('ERP.pdf_historial_proyecto', compact('proyecto', 'historial'));
         return $pdf->download('Historial_Interacciones_' . preg_replace('/[^A-Za-z0-9]/', '_', $proyecto->nombre_proyecto) . '.pdf');
+    }
+
+    public function costosFallas()
+    {
+        // Role check
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        $role = strtoupper($userRoleName);
+        if (!in_array($role, ['ADMIN'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
+        $fallas = DB::table('fallas as f')
+            ->join('Proyectos as p', 'f.proyecto_id', '=', 'p.proyecto_id')
+            ->join('proyecto_articulos as pa', 'f.articulo_id', '=', 'pa.id')
+            ->select('f.id as falla_id', 'f.materiales', 'f.costo_hh', 'p.nombre as proyecto_nombre', 'pa.nombre as articulo_nombre', 'f.fecha')
+            ->whereNotNull('f.materiales')
+            ->where('f.materiales', '!=', '[]')
+            ->orderBy('f.id', 'desc')
+            ->get();
+
+        $fallasPendientes = $fallas->map(function ($falla) {
+            $materiales = json_decode($falla->materiales, true);
+            if (!is_array($materiales)) return null;
+
+            $pendientes = array_filter($materiales, function ($mat) {
+                return !isset($mat['costo']) || $mat['costo'] === '' || (float)$mat['costo'] == 0;
+            });
+
+            if (empty($pendientes)) return null;
+
+            $falla->materiales_pendientes = array_values($pendientes); // re-index
+            return $falla;
+        })->filter(); // remove nulls
+
+        return view('ERP.costosFallas', ['fallas' => $fallasPendientes]);
+    }
+
+    public function guardarCostosFalla(Request $request)
+    {
+        $request->validate([
+            'falla_id' => 'required|exists:fallas,id',
+            'materiales' => 'required|array',
+            'materiales.*.material' => 'required|string',
+            'materiales.*.costo' => 'required|numeric|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $falla = DB::table('fallas')->where('id', $request->falla_id)->first();
+            if (!$falla) {
+                return response()->json(['success' => false, 'message' => 'Falla no encontrada'], 404);
+            }
+
+            $materialesOriginales = json_decode($falla->materiales, true) ?? [];
+            $materialesNuevos = $request->materiales;
+            
+            // Create a map of new costs from the request
+            $nuevosCostosMap = [];
+            foreach ($materialesNuevos as $matNuevo) {
+                $nuevosCostosMap[$matNuevo['material']] = (float)$matNuevo['costo'];
+            }
+
+            // Update original materials list with new costs
+            $costoMaterialesTotal = 0;
+            foreach ($materialesOriginales as &$matOriginal) {
+                // If a new cost was submitted for this material, update it
+                if (array_key_exists($matOriginal['material'], $nuevosCostosMap)) {
+                    $matOriginal['costo'] = $nuevosCostosMap[$matOriginal['material']];
+                }
+                $costoMaterialesTotal += (float)($matOriginal['costo'] ?? 0);
+            }
+
+            $costoTotal = (float)$falla->costo_hh + $costoMaterialesTotal;
+
+            DB::table('fallas')
+                ->where('id', $request->falla_id)
+                ->update([
+                    'materiales' => json_encode($materialesOriginales),
+                    'costo_materiales' => $costoMaterialesTotal,
+                    'costo_total' => $costoTotal,
+                ]);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Costos actualizados correctamente.']);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

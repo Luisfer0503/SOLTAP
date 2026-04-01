@@ -191,7 +191,6 @@ function clientesModule(){
         empresas: @json($empresas),
         estados: @json($estados),
         enfoques: @json($enfoques),
-        canales: @json($canales),
         prefijoProyecto: '',
         partePersonalizada: '',
         nombreProyectoCompleto: '',
@@ -201,7 +200,6 @@ function clientesModule(){
         empresaSeleccionada: null,
         descripcion: '',
         enfoqueSeleccionado: null,
-        canalSeleccionado: null,
         mapsUrl: '',
         mensaje: '',
         cargandoGuardar: false,
@@ -219,7 +217,6 @@ function clientesModule(){
             this.empresaSeleccionada = cliente.empresa_id || null;
             this.descripcion = '';
             this.enfoqueSeleccionado = cliente.enfoque_id || null;
-            this.canalSeleccionado = cliente.canal_id || null;
             this.mapsUrl = cliente.maps || '';
             this.calleEntrega = cliente.calle || '';
             this.municipioEntrega = cliente.municipio || '';
@@ -232,7 +229,6 @@ function clientesModule(){
             this.empresaSeleccionada = null;
             this.descripcion = '';
             this.enfoqueSeleccionado = null;
-            this.canalSeleccionado = null;
             this.mapsUrl = '';
         },
 
@@ -327,7 +323,6 @@ function clientesModule(){
             if (this.mapsUrl) fd.append('maps', this.mapsUrl);
             if (this.descripcion) fd.append('descripcion', this.descripcion);
             if (this.enfoqueSeleccionado) fd.append('enfoque_id', this.enfoqueSeleccionado);
-            if (this.canalSeleccionado) fd.append('canal_id', this.canalSeleccionado);
             try{
                 const res = await fetch('{{ route('guardarProyecto') }}', { method:'POST', headers:{'X-CSRF-TOKEN': token,'Accept':'application/json'}, body: fd });
                 const json = await res.json();

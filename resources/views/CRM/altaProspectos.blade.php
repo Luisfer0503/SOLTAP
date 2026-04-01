@@ -134,7 +134,9 @@
                                 <select name="IdEmpresa" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500">
                                     <option value="">Seleccionar Empresa...</option>
                                     @foreach($empresas as $empresa)
-                                        <option value="{{ $empresa->empresa_id }}" @selected(old('IdEmpresa') == $empresa->empresa_id)>{{ $empresa->nombre }}</option>
+                                        @if (strtoupper($empresa->nombre) !== 'MML')
+                                            <option value="{{ $empresa->empresa_id }}" @selected(old('IdEmpresa') == $empresa->empresa_id)>{{ $empresa->nombre }}</option>
+                                        @endif
                                     @endforeach
                                 </select>
                             </div>
@@ -766,18 +768,6 @@
                 editarProspecto(id) {
                     console.log('Editando prospecto:', id);
                     window.location.href = `{{ url('crm/prospecto/editar') }}/${id}`;
-                },
-
-                eliminarProspecto(id) {
-                    console.log('Eliminando prospecto:', id);
-                    if (confirm('¿Estás seguro de que deseas eliminar este prospecto?')) {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = `{{ url('crm/prospecto/eliminar') }}/${id}`;
-                        form.innerHTML = `@csrf @method('DELETE')`;
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
                 }
             }
         }
@@ -812,7 +802,7 @@
                             <th class="px-4 py-2 text-left font-semibold text-gray-700">Teléfono</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700">Empresa</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700">Estatus</th>
-                            <th class="px-4 py-2 text-center font-semibold text-gray-700">Acciones</th>
+                            <th class="px-4 py-2 text-left font-semibold text-gray-700">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -828,12 +818,9 @@
                                         x-text="prospecto.estatus">
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-center flex gap-1 justify-center">
-                                    <button @click="editarProspecto(prospecto.id)" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold transition" title="Editar">
-                                        <i class="ph ph-pencil"></i>
-                                    </button>
-                                    <button @click="eliminarProspecto(prospecto.id)" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-semibold transition" title="Eliminar">
-                                        <i class="ph ph-trash"></i>
+                                <td class="px-4 py-3">
+                                    <button @click="editarProspecto(prospecto.id)" class="px-3 py-1 bg-blue-600 text-white rounded text-xs">
+                                        Editar
                                     </button>
                                 </td>
                             </tr>

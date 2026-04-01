@@ -6,10 +6,12 @@
     $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
     $role = strtoupper($userRoleName);
     $isAdmin = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION']);
+    $isDireccion = in_array($role, ['DIRECCIÓN', 'DIRECCION']);
     $isProduccion = in_array($role, ['COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS']);
     $isLogistica = in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
     $isDvCasaTapier = in_array($role, ['COORD. DV&MKT']);
     $isDvSolferino = in_array($role, ['COORD. DV SOLFERINO']);
+    $isVendedor = in_array($role, ['VENDEDOR/DISEÑADOR']);
 @endphp
 <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50" x-data="seguimientoApp()">
 
@@ -19,7 +21,7 @@
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center">
                     <i class="ph ph-kanban text-blue-600 mr-3"></i> Seguimiento de Proyectos
                 </h2>
-                <p class="text-sm text-gray-500 mt-1">Gestiona tu tubería de ventas y prioridades.</p>
+                <p class="text-sm text-gray-500 mt-1">Gestionar proyectos y su avance.</p>
             </div>
             <div class="flex space-x-3">
                 @if(request()->has('proyecto_id'))
@@ -27,14 +29,19 @@
                     <i class="ph ph-list mr-2"></i> Ver Todos
                 </a>
                 @endif
-                <a href="{{ route('altaProspectos') }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 shadow-sm text-sm font-medium flex items-center">
-                    <i class="ph ph-user-plus mr-2"></i> Nuevo Prospecto
-                </a>
             </div>
         </div>
     </header>
 
-    <div class="px-8 pt-6 pb-2">
+    <div class="px-8 pt-6 pb-2 shrink-0">
+        <!-- Search Bar -->
+        <div class="mb-4">
+            <div class="relative">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" x-model="filtro" placeholder="Buscar por nombre de proyecto o cliente..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm">
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
@@ -60,25 +67,27 @@
                         <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
-                @foreach($proyectos as $p)
-                <tbody class="bg-white border-b border-gray-200" x-data="{ 
-                    expanded: {{ request()->has('proyecto_id') ? 'true' : 'false' }}, 
-                    articles: {{ json_encode($p->articulos) }}.map(a => ({
+                <template x-for="p in proyectosFiltrados" :key="p.id">
+                    <tbody class="bg-white border-b border-gray-200" x-data="{ 
+                    expanded: {{ request()->has('proyecto_id') ? 'true' : 'false' }} && p.id == {{ request()->query('proyecto_id', 'null') }}, 
+                    articles: p.articulos.map(a => ({
                         ...a, 
                         notas: '', 
                         fallas: '', 
                         checks: [a.produccion == 1, a.dyv == 1, a.logistica == 1] 
                     })),
-                    projectId: {{ $p->id }},
+                    projectId: p.id,
                     progressP: 0,
                     progressDV: 0,
                     progressL: 0,
-                    empresa: '{{ $p->empresa_nombre ?? '' }}',
+                    empresa: p.empresa_nombre || '',
                     isAdmin: {{ $isAdmin ? 'true' : 'false' }},
+                    isDireccion: {{ $isDireccion ? 'true' : 'false' }},
                     isProduccion: {{ $isProduccion ? 'true' : 'false' }},
                     isLogistica: {{ $isLogistica ? 'true' : 'false' }},
                     isDvCasaTapier: {{ $isDvCasaTapier ? 'true' : 'false' }},
                     isDvSolferino: {{ $isDvSolferino ? 'true' : 'false' }},
+                    isVendedor: {{ $isVendedor ? 'true' : 'false' }},
                     canSeeProduccion() { return this.isAdmin || this.isProduccion; },
                     canSeeLogistica() { return this.isAdmin || this.isLogistica; },
                     canSeeDV() {
@@ -165,12 +174,11 @@
                                 <div class="mr-3 text-gray-400">
                                     <i class="ph" :class="expanded ? 'ph-caret-down' : 'ph-caret-right'"></i>
                                 </div>
-                                <div class="flex-shrink-0 h-10 w-10 rounded bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                                    {{ substr($p->nombre, 0, 2) }}
+                                <div class="flex-shrink-0 h-10 w-10 rounded bg-blue-100 flex items-center justify-center text-blue-600 font-bold" x-text="p.nombre.substring(0, 2)">
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-bold text-gray-900">{{ $p->nombre }}</div>
-                                    <div class="text-xs text-gray-500">{{ $p->cliente ?? 'Sin Cliente' }}</div>
+                                    <div class="text-sm font-bold text-gray-900" x-text="p.nombre"></div>
+                                    <div class="text-xs text-gray-500" x-text="p.cliente || 'Sin Cliente'"></div>
                                 </div>
                             </div>
                         </td>
@@ -178,6 +186,7 @@
                             <div class="flex flex-col space-y-1 w-40">
                                 <div class="flex items-center justify-between text-xs" x-show="canSeeProduccion()">
                                     <span class="font-bold text-blue-600 w-6">P</span>
+                                    <span class="font-bold text-blue-600 w-6" x-text="labels[0]"></span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressP}%`"></div>
                                     </div>
@@ -185,6 +194,7 @@
                                 </div>
                                 <div class="flex items-center justify-between text-xs" x-show="canSeeDV()">
                                     <span class="font-bold text-purple-600 w-6">DV</span>
+                                    <span class="font-bold text-purple-600 w-6" x-text="labels[1]"></span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressDV}%`"></div>
                                     </div>
@@ -192,6 +202,7 @@
                                 </div>
                                 <div class="flex items-center justify-between text-xs" x-show="canSeeLogistica()">
                                     <span class="font-bold text-orange-600 w-6">L</span>
+                                    <span class="font-bold text-orange-600 w-6" x-text="labels[2]"></span>
                                     <div class="flex-1 bg-gray-200 rounded-full h-1.5 mx-2">
                                         <div class="bg-orange-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${progressL}%`"></div>
                                     </div>
@@ -200,28 +211,29 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            @if($p->estatus == 'Cotización Pendiente')
+                            <template x-if="p.estatus == 'Cotización Pendiente'">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 border border-orange-200">
                                     Por Cotizar
                                 </span>
-                            @elseif($p->estatus == 'En Proceso')
+                            </template>
+                            <template x-if="p.estatus == 'En Proceso'">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
                                     En Diseño
                                 </span>
-                            @elseif($p->estatus == 'Cerrado / Ganado')
+                            </template>
+                            <template x-if="p.estatus == 'Cerrado / Ganado'">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
                                     <i class="ph ph-check mr-1"></i> Ganado
                                 </span>
-                            @else
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    {{ $p->estatus }}
+                                    <span x-text="p.estatus"></span>
                                 </span>
-                            @endif
+                            </template>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end items-center space-x-3">
                                 
-                                <div class="flex items-center space-x-1" @click.stop>
+                                <div class="flex items-center space-x-1" @click.stop x-show="!isDireccion && !isVendedor">
                                     <select x-model="selectedInteraccion" class="text-xs border-gray-300 rounded py-1 pl-2 pr-6 focus:ring-indigo-500 focus:border-indigo-500 w-36">
                                         <option value="">Añadir estatus...</option>
                                         <template x-for="int in interacciones" :key="int.id || int.interaccion_id">
@@ -234,7 +246,7 @@
                                     </button>
                                 </div>
 
-                                <a href="{{ route('detalleProyecto', $p->id) }}" @click.stop class="text-blue-500 hover:text-blue-700 p-1 rounded bg-white inline-flex items-center justify-center border border-gray-200 shadow-sm" title="Ver Detalles">
+                                <a :href="'{{ url('erp/detalle-proyecto') }}/' + p.id" @click.stop class="text-blue-500 hover:text-blue-700 p-1 rounded bg-white inline-flex items-center justify-center border border-gray-200 shadow-sm" title="Ver Detalles">
                                     <i class="ph ph-eye text-lg"></i>
                                 </a>
                             </div>
@@ -258,7 +270,7 @@
                                         <thead class="bg-gray-100 text-xs text-gray-500 uppercase">
                                             <tr>
                                                 <th class="px-4 py-3 text-left w-1/3">Artículo</th>
-                                                <th class="px-4 py-3 text-center w-1/4">
+                                                <th class="px-4 py-3 text-center w-1/4" x-show="!isDireccion  && !isVendedor">
                                                     <div class="flex items-center justify-center gap-2">
                                                         <span>Verificación (Etapas)</span>
                                                         <button @click.stop="guardarVerificacion()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-2 py-1 rounded shadow-sm flex items-center transition" :disabled="guardandoVerificacion" title="Guardar cambios de etapas">
@@ -268,7 +280,7 @@
                                                         </button>
                                                     </div>
                                                 </th>
-                                                <th class="px-4 py-3 text-left">Observaciones</th>
+                                                <th class="px-4 py-3 text-left" x-show="!isDireccion ">Observaciones</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
@@ -291,14 +303,14 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 align-middle">
+                                                    <td class="px-4 py-3 align-middle" x-show="!isDireccion">
                                                         <div class="flex flex-col items-center">
                                                             <div class="mb-2">
                                                                 <span class="text-xs font-bold" :class="getRowProgress(art) === 100 ? 'text-green-600' : 'text-gray-600'" x-text="getRowProgress(art) + '%'"></span>
                                                             </div>
                                                             <div class="flex justify-center space-x-2">
                                                             <template x-for="(check, i) in art.checks">
-                                                                <div class="flex flex-col items-center cursor-pointer group" @click="toggleCheck(index, i)" x-show="(i===0 && canSeeProduccion()) || (i===1 && canSeeDV()) || (i===2 && canSeeLogistica())">
+                                                                    <div class="flex flex-col items-center cursor-pointer group" @click.stop="toggleCheck(index, i)" x-show="(i===0 && canSeeProduccion()) || (i===1 && canSeeDV()) || (i===2 && canSeeLogistica())">
                                                                     <div class="w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shadow-sm mb-1"
                                                                          :class="check ? (i===0?'bg-blue-500 border-blue-500':(i===1?'bg-purple-500 border-purple-500':'bg-orange-500 border-orange-500')) + ' text-white' : 'bg-white border-gray-300 text-gray-300 hover:border-gray-400'">
                                                                         <i class="ph ph-check text-lg" x-show="check"></i>
@@ -310,13 +322,13 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 align-top">
+                                                    <td class="px-4 py-3 align-top" x-show="!isDireccion">
                                                         <div class="space-y-2 w-64">
                                                             <div class="flex items-center gap-2">
                                                                 <button type="button" @click="verFallasArticulo(art)" class="shrink-0 px-2 py-1.5 bg-gray-600 text-white rounded text-xs font-bold hover:bg-gray-700 flex items-center shadow-sm" title="Ver Historial de Fallas">
                                                                     <i class="ph ph-list-magnifying-glass mr-1"></i> Ver Fallas
                                                                 </button>
-                                                                <button type="button" @click="abrirModalFalla({ id: {{ $p->id }}, nombre: '{{ addslashes($p->nombre) }}', disenador: '{{ addslashes($p->disenador ?? '') }}' }, art)" class="shrink-0 px-2 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 flex items-center shadow-sm">
+                                                                    <button type="button" @click="abrirModalFalla({ id: p.id, nombre: p.nombre, disenador: p.disenador }, art)" class="shrink-0 px-2 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 flex items-center shadow-sm">
                                                                     <i class="ph ph-plus mr-1"></i> Falla
                                                                 </button>
                                                             </div>
@@ -331,7 +343,8 @@
                         </td>
                     </tr>
                 </tbody>
-                @endforeach
+                    </tbody>
+                </template>
             </table>
         </div>
     </div>
@@ -403,12 +416,14 @@
                 <div class="grid grid-cols-2 gap-4 mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">ORIGINÓ <span class="text-red-500">*</span></label>
-                        <select x-model="formFalla.origino" multiple class="w-full text-sm border-gray-300 focus:border-red-500 focus:ring-red-500 rounded bg-white h-28 text-gray-800">
+                        <div class="w-full text-sm border border-gray-300 rounded bg-white h-28 overflow-y-auto p-2 space-y-1">
                             <template x-for="u in usuarios" :key="u.id">
-                                <option :value="u.id" x-text="u.name"></option>
+                                <label class="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                                    <input type="checkbox" :value="u.id" x-model="formFalla.origino" class="rounded text-red-500 focus:ring-red-400">
+                                    <span x-text="u.name" class="text-gray-700"></span>
+                                </label>
                             </template>
-                        </select>
-                        <p class="text-[10px] text-gray-500 mt-1"><i class="ph ph-mouse-left"></i> Ctrl+Click para selección múltiple</p>
+                        </div>
                     </div>
                     <div class="flex flex-col justify-end pb-5">
                         <label class="block text-xs font-bold text-gray-500 mb-1">ÁREA DE ORIGEN (Automático)</label>
@@ -417,12 +432,14 @@
 
                     <div>
                         <label class="block text-xs font-bold text-gray-700 mb-1">RESOLVIÓ <span class="text-red-500">*</span></label>
-                        <select x-model="formFalla.resolvio" multiple class="w-full text-sm border-gray-300 focus:border-red-500 focus:ring-red-500 rounded bg-white h-28 text-gray-800">
+                        <div class="w-full text-sm border border-gray-300 rounded bg-white h-28 overflow-y-auto p-2 space-y-1">
                             <template x-for="u in usuarios" :key="u.id">
-                                <option :value="u.id" x-text="u.name"></option>
+                                <label class="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                                    <input type="checkbox" :value="u.id" x-model="formFalla.resolvio" class="rounded text-red-500 focus:ring-red-400">
+                                    <span x-text="u.name" class="text-gray-700"></span>
+                                </label>
                             </template>
-                        </select>
-                        <p class="text-[10px] text-gray-500 mt-1"><i class="ph ph-mouse-left"></i> Ctrl+Click para selección múltiple</p>
+                        </div>
                     </div>
                     <div class="flex flex-col justify-end pb-5">
                         <label class="block text-xs font-bold text-gray-500 mb-1">ÁREA SOLUCIÓN (Automático)</label>
@@ -449,20 +466,14 @@
                 <div class="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                     <div class="flex justify-between items-center mb-3">
                         <label class="block text-xs font-bold text-gray-700">MATERIALES ASOCIADOS</label>
-                        <button type="button" @click="formFalla.materiales.push({material: '', costo: ''})" class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 font-bold hover:bg-blue-100"><i class="ph ph-plus"></i> Agregar Fila Material</button>
+                        <button type="button" @click="formFalla.materiales.push({material: '', costo: 0})" class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 font-bold hover:bg-blue-100"><i class="ph ph-plus"></i> Agregar Fila Material</button>
                     </div>
                     <template x-for="(mat, idx) in formFalla.materiales" :key="idx">
                         <div class="flex gap-2 mb-2 items-center">
                             <input type="text" x-model="mat.material" placeholder="Descripción del material..." class="flex-1 text-sm border-gray-300 focus:border-red-500 focus:ring-red-500 rounded bg-white text-gray-800">
-                            <span class="text-gray-500 font-bold">$</span>
-                            <input type="number" x-model="mat.costo" placeholder="Costo" class="w-32 text-sm border-gray-300 focus:border-red-500 focus:ring-red-500 rounded bg-white text-right font-bold text-gray-800">
                             <button type="button" @click="formFalla.materiales.splice(idx, 1)" class="text-red-500 hover:text-red-700 text-lg"><i class="ph ph-trash"></i></button>
                         </div>
                     </template>
-                    <div class="text-right mt-3 border-t pt-3">
-                        <span class="text-xs font-bold text-gray-500">COSTO MATERIALES (Automático):</span>
-                        <span class="text-base font-bold text-red-700 ml-2" x-text="'$ ' + costoMateriales.toFixed(2)"></span>
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 items-end mt-2">
@@ -484,7 +495,7 @@
                     </div>
                     <div class="text-right p-4 bg-red-100 rounded-lg border border-red-200 shadow-inner">
                         <span class="text-xs font-bold text-red-800 uppercase block mb-1">COSTO TOTAL DE LA FALLA (Automático):</span>
-                        <span class="text-3xl font-black text-red-700 block" x-text="'$ ' + costoTotal.toFixed(2)"></span>
+                        <span class="text-3xl font-black text-red-700 block" x-text="'$ ' + costoHhAprox.toFixed(2)"></span>
                     </div>
                 </div>
             </div>
@@ -596,6 +607,21 @@
             modalVerFallasOpen: false,
             cargandoFallas: false,
             fallasList: [],
+            proyectos: @json($proyectos),
+            filtro: '',
+
+            get proyectosFiltrados() {
+                if (this.filtro === '') {
+                    return this.proyectos;
+                }
+                const search = this.filtro.toLowerCase();
+                return this.proyectos.filter(p => {
+                    const nombre = p.nombre ? p.nombre.toLowerCase() : '';
+                    const cliente = p.cliente ? p.cliente.toLowerCase() : '';
+                    return nombre.includes(search) || cliente.includes(search);
+                });
+            },
+
             proyectoActual: null,
             articuloActual: null,
             formFalla: {
@@ -645,7 +671,7 @@
                     resolvio: [],
                     descripcion: '',
                     hh_minutos: '',
-                    materiales: [{ material: '', costo: '' }],
+                    materiales: [{ material: '', costo: 0 }],
                     reporte: null,
                     reportePreview: null
                 };
@@ -741,8 +767,8 @@
                 formData.append('origino', JSON.stringify(this.formFalla.origino));
                 formData.append('resolvio', JSON.stringify(this.formFalla.resolvio));
                 
-                const matValidos = this.formFalla.materiales.filter(m => m.material.trim() !== '' || m.costo !== '');
-                formData.append('materiales', JSON.stringify(matValidos));
+                const matValidos = this.formFalla.materiales.filter(m => m.material.trim() !== '');
+                formData.append('materiales', JSON.stringify(matValidos.map(m => ({ material: m.material, costo: 0 }))));
                 
                 if (this.formFalla.reporte) {
                     formData.append('reporte', this.formFalla.reporte);

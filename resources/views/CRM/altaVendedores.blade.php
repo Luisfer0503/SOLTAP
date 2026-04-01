@@ -65,7 +65,6 @@
                                         <tr>
                                             <th class="px-3 py-2 text-left">ID</th>
                                             <th class="px-3 py-2 text-left">Nombre</th>
-                                            <th class="px-3 py-2 text-left">Correo</th>
                                             <th class="px-3 py-2 text-right">Acciones</th>
                                         </tr>
                                     </thead>
@@ -74,7 +73,6 @@
                                         <tr class="border-t hover:bg-gray-50">
                                             <td class="px-3 py-2 align-top">{{ $v->vendedor_id }}</td>
                                             <td class="px-3 py-2 align-top">{{ $v->nombre }} {{ $v->apellido_paterno }} {{ $v->apellido_materno }}</td>
-                                            <td class="px-3 py-2 align-top">{{ $v->correo }}</td>
                                             <td class="px-3 py-2 align-top text-right">
                                                 <button type="button" @click="editar({{ json_encode($v) }})" class="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mr-2">Editar</button>
                                                 <form action="{{ route('eliminarVendedor', $v->vendedor_id) }}" method="POST" class="inline-block" onsubmit="return confirm('¿Eliminar este vendedor?');">
@@ -121,17 +119,6 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                             <input type="text" name="apellido_materno" value="{{ old('apellido_materno') }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo</label>
-                            <input type="email" name="correo" value="{{ old('correo') }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="number" name="telefono" value="{{ old('telefono') }}" required 
                                 class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
                         </div>
 
@@ -206,8 +193,6 @@
                 document.querySelector('input[name="nombre"]').value = v.nombre;
                 document.querySelector('input[name="apellido_paterno"]').value = v.apellido_paterno;
                 document.querySelector('input[name="apellido_materno"]').value = v.apellido_materno;
-                document.querySelector('input[name="correo"]').value = v.correo;
-                document.querySelector('input[name="telefono"]').value = v.telefono;
                 
                 // Seleccionar empresa
                 const radio = document.querySelector(`input[name="empresa"][value="${v.empresa_id}"]`);

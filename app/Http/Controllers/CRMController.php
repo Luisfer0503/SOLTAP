@@ -31,7 +31,7 @@ class CRMController extends Controller
             $sigue = ($cuantos == 0) ? 1 : $consulta[0]->vendedor_id + 1;
             
        // Obtener empresas de la base de datos
-            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
+            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas WHERE nombre='Casa Tapier' or nombre='Solferino Home' ORDER BY nombre ASC");
         // Obtener lista de vendedores para mostrar en la vista
         $vendedores = DB::select("SELECT * FROM vendedores ORDER BY vendedor_id DESC");
 
@@ -50,11 +50,6 @@ class CRMController extends Controller
                 'apellido_paterno.regex' => 'El apellido paterno solo debe contener letras.',
                 'apellido_materno.required' => 'El apellido materno es obligatorio.',
                 'apellido_materno.regex' => 'El apellido materno solo debe contener letras.',
-                'correo.required' => 'El correo electrónico es obligatorio.',
-                'correo.email' => 'El formato del correo no es válido.',
-                'correo.unique' => 'Este correo ya está registrado.',
-                'telefono.required' => 'El teléfono es obligatorio.',
-                'telefono.numeric' => 'El teléfono debe contener solo números.',
                 'empresa.required' => 'Debe seleccionar una empresa.',
                 'foto.required' => 'La fotografía es obligatoria.',
                 'foto.max' => 'La fotografía no debe pesar más de 3MB.',
@@ -64,8 +59,6 @@ class CRMController extends Controller
                   'nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
                   'apellido_paterno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
                   'apellido_materno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\s]+$/',
-                  'correo' => 'required|email|unique:vendedores,correo',
-                  'telefono' => 'required|numeric',
                   'empresa' => 'required|exists:empresas,empresa_id',
                   'foto' => 'required|image|mimes:jpeg,png,jpg|max:3072'
             ], $messages);
@@ -78,8 +71,6 @@ class CRMController extends Controller
             $vendedor->nombre = $request->nombre;
             $vendedor->apellido_paterno = $request->apellido_paterno;
             $vendedor->apellido_materno = $request->apellido_materno;
-            $vendedor->correo = $request->correo;
-            $vendedor->telefono = $request->telefono;
             $vendedor->empresa_id = $request->empresa;
             $vendedor->foto = $path;
             $vendedor->save();
@@ -95,10 +86,10 @@ class CRMController extends Controller
                 return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
             }
 
-            $vendedor = DB::selectOne("SELECT * FROM vendedores WHERE vendedor_id = ?", [$id]);
+            $vendedor = DB::selectOne("SELECT nombre, apellido_paterno, apellido_materno, empresa_id, foto FROM vendedores WHERE vendedor_id = ?", [$id]);
             if (!$vendedor) return redirect()->route('altaVendedores')->with('mensaje', 'Vendedor no encontrado');
 
-            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
+            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas WHERE nombre='Casa Tapier' or nombre='Solferino Home' ORDER BY nombre ASC");
             return view('CRM.editarVendedores', compact('vendedor','empresas'));
         }
 
@@ -111,11 +102,6 @@ class CRMController extends Controller
                 'apellido_paterno.regex' => 'El apellido paterno solo debe contener letras.',
                 'apellido_materno.required' => 'El apellido materno es obligatorio.',
                 'apellido_materno.regex' => 'El apellido materno solo debe contener letras.',
-                'correo.required' => 'El correo electrónico es obligatorio.',
-                'correo.email' => 'El formato del correo no es válido.',
-                'correo.unique' => 'Este correo ya está registrado por otro vendedor.',
-                'telefono.required' => 'El teléfono es obligatorio.',
-                'telefono.numeric' => 'El teléfono debe contener solo números.',
                 'empresa.required' => 'Debe seleccionar una empresa.',
             ];
 
@@ -123,8 +109,6 @@ class CRMController extends Controller
                 'nombre' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\\s]+$/',
                 'apellido_paterno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\\s]+$/',
                 'apellido_materno' => 'required|string|max:100|regex:/^[a-zA-ZñÑáéíóúÁÉÍÓÚ\\s]+$/',
-                'correo' => ['required','email', Rule::unique('vendedores','correo')->ignore($id, 'vendedor_id')],
-                'telefono' => 'required|numeric',
                 'empresa' => 'required|exists:empresas,empresa_id',
                 'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:6000'
             ], $messages);
@@ -194,7 +178,7 @@ class CRMController extends Controller
             $estados = DB::select("SELECT estado_id, nombre FROM estados ORDER BY nombre ASC");
             
             // Obtener empresas de la base de datos
-            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
+            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas WHERE nombre='Casa Tapier' or nombre='Solferino Home' ORDER BY nombre ASC");
             
             $enfoques = DB::select("SELECT enfoque_id, nombre FROM enfoques ");
             
@@ -465,8 +449,19 @@ class CRMController extends Controller
       public function listarProspectos()
       {
             try {
-                // Retornar lista de prospectos en JSON para el modal
-                $prospectos = DB::select("SELECT p.prospecto_id AS id, p.nombre, p.apellido_paterno, p.apellido_materno, CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo, p.telefono, p.correo, COALESCE(es.nombre,'') AS estatus, COALESCE(em.nombre,'') AS empresa FROM prospectos p LEFT JOIN estatus es ON p.estatus_id = es.estatus_id LEFT JOIN empresas em ON p.empresa_id = em.empresa_id ORDER BY p.prospecto_id DESC");
+                $prospectos = DB::table('prospectos as p')
+                    ->leftJoin('estatus as es', 'p.estatus_id', '=', 'es.estatus_id')
+                    ->leftJoin('empresas as em', 'p.empresa_id', '=', 'em.empresa_id')
+                    ->where('es.nombre', 'Prospecto')
+                    ->select(
+                        'p.prospecto_id AS id', 'p.nombre', 'p.apellido_paterno', 'p.apellido_materno',
+                        DB::raw("CONCAT(COALESCE(p.nombre,''), ' ', COALESCE(p.apellido_paterno,''), ' ', COALESCE(p.apellido_materno,'')) AS nombre_completo"),
+                        'p.telefono', 'p.correo',
+                        DB::raw("COALESCE(es.nombre,'') AS estatus"),
+                        DB::raw("COALESCE(em.nombre,'') AS empresa")
+                    )
+                    ->orderBy('p.prospecto_id', 'desc')
+                    ->get();
                 \Log::info('Prospectos cargados:', ['count' => count($prospectos)]);
                 return response()->json($prospectos);
             } catch (\Exception $e) {
@@ -577,7 +572,7 @@ class CRMController extends Controller
             if (!$prospecto) return redirect()->route('altaProspectos')->with('error', 'Prospecto no encontrado');
 
             $estados = DB::select("SELECT estado_id, nombre FROM estados ORDER BY nombre ASC");
-            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas ORDER BY nombre ASC");
+            $empresas = DB::select("SELECT empresa_id, nombre FROM empresas WHERE nombre='Casa Tapier' or nombre='Solferino Home' ORDER BY nombre ASC");
             $estatus = DB::select("SELECT estatus_id, nombre FROM estatus ORDER BY nombre ASC");
             $enfoques = DB::select("SELECT enfoque_id, nombre FROM enfoques ORDER BY nombre ASC");
             $canales_distribucion = DB::select("SELECT canal_id, nombre FROM canales_distribucion ORDER BY nombre ASC");

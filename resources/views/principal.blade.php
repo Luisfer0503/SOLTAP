@@ -36,13 +36,13 @@
                     $canAccessCRM = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO']);
                     
                     $canAccessERP = in_array($role, ['ADMIN', 'VENDEDOR/DISEÑADOR']);
-                    $canAccessSeguimiento = $canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan) || in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']) ;
+                    $canAccessSeguimiento =  $canAccessCRM ||$canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan) || in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']) ;
                     $canAccessAsignacionPrecios = $canAccessERP || in_array($role, ['COORD. DV SOLFERINO', 'COORD. DV&MKT', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
                     $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION']);
                     $canAccessLogistica = in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
                     $canAccessEscaner = $canAccessERP || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan);
                     
-                    $canAccessHistorialProyectos = $canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT']);
+                    $canAccessHistorialProyectos = in_array($role, ['DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT', 'ADMIN']) || ($role === 'VENDEDOR/DISEÑADOR' && strtoupper(Auth::user()->name) === 'SAUL APARICIO TORRES');
                     $canAccessInicio = $canAccessCRM || $canAccessERP || $canAccessHistorialProyectos || $canAccessSeguimiento || $canAccessAsignacionPrecios || $canAccessCobranza || $canAccessLogistica || $canAccessEscaner;
                     $showCRMHeader = $canAccessCRM;
                     $showERPHeader = $canAccessERP || $canAccessHistorialProyectos || $canAccessSeguimiento || $canAccessAsignacionPrecios || $canAccessCobranza || $canAccessLogistica || $canAccessEscaner;
@@ -140,10 +140,13 @@
             <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-users-three text-lg mr-3"></i> Gestión de Usuarios
             </a>
+            <a href="{{ route('costosFallas') }}" class="{{ request()->routeIs('costosFallas') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-currency-dollar text-lg mr-3"></i> Costos de Fallas
+            </a>
             @endif
 
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Cuenta</p>
-            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition">
+            <a href="#" onclick="event.preventDefault(); if(confirm('¿Estás seguro de que deseas salir del sistema?')) { document.getElementById('logout-form').submit(); }" class="flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition">
                 <i class="ph ph-sign-out text-lg mr-3 text-red-400"></i> Cerrar Sesión
             </a>
 

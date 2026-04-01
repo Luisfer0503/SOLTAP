@@ -59,16 +59,6 @@
                                 class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo</label>
-                            <input type="email" name="correo" value="{{ old('correo', $vendedor->correo) }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="number" name="telefono" value="{{ old('telefono', $vendedor->telefono) }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
-                        </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Empresa</label>

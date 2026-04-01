@@ -23,10 +23,16 @@
 
 <main class="flex-1 flex flex-col h-screen bg-gray-50" x-data="cotizadorApp()">
     <!-- Header -->
-    <header class="bg-white border-b px-8 py-4 shadow-sm z-20">
-        <h2 class="text-xl font-bold text-gray-800 flex items-center">
-            <i class="ph ph-currency-dollar text-green-600 mr-2"></i> Asignación de Precios y Cotizaciones
-        </h2>
+    <header class="bg-white border-b px-8 py-4 shadow-sm z-20 flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                <i class="ph ph-currency-dollar text-green-600 mr-2"></i> Asignación de Precios y Cotizaciones
+            </h2>
+        </div>
+        <div class="relative w-full max-w-md">
+            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" x-model="filtro" placeholder="Buscar por proyecto o cliente..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm">
+        </div>
     </header>
 
     <!-- Listado de Proyectos -->
@@ -43,52 +49,58 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($proyectos as $p)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-bold text-gray-900">{{ $p->nombre_proyecto }}</div>
-                            <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($p->fecha)->format('d/m/Y') }}</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900">{{ $p->cliente_nombre }}</div>
-                            <div class="text-xs text-gray-500">{{ $p->direccion }}</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900">{{ $p->telefono }}</div>
-                            <div class="text-xs text-gray-500">{{ $p->correo }}</div>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
-                            {{ $p->vendedor_nombre }}
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                @if($p->tiene_pagos > 0)
-                                    <button @click="abrirCotizador({{ json_encode($p) }})" class="px-3 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition shadow-sm flex items-center" title="Cotización bloqueada por pagos existentes">
-                                        <i class="ph ph-lock-key mr-1"></i> Ver Cotización
+                    <template x-for="p in proyectosFiltrados" :key="p.proyecto_id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-bold text-gray-900" x-text="p.nombre_proyecto"></div>
+                                <div class="text-xs text-gray-500" x-text="formatDate(p.fecha)"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-gray-900" x-text="p.cliente_nombre"></div>
+                                <div class="text-xs text-gray-500" x-text="p.direccion"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-gray-900" x-text="p.telefono"></div>
+                                <div class="text-xs text-gray-500" x-text="p.correo"></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="p.vendedor_nombre"></td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <template x-if="p.tiene_pagos > 0">
+                                        <button @click="abrirCotizador(p)" class="px-3 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition shadow-sm flex items-center" title="Cotización bloqueada por pagos existentes">
+                                            <i class="ph ph-lock-key mr-1"></i> Ver Cotización
+                                        </button>
+                                    </template>
+                                    <template x-if="p.tiene_pagos == 0">
+                                        <button @click="abrirCotizador(p)" class="px-3 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
+                                            <i class="ph ph-calculator mr-1"></i> Cotizar
+                                        </button>
+                                    </template>
+                                    
+                                    <button @click="abrirModalPagos(p)" 
+                                            class="px-3 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            :title="(p.tiene_cotizacion && p.articulos_pendientes == 0) ? 'Generar Remisión' : 'Complete la cotización primero (Precios y Totales)'"
+                                            :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
+                                        <i class="ph ph-file-text mr-1"></i> Remisión
                                     </button>
-                                @else
-                                    <button @click="abrirCotizador({{ json_encode($p) }})" class="px-3 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
-                                        <i class="ph ph-calculator mr-1"></i> Cotizar
+                                    
+                                    <button @click="generarProduccionPdf(p)" 
+                                            class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            title="Generar PDF Producción"
+                                            :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
+                                        <i class="ph ph-factory mr-1"></i> Producción
                                     </button>
-                                @endif
-                                
-                                <button @click="abrirModalPagos({{ json_encode($p) }})" 
-                                        class="px-3 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        title="{{ ($p->tiene_cotizacion && $p->articulos_pendientes == 0) ? 'Generar Remisión' : 'Complete la cotización primero (Precios y Totales)' }}"
-                                        {{ (!$p->tiene_cotizacion || $p->articulos_pendientes > 0) ? 'disabled' : '' }}>
-                                    <i class="ph ph-file-text mr-1"></i> Remisión
-                                </button>
-                                
-                                <button @click="generarProduccionPdf({{ json_encode($p) }})" 
-                                        class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        title="Generar PDF Producción"
-                                        {{ (!$p->tiene_cotizacion || $p->articulos_pendientes > 0) ? 'disabled' : '' }}>
-                                    <i class="ph ph-factory mr-1"></i> Producción
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="proyectosFiltrados.length === 0">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                No se encontraron proyectos que coincidan con la búsqueda.
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -364,6 +376,8 @@
 <script>
     function cotizadorApp() {
         return {
+            proyectos: @json($proyectos),
+            filtro: '',
             mostrarModal: false,
             proyecto: null,
             articulos: [],
@@ -387,6 +401,18 @@
             condicionesRemision: '',
             autorizando: false,
             ajustando: false,
+
+            get proyectosFiltrados() {
+                if (this.filtro === '') {
+                    return this.proyectos;
+                }
+                const busqueda = this.filtro.toLowerCase();
+                return this.proyectos.filter(p => {
+                    const nombreProyecto = p.nombre_proyecto ? p.nombre_proyecto.toLowerCase() : '';
+                    const nombreCliente = p.cliente_nombre ? p.cliente_nombre.toLowerCase() : '';
+                    return nombreProyecto.includes(busqueda) || nombreCliente.includes(busqueda);
+                });
+            },
 
             async abrirCotizador(proyecto) {
                 this.proyecto = proyecto;

@@ -38,8 +38,10 @@
         </div>
         
         <div class="flex items-center space-x-3">
-            <button @click="guardarTodo" class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 shadow-sm flex items-center text-sm font-medium">
-                <i class="ph ph-floppy-disk mr-2"></i> Guardar Todo
+            <button @click="guardarTodo" class="px-4 py-2 text-white rounded-lg shadow-sm flex items-center text-sm font-medium transition"
+                    :class="isDirty ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-800 hover:bg-blue-900'">
+                <i class="ph mr-2" :class="isDirty ? 'ph-warning animate-pulse' : 'ph-floppy-disk'"></i>
+                <span x-text="isDirty ? 'Guardar Cambios' : 'Guardado'"></span>
             </button>
         </div>
     </header>
@@ -79,7 +81,7 @@
                                 </template>
                             </select>
                         </div>
-                        <div class="col-span-2">
+                        <div class="col-span-3">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Nombre del Artículo</label>
                             <select x-model="form.nombre" required class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">-- Seleccionar Artículo --</option>
@@ -650,7 +652,7 @@
                                 </template>
                             </select>
                         </div>
-                        <div class="col-span-2">
+                        <div class="col-span-3">
                             <label class="block text-sm font-bold text-gray-700 mb-2">Nombre del Artículo</label>
                             <select x-model="form.nombre" required class="w-full px-3 py-2 rounded bg-white border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">-- Seleccionar Artículo --</option>
@@ -955,6 +957,7 @@
             articulos: [],
             showModalMateriales: false,
             tipoMaterialSeleccionado: null,
+            isDirty: false, // Flag para cambios sin guardar
             showModalEdicion: false,
             indexEdicion: null,
             showModalDuplicarBloque: false,
@@ -988,6 +991,16 @@
                 this.$watch('form.alto', () => this.calcularCubicaje());
                 this.$watch('form.ancho', () => this.calcularCubicaje());
                 this.$watch('form.profundo', () => this.calcularCubicaje());
+
+                window.addEventListener('beforeunload', (event) => {
+                    if (this.isDirty) {
+                        event.preventDefault();
+                        // El mensaje personalizado es ignorado por la mayoría de navegadores modernos,
+                        // pero es necesario para activar el diálogo de confirmación.
+                        event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+                        return 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+                    }
+                });
             },
 
             get haySeleccionados() {
@@ -1029,6 +1042,7 @@
                     copy.seleccionado = false; 
                     return copy;
                 });
+                this.isDirty = true;
                 this.articulos.unshift(...duplicados);
                 this.articulos.forEach(a => a.seleccionado = false);
                 this.cerrarModalDuplicarBloque();
@@ -1117,6 +1131,7 @@
                         this.form.melaminas_seleccionadas.push(seleccion);
                     }
                     this.tempMelamina.seleccion = '';
+                    this.isDirty = true;
                 } else {
                     alert('Por favor selecciona una combinación de melamina.');
                 }
@@ -1132,6 +1147,7 @@
                         this.form.cubiertas_seleccionadas.push(seleccion);
                     }
                     this.tempCubierta.seleccion = '';
+                    this.isDirty = true;
                 } else {
                     alert('Por favor selecciona una combinación de cubierta.');
                 }
@@ -1147,6 +1163,7 @@
                         this.form.telas_seleccionadas.push(seleccion);
                     }
                     this.tempTela.seleccion = '';
+                    this.isDirty = true;
                 } else {
                     alert('Por favor selecciona una combinación de tela.');
                 }
@@ -1237,11 +1254,13 @@
                 nuevoItem.imagen = this.imagePreview; 
                 nuevoItem.seleccionado = false;
                 
+                this.isDirty = true;
                 this.articulos.unshift(nuevoItem); 
                 
                 // Limpiar formulario (manteniendo algunos valores lógicos si se desea)
                 this.resetForm();
             },
+
 
             eliminarArticulo(index) {
                 if(confirm('¿Borrar?')) this.articulos.splice(index, 1);
@@ -1451,30 +1470,40 @@
                 if (this.indexEdicion !== null) {
                     // Modo edición: actualizar artículo existente
                     this.articulos[this.indexEdicion] = itemEditado;
+                    this.isDirty = true;
                     alert('Artículo actualizado correctamente');
                 } else {
                     // Modo duplicación: agregar como nuevo artículo
                     this.articulos.unshift(itemEditado);
+                    this.isDirty = true;
                     alert('Artículo duplicado correctamente');
                 }
                 
                 this.cerrarModalEdicion();
             },
 
-            confirmarCambioProyecto(event) {
+            async confirmarCambioProyecto(event) {
                 const nuevoId = event.target.value;
-                // Solo advertir si ya había un proyecto seleccionado y hay items en la lista
-                if (this.proyecto_id !== '' && this.articulos.length > 0) {
-                    if (!confirm('Si cambias de proyecto, se cargarán los artículos guardados de ese proyecto y perderás los cambios no guardados actuales. ¿Continuar?')) {
+                // Si hay cambios sin guardar, guardarlos automáticamente antes de cambiar
+                if (this.isDirty) {
+                    if (!confirm('Tienes cambios en artículos sin guardar. Se guardarán automáticamente antes de cambiar de proyecto. ¿Deseas continuar?')) {
                         event.target.value = this.proyecto_id; // Revertir selección
+                        return;
+                    }
+                    // Guardar cambios automáticamente
+                    const saved = await this.guardarTodo(true);
+                    if (!saved) {
+                        event.target.value = this.proyecto_id; // Revertir selección si falló el guardado
                         return;
                     }
                 }
                 this.proyecto_id = nuevoId;
                 if(nuevoId) {
+                    this.isDirty = false; // Se resetea al cargar un nuevo proyecto
                     this.cargarArticulosProyecto(nuevoId);
                 } else {
                     this.articulos = [];
+                    this.isDirty = false;
                 }
             },
 
@@ -1501,6 +1530,7 @@
                         // La imagen ya viene como URL completa desde el controlador
                         return item;
                     });
+                    this.isDirty = false; // Marcar como limpio después de cargar
                 } catch (error) {
                     console.error('Error cargando artículos:', error);
                     alert('Error al cargar los artículos del proyecto.');
@@ -1516,7 +1546,7 @@
                 }
             },
 
-            async guardarTodo() {
+            async guardarTodo(skipConfirm = false) {
                 if (!this.proyecto_id) {
                     alert('Por favor selecciona un proyecto primero.');
                     return;
@@ -1526,7 +1556,7 @@
                     return;
                 }
 
-                if (!confirm('¿Estás seguro de sincronizar ' + this.articulos.length + ' artículos? Esto actualizará la base de datos con la lista actual.')) return;
+                if (!skipConfirm && !confirm('¿Estás seguro de sincronizar ' + this.articulos.length + ' artículos? Esto actualizará la base de datos con la lista actual.')) return;
 
                 const formData = new FormData();
                 formData.append('proyecto_id', this.proyecto_id);
@@ -1584,14 +1614,18 @@
                     });
                     const data = await response.json();
                     if (data.success) {
-                        alert('Artículos guardados correctamente.');
-                        this.cargarArticulosProyecto(this.proyecto_id); // Recargar para obtener IDs actualizados
+                        if (!skipConfirm) alert('Artículos guardados correctamente.');
+                        this.isDirty = false; // Marcar como limpio después de guardar
+                        if (!skipConfirm) this.cargarArticulosProyecto(this.proyecto_id); // Recargar para obtener IDs actualizados solo si no es automático
+                        return true;
                     } else {
                         alert('Error: ' + (data.message || 'Desconocido'));
+                        return false;
                     }
                 } catch (e) {
                     console.error(e);
                     alert('Error de conexión al guardar');
+                    return false;
                 }
             }
         }
