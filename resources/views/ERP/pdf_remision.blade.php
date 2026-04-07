@@ -38,11 +38,11 @@ margin:1cm 0 5px 0;
 width:100%;
 border-collapse:collapse;
 margin-top:5px;
-border-top:1px solid #000;
+border-top:1px solid #ccc;
 }
 
 .datos td{
-border-bottom:1px solid #000;
+border-bottom:1px solid #ccc;
 padding:4px;
 }
 
@@ -66,14 +66,14 @@ border-collapse:collapse;
 }
 
 .tabla th{
-border:1px solid #000;
+border:1px solid #ccc;
 background:#e6e6e6;
 padding:5px;
 font-size:9px;
 }
 
 .tabla td{
-border:1px solid #000;
+border:1px solid #ccc;
 padding:5px;
 font-size:9px;
 vertical-align:top;
@@ -94,7 +94,7 @@ margin-top:5px;
 }
 
 .resumen td{
-border:1px solid #000;
+border:1px solid #ccc;
 padding:5px;
 font-size:10px;
 }
@@ -125,10 +125,6 @@ right:0;
 text-align:center;
 font-size:10px;
 }
-.header{
-text-align:center;
-margin-bottom:5px;
-}
 
 </style>
 </head>
@@ -153,9 +149,9 @@ margin-bottom:5px;
 
         <!-- 40% Datos (Columna Precio + Total) -->
         <td width="40%" style="vertical-align: middle;">
-            <div style="width: 100%; border: 1px solid #000;">
+            <div style="width: 100%; border: 1px solid #ccc;">
                 <!-- REMISION LABEL (NEGRO) -->
-                <div style="background-color: #000; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
+                <div style="background-color: #333; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
                     NO. DE REMISIÓN DE VENTA
                 </div>
                 <!-- NUMERO REMISION (BLANCO) -->
@@ -163,7 +159,8 @@ margin-bottom:5px;
                     {{ $cotizacionId }}
                 </div>
                 <!-- NUMERO CLIENTE (NEGRO) -->
-                <div style="background-color: #000; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px; border-top: 1px solid #000;">
+                <div style="background-color: #333; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
+                &nbsp;
                 </div>
             </div>
         </td>
@@ -174,24 +171,24 @@ margin-bottom:5px;
 <table class="datos">
 
 <tr>
-<td width="50%"><b>Nombre:</b> <span style="color:#1b3fbf;">{{ $proyecto['cliente_nombre'] }}</span></td>
-<td width="50%"><b>Fecha:</b> <span style="color:#1b3fbf;">{{ date('d/m/Y') }}</span></td>
+<td width="60%" style="color:#1b3fbf;"><b>Nombre:</b> <span style="color:#1b3fbf;">{{ $proyecto['cliente_nombre'] }}</span></td>
+<td width="40%" style="color:#1b3fbf;"><b>Fecha:</b> <span style="color:#1b3fbf;">{{ date('d/m/Y') }}</span></td>
 </tr>
 <tr>
-    <td colspan="2"><b>RFC:</b> <span style="color:#1b3fbf;">{{ $rfc ?? '' }}</span></td>
-</tr>
-
-<tr>
-<td><b>Teléfono:</b> <span style="color:#1b3fbf;">{{ $proyecto['telefono'] }}</span></td>
-<td><b>Correo:</b> <span style="color:#1b3fbf;">{{ $proyecto['correo'] }}</span></td>
+    <td style="color:#1b3fbf;"><b>RFC:</b> <span style="color:#1b3fbf;">{{ $rfc ?? '' }}</span></td>
+    <td style="color:#1b3fbf;"><b>Correo:</b> <span style="color:#1b3fbf;">{{ $proyecto['correo'] }}</span></td>
 </tr>
 
 <tr>
-<td colspan="2"><b>Dirección:</b> <span style="color:#1b3fbf;">{{ $proyecto['direccion'] }}</span></td>
+<td colspan="2" style="color:#1b3fbf;"><b>Teléfono:</b> <span style="color:#1b3fbf;">{{ $proyecto['telefono'] }}</span></td>
 </tr>
 
 <tr>
-    <td colspan="2">
+<td colspan="2" style="color:#1b3fbf;"><b>Dirección:</b> <span style="color:#1b3fbf;">{{ $proyecto['direccion'] }}</span></td>
+</tr>
+
+<tr>
+    <td colspan="2" style="color:#1b3fbf;">
         @if(!empty($condiciones))
             <b>Condiciones:</b> {{ $condiciones }}
         @elseif(!empty($pagos) && count($pagos) > 0)
@@ -238,15 +235,31 @@ A CONTINUACIÓN SE MUESTRA LA DESCRIPCIÓN DE LOS ARTÍCULOS ADQUIRIDOS.
 
 <br>
 
-<div style="width:100%;">
-<span style="float:left;">
-L/A {{ 0 + number_format((float)$item['ancho'], 2, '.', '') }} x ALT {{ 0 + number_format((float)$item['alto'], 2, '.', '') }} x PRO {{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}
-</span>
-<span style="float:right; color:#1b3fbf; font-weight:bold;">
-{{ 0 + number_format((float)$item['cubicaje'], 2, '.', '') }} - {{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'], 2, '.', '') }} - {{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 2, '.', '') }}
-</span>
-</div>
-<div style="clear:both;"></div>
+<table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
+   <tr style="text-align: center;">
+    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">L/A</td>
+    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
+    
+    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    
+    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">ALT</td>
+    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
+    
+    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    
+    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">PRO</td>
+    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
+    
+    <td style="padding: 2px; border-right: 1px solid #ccc; width: 10%;"></td>
+    
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['peso'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 1, '.', '') }}</td>
+</table>
 
 <br>
 
@@ -254,12 +267,12 @@ L/A {{ 0 + number_format((float)$item['ancho'], 2, '.', '') }} x ALT {{ 0 + numb
 
 </td>
 
-<td align="right">
-$ {{ number_format($item['precio_unitario'],2) }}
+<td align="center" style="color:#000; vertical-align: middle;">
+<b>$ {{ number_format($item['precio_unitario'],2) }}</b>
 </td>
 
-<td align="right">
-$ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
+<td align="center" style="color:#000; vertical-align: middle;">
+<b>$ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}</b>
 </td>
 
 </tr>
@@ -281,7 +294,7 @@ $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
 <table style="width:100%;border-collapse:collapse;">
 
 <tr>
-<td class="azul" colspan="2" style="text-align:right;">{{ number_format($totales['cubicaje'] ?? 0, 1) }} - {{ number_format($totales['peso'] ?? 0, 1) }}</td>
+<td class="azul" colspan="2" style="text-align:right;">{{ 0 + number_format((float)($totales['cubicaje'] ?? 0), 1, '.', '') }} <span style="padding-left: 1.25cm;">{{ 0 + number_format((float)($totales['peso'] ?? 0), 1, '.', '') }}</span></td>
 </tr>
 
 <tr>
@@ -293,7 +306,7 @@ $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
 {{ $totales['articulos'] ?? 0 }}
 </td>
 
-<td style="font-weight:bold;">
+<td style="text-align:center;font-weight:bold;">
 ARTÍCULOS COTIZADOS
 </td>
 </tr>
@@ -312,10 +325,19 @@ ARTÍCULOS COTIZADOS
 <td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['subtotal_articulos'],2) }}</td>
 </tr>
 
+@if(isset($totales['envio']) && $totales['envio'] > 0)
 <tr>
 <td class="total">ENVÍO:</td>
 <td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['envio'],2) }}</td>
 </tr>
+@endif
+
+@if(isset($totales['instalacion']) && $totales['instalacion'] > 0)
+<tr>
+<td class="total">INSTALACIÓN:</td>
+<td align="right" style="color:#1b3fbf;">$ {{ number_format($totales['instalacion'], 2) }}</td>
+</tr>
+@endif
 
 @if(isset($totales['descuento']) && $totales['descuento'] > 0)
 <tr>
@@ -364,9 +386,9 @@ aceptando la "Opción de pago", así como las condiciones y garantías dadas a c
         <td width="40%"></td>
     </tr>
     <tr>
-        <td width="40%" align="center" style="border-top:1px solid #000; padding-top: 5px;">CASA TAPIER S.A. DE C.V.</td>
+        <td width="40%" align="center" style="border-top:1px solid #ccc; padding-top: 5px;">CASA TAPIER S.A. DE C.V.</td>
         <td width="20%"></td>
-        <td width="40%" align="center" style="border-top:1px solid #000; padding-top: 5px;">Nombre completo y Firma del Cliente</td>
+        <td width="40%" align="center" style="border-top:1px solid #ccc; padding-top: 5px;">Nombre Completo y Firma del Cliente</td>
     </tr>
 </table>
 

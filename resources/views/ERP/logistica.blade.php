@@ -2,6 +2,13 @@
 
 @section('contenido')
 
+@php
+    $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+    $role = strtoupper($userRoleName);
+    $isVendedor = in_array($role, ['VENDEDOR/DISEÑADOR']);
+    $isLogistica = in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'ADMIN']);
+@endphp
+
 <script src="//unpkg.com/alpinejs" defer></script>
 
 <main class="flex-1 flex flex-col h-screen bg-gray-50" x-data="logisticaApp()">
@@ -156,7 +163,7 @@
                                 <p class="text-xs text-gray-500" x-text="`${item.alto}x${item.ancho}x${item.profundo}cm | ${item.peso}kg | Cantidad: ${item.cantidad}`"></p>
                                 <p class="text-xs text-gray-400 mt-1" x-text="item.descripcion"></p>
                             </div>
-                            <div class="ml-auto pl-4 flex-shrink-0">
+                            <div class="ml-auto pl-4 flex-shrink-0" x-show="isVendedor">
                                 <button @click="abrirModalRetorno(item)" class="px-3 py-1.5 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded text-xs font-bold transition flex items-center shadow-sm">
                                     <i class="ph ph-arrow-u-up-left mr-1 text-lg"></i> Retornar
                                 </button>
@@ -191,7 +198,18 @@
                                     <td class="px-6 py-4 text-sm text-gray-600" x-text="retorno.destinatario"></td>
                                     <td class="px-6 py-4 text-sm text-gray-500" x-text="retorno.fecha_formateada"></td>
                                     <td class="px-6 py-4 text-center">
-                                        <span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800" x-text="retorno.estatus"></span>
+                                        <template x-if="!isLogistica">
+                                            <span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800" x-text="retorno.estatus"></span>
+                                        </template>
+                                        <template x-if="isLogistica">
+                                            <select x-model="retorno.estatus" @change="actualizarEstatus(retorno)" class="text-xs font-bold border-gray-300 rounded-lg py-1 px-2 focus:ring-orange-500 focus:border-orange-500 bg-orange-50 text-orange-800">
+                                                <option value="En Revisión">En Revisión</option>
+                                                <option value="Autorizado">Autorizado</option>
+                                                <option value="En camino">En camino</option>
+                                                <option value="Entregado">Entregado</option>
+                                                <option value="Cancelado">Cancelado</option>
+                                            </select>
+                                        </template>
                                     </td>
                                 </tr>
                             </template>
@@ -274,6 +292,8 @@
             retornos: @json($retornos ?? []),
             mostrarModalRetorno: false,
             guardandoRetorno: false,
+            isVendedor: {{ $isVendedor ? 'true' : 'false' }},
+            isLogistica: {{ $isLogistica ? 'true' : 'false' }},
             formRetorno: {
                 proyecto_id: null,
                 proyecto_nombre: '',
@@ -332,6 +352,23 @@
                 } catch (error) {
                     console.error(error); alert('Error de conexión');
                 } finally { this.guardandoRetorno = false; }
+            },
+
+            async actualizarEstatus(retorno) {
+                try {
+                    const response = await fetch('{{ route("guardarRetorno") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ id: retorno.id, estatus: retorno.estatus, proyecto_id: retorno.proyecto_id })
+                    });
+                    const data = await response.json();
+                    
+                    if (!response.ok || !data.success) {
+                        alert('Error al actualizar el estatus: ' + (data.message || 'Desconocido'));
+                    }
+                } catch (error) {
+                    console.error(error); alert('Error de conexión');
+                }
             }
         }
     }

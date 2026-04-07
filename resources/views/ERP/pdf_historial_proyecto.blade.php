@@ -6,14 +6,14 @@
 <style>
     @page { margin: 1.5cm 1cm 2cm 1cm; }
     body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10px; color: #333; }
-    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1b3fbf; padding-bottom: 10px; }
-    .header h1 { font-size: 16px; margin: 0; color: #000; text-transform: uppercase;}
+    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+    .header h1 { font-size: 12px; margin: 0; color: #000; text-transform: uppercase;}
     .logo { width: 150px; margin-bottom: 10px; }
     .datos { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    .datos td { padding: 6px; border-bottom: 1px solid #e0e0e0; font-size: 11px;}
+    .datos td { padding: 6px; border-bottom: 1px solid #ccc; font-size: 11px;}
     .datos b { font-weight: bold; color: #000; }
     .tabla { width: 100%; border-collapse: collapse; margin-top: 10px;}
-    .tabla th { background-color: #1b3fbf; color: #fff; border: 1px solid #1b3fbf; padding: 8px; font-size: 10px; text-align: left; }
+    .tabla th { background-color: #1b3fbf; color: #fff; border: 1px solid #ccc; padding: 8px; font-size: 10px; text-align: left; }
     .tabla td { border: 1px solid #ccc; padding: 8px; font-size: 10px; vertical-align: top; }
     .page-footer { position: fixed; bottom: -1.5cm; left: 0; right: 0; text-align: center; font-size: 9px; color: #666; border-top: 1px solid #ccc; padding-top: 5px;}
 </style>
@@ -28,10 +28,10 @@
 <table class="datos">
     <tr>
         <td width="50%"><b>Proyecto:</b> {{ $proyecto->nombre_proyecto }}</td>
-        <td width="50%"><b>Fecha de Impresión:</b> {{ date('d/m/Y H:i') }}</td>
+        <td width="50%"><b>Fecha de Impresión:</b> {{ now()->timezone('America/Mexico_City')->format('d/m/Y H:i') }}</td>
     </tr>
     <tr>
-        <td width="50%"><b>Cliente:</b> {{ $proyecto->cliente_nombre ?? 'No asignado' }}</td>
+        <td colspan="2"><b>Cliente:</b> {{ $proyecto->cliente_nombre ?? 'No asignado' }}</td>
     </tr>
 </table>
 

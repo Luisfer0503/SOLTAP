@@ -60,6 +60,7 @@
                         </div>
                     </div>
 
+                    @if($isAdminOrDireccion ?? false)
                     <!-- Formulario Nueva Interacción -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
                         <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -88,6 +89,7 @@
                             </div>
                         </form>
                     </div>
+                    @endif
 
                     <!-- Línea de Tiempo del Historial -->
                     <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">

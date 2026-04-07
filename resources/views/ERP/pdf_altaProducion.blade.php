@@ -54,14 +54,14 @@ margin-top:10px;
 
 .tabla th{
 background-color: #e6e6e6;
-border:1px solid #000;
+border:1px solid #ccc;
 padding:6px;
 font-size:10px;
 text-transform: uppercase;
 }
 
 .tabla td{
-border:1px solid #000;
+border:1px solid #ccc;
 padding:6px;
 }
 
@@ -90,7 +90,7 @@ margin-top:10px;
 }
 
 .totalesGeneral td{
-border:1px solid black;
+border:1px solid #ccc;
 }
 
 .azul{
@@ -280,13 +280,13 @@ $imagePath=$local;
 
 </td>
 
-<td align="right">
+<td align="center">
 
 $ {{ number_format($item['precio_unitario'],2) }}
 
 </td>
 
-<td align="right">
+<td align="center">
 
 $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
 
@@ -342,7 +342,7 @@ $ {{ number_format($item['cantidad'] * $item['precio_unitario'],2) }}
 {{ $totalArticulos }}
 </td>
 
-<td style="font-weight:bold;">
+<td style="text-align:center;font-weight:bold;">
 ARTICULOS COTIZADOS
 </td>
 

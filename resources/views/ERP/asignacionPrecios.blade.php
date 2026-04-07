@@ -211,6 +211,10 @@
                             <span class="text-gray-600">Envío:</span>
                             <input type="number" x-model="costoEnvio" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
                         </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Instalación:</span>
+                            <input type="number" x-model="costoInstalacion" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded py-1 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0">
+                        </div>
                         
                         <!-- Botón para editar configuración -->
                         <div class="flex justify-end mt-1">
@@ -289,7 +293,7 @@
                 <button @click="imprimirPdf()" 
                         :disabled="!esCotizacionValida || !cotizacionAutorizada"
                         class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-lg flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        :title="!cotizacionAutorizada ? 'Debe autorizar internamente la cotización para habilitar el PDF' : (esCotizacionValida ? 'Generar y descargar PDF' : 'Complete todos los precios y el costo de envío para habilitar')">
+                        :title="!cotizacionAutorizada ? 'Debe autorizar internamente la cotización para habilitar el PDF' : (esCotizacionValida ? 'Generar y descargar PDF' : 'Complete todos los precios, envío e instalación para habilitar')">
                     <i class="ph ph-file-pdf mr-2"></i> Generar PDF
                 </button>
             </div>
@@ -383,6 +387,11 @@
             <div class="p-6 bg-gray-50 overflow-y-auto max-h-[70vh]">
                 <p class="text-sm text-gray-600 mb-4">Seleccione los artículos que desea enviar a la orden de producción. Los artículos que ya han sido enviados previamente aparecerán bloqueados; si desea volver a imprimirlos, use la opción de desbloquear.</p>
                 
+                <div class="mb-4 bg-white p-4 rounded border border-gray-200">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Tiempo de Entrega (Manual)</label>
+                    <input type="text" x-model="tiempoEntregaProduccion" placeholder="Ej. 4 a 5 semanas" class="w-full text-sm border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
                 <div class="bg-white rounded border border-gray-200 overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
@@ -446,6 +455,7 @@
             proyecto: null,
             articulos: [],
             costoEnvio: 0,
+            costoInstalacion: 0,
             descuento: 0,
             ivaPorcentaje: 16,
             descuentoPorcentaje: 0,
@@ -470,6 +480,7 @@
             mostrarModalProduccion: false,
             proyectoProduccion: null,
             articulosProduccion: [],
+            tiempoEntregaProduccion: '',
             generandoPdf: false,
 
             get proyectosFiltrados() {
@@ -488,6 +499,7 @@
                 this.proyecto = proyecto;
                 this.articulos = [];
                 this.costoEnvio = ''; // Inicializar vacío para obligar validación
+                this.costoInstalacion = ''; // Inicializar vacío para obligar validación
                 this.rfcRemision = '';
                 this.descuento = 0;
                 this.ivaPorcentaje = parseFloat(proyecto.iva_porcentaje) || 0;
@@ -513,6 +525,7 @@
                         const cotizacion = await resCot.json();
                         if (cotizacion) {
                             this.costoEnvio = (cotizacion.envio !== null && cotizacion.envio !== '') ? parseFloat(cotizacion.envio) : '';
+                            this.costoInstalacion = (cotizacion.instalacion !== null && cotizacion.instalacion !== '') ? parseFloat(cotizacion.instalacion) : '';
                             // Solo cargar descuento manual si no hay porcentaje fijo de cliente
                             if (this.descuentoPorcentaje == 0) {
                                 this.descuento = parseFloat(cotizacion.descuento) || 0;
@@ -548,6 +561,9 @@
                 if (this.costoEnvio === '' || this.costoEnvio === null || isNaN(parseFloat(this.costoEnvio)) || parseFloat(this.costoEnvio) < 0) {
                     return false;
                 }
+                if (this.costoInstalacion === '' || this.costoInstalacion === null || isNaN(parseFloat(this.costoInstalacion)) || parseFloat(this.costoInstalacion) < 0) {
+                    return false;
+                }
 
                 // 3. Debe haber al menos un artículo en la cotización
                 if (this.articulos.length === 0) {
@@ -566,7 +582,7 @@
                 if (this.descuentoPorcentaje > 0) {
                     descuentoAplicado = this.subtotalArticulos * (this.descuentoPorcentaje / 100);
                 }
-                return Math.max(0, this.subtotalArticulos + (parseFloat(this.costoEnvio) || 0) - descuentoAplicado);
+                return Math.max(0, this.subtotalArticulos + (parseFloat(this.costoEnvio) || 0) + (parseFloat(this.costoInstalacion) || 0) - descuentoAplicado);
             },
 
             get iva() {
@@ -712,6 +728,7 @@
                     totales: {
                         subtotal_articulos: this.subtotalArticulos,
                         envio: this.costoEnvio || 0, // Permite guardar 0 o vacío
+                        instalacion: this.costoInstalacion || 0,
                         descuento: this.descuentoCalculado,
                         subtotal: this.subtotalGeneral,
                         iva: this.iva,
@@ -873,6 +890,7 @@
             async abrirModalProduccion(proyecto) {
                 this.proyectoProduccion = proyecto;
                 this.articulosProduccion = [];
+                this.tiempoEntregaProduccion = '';
                 this.mostrarModalProduccion = true;
                 
                 try {
@@ -911,7 +929,8 @@
                 try {
                     const data = {
                         proyecto_id: this.proyectoProduccion.proyecto_id,
-                        articulos_ids: seleccionados
+                        articulos_ids: seleccionados,
+                        tiempo_entrega: this.tiempoEntregaProduccion
                     };
 
                     const response = await fetch('{{ route("generarProduccionPdf") }}', {
@@ -975,6 +994,7 @@
                     totales: {
                         subtotal_articulos: this.subtotalArticulos,
                         envio: this.costoEnvio,
+                        instalacion: this.costoInstalacion,
                         descuento: this.descuentoCalculado, // Enviamos el calculado para que sea exacto
                         subtotal: this.subtotalGeneral,
                         iva: this.iva,

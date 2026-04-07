@@ -104,16 +104,27 @@ class ERPController extends Controller
               $q->select(DB::raw(1))
                 ->from('proyecto_articulos')
                 ->whereColumn('proyecto_articulos.proyecto_id', 'Proyectos.proyecto_id');
+              
+              // Adicional: Solo proyectos con artículos ya enviados a producción
+              if (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_produccion')) {
+                  $q->where('impreso_produccion', 1);
+              }
           });
 
           $proyectos = $query->orderBy('Proyectos.proyecto_id', 'desc')->get();
 
           // Eager load articles for these projects to display progress without expanding
           $projectIds = $proyectos->pluck('id');
-          $articulos = DB::table('proyecto_articulos')
+          
+          $queryArticulos = DB::table('proyecto_articulos')
               ->whereIn('proyecto_id', $projectIds)
-              ->select('id', 'proyecto_id', 'articulo_produccion_id', 'nombre', 'descripcion', 'cantidad', 'imagen', 'produccion', 'dyv', 'logistica')
-              ->get();
+              ->select('id', 'proyecto_id', 'articulo_produccion_id', 'nombre', 'descripcion', 'cantidad', 'imagen', 'produccion', 'dyv', 'logistica');
+              
+          if (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_produccion')) {
+              $queryArticulos->where('impreso_produccion', 1);
+          }
+
+          $articulos = $queryArticulos->get();
 
           // Attach articles to projects
           foreach ($proyectos as $p) {
@@ -350,10 +361,12 @@ class ERPController extends Controller
                 'articulos' => 'required|array|min:1',
                 'articulos.*.precio_unitario' => 'required|numeric|min:0',
                 'totales.envio' => 'required|numeric|min:0',
+                'totales.instalacion' => 'required|numeric|min:0',
                 'cotizacionId' => 'required|integer'
             ], [
                 'articulos.*.precio_unitario.required' => 'Todos los artículos deben tener un precio asignado.',
                 'totales.envio.required' => 'El costo de envío es obligatorio para generar el PDF.',
+                'totales.instalacion.required' => 'El costo de instalación es obligatorio para generar el PDF.',
             ]);
 
             if ($validator->fails()) {
@@ -450,6 +463,7 @@ class ERPController extends Controller
             $totales = [
                 'subtotal_articulos' => 0,
                 'envio' => 0,
+                'instalacion' => 0,
                 'descuento' => 0,
                 'subtotal' => 0,
                 'iva' => 0,
@@ -471,6 +485,7 @@ class ERPController extends Controller
             $cotizacionId = 0;
             if ($cotizacion) {
                 $totales['envio'] = $cotizacion->envio;
+                $totales['instalacion'] = $cotizacion->instalacion ?? 0;
                 $totales['descuento'] = $cotizacion->descuento;
                 $totales['subtotal'] = $cotizacion->subtotal;
                 $totales['iva'] = $cotizacion->iva;
@@ -533,6 +548,8 @@ class ERPController extends Controller
 
     public function generarProduccionPdf(Request $request)
     {
+        $vendedores = DB::table('vendedores')->orderBy('nombre')->get();
+         
         try {
             $proyecto_id = $request->input('proyecto_id');
             $articulos_ids = $request->input('articulos_ids');
@@ -544,6 +561,9 @@ class ERPController extends Controller
                 ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
                 ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
                 ->leftJoin('vendedores', 'proyecto_detalles.vendedor_id', '=', 'vendedores.vendedor_id')
+                ->leftJoin('estados as E1', 'P1.estado_id', '=', 'E1.estado_id')
+                ->leftJoin('estados as E2', 'P2.estado_id', '=', 'E2.estado_id')
+                ->leftJoin('tiempo_disenno', 'proyecto_detalles.tiempo_id', '=', 'tiempo_disenno.tiempo_id')
                 ->select(
                     'Proyectos.proyecto_id',
                     'Proyectos.cliente_id',
@@ -553,7 +573,10 @@ class ERPController extends Controller
                     DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
                     DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
                     'Proyectos.created_at as fecha',
-                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre")
+                    DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
+                    DB::raw("COALESCE(P1.municipio, P2.municipio) as municipio"),
+                    DB::raw("COALESCE(E1.nombre, E2.nombre) as estado"),
+                    'tiempo_disenno.nombre as tiempo_entrega'
                 )
                 ->where('Proyectos.proyecto_id', $proyecto_id)
                 ->first();
@@ -564,6 +587,10 @@ class ERPController extends Controller
             
             $proyecto = (array)$proyectoData;
 
+            if (!empty($request->input('tiempo_entrega'))) {
+                $proyecto['tiempo_entrega'] = $request->input('tiempo_entrega');
+            }
+
             // 2. Obtener artículos
             $queryArticulos = DB::table('proyecto_articulos')->where('proyecto_id', $proyecto_id);
             
@@ -572,7 +599,8 @@ class ERPController extends Controller
             }
 
             $articulos = $queryArticulos
-                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'cubicaje', 'peso', 'imagen')
+                ->leftJoin('categorias_articulos', 'proyecto_articulos.categoria_id', '=', 'categorias_articulos.categoria_articulo_id')
+                ->select('proyecto_articulos.articulo_produccion_id as id_articulo_produccion', 'proyecto_articulos.nombre', 'proyecto_articulos.descripcion', 'proyecto_articulos.alto', 'proyecto_articulos.ancho', 'proyecto_articulos.profundo', 'proyecto_articulos.cantidad', 'proyecto_articulos.precio as precio_unitario', 'proyecto_articulos.cubicaje', 'proyecto_articulos.peso', 'proyecto_articulos.imagen', 'categorias_articulos.nombre as categoria_nombre')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
@@ -614,7 +642,7 @@ class ERPController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('ERP.pdf_produccion', compact('proyecto', 'articulos', 'qrImage'));
+            $pdf = Pdf::loadView('ERP.pdf_produccion', compact('proyecto', 'articulos', 'qrImage'))->setPaper('letter', 'landscape');
             return $pdf->download('Produccion_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -644,7 +672,13 @@ class ERPController extends Controller
             return redirect()->back()->with('error', 'Proyecto no encontrado');
         }
 
-        $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
+        $queryArticulos = DB::table('proyecto_articulos')->where('proyecto_id', $id);
+        
+        if (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_produccion')) {
+            $queryArticulos->where('impreso_produccion', 1);
+        }
+        
+        $articulos = $queryArticulos->get();
 
         $interacciones = [];
         $historial = collect();
@@ -680,7 +714,7 @@ class ERPController extends Controller
         $role = strtoupper($userRoleName);
         $rolesProduccionCoords = ['SUP. CARPINTERÍA', 'SUP. CARPINTERIA', 'SUP. BARNIZ Y LIJADO', 'COORD. INSTALACIÓN / SUP. HERRERÍA', 'COORD. INSTALACION / SUP. HERRERIA', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'];
         $rolesProduccionScan = ['PRODUCCIÓN', 'PRODUCCION', 'LOGÍSTICA', 'LOGISTICA', 'ALMACÉN', 'ALMACEN', 'COORD. INSTALACIÓN', 'COORD. INSTALACION'];
-        if (!in_array($role, array_merge(['ADMIN', 'VENDEDOR/DISEÑADOR'], $rolesProduccionCoords, $rolesProduccionScan))) {
+        if (!in_array($role, array_merge(['ADMIN'], $rolesProduccionCoords, $rolesProduccionScan))) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
 
@@ -716,11 +750,7 @@ class ERPController extends Controller
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
         
-        $canAccess = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT']) || ($role === 'VENDEDOR/DISEÑADOR' && strtoupper(auth()->user()->name) === 'SAUL APARICIO TORRES');
-
-        if (!$canAccess) {
-            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
-        }
+        $isAdminOrDireccion = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION']);
 
         $proyectos = DB::table('Proyectos')
             ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
@@ -737,7 +767,7 @@ class ERPController extends Controller
 
         $interacciones = DB::table('interacciones')->get();
 
-        return view('ERP.reporteEstatusProyecto', compact('proyectos', 'interacciones'));
+        return view('ERP.reporteEstatusProyecto', compact('proyectos', 'interacciones', 'isAdminOrDireccion'));
     }
 
     public function obtenerHistorialInteracciones($proyecto_id)
@@ -1104,6 +1134,13 @@ class ERPController extends Controller
                 });
             }
 
+            // Asegurar que la tabla soporte la columna 'instalacion'
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('cotizaciones', 'instalacion')) {
+                \Illuminate\Support\Facades\Schema::table('cotizaciones', function ($table) {
+                    $table->decimal('instalacion', 10, 2)->default(0);
+                });
+            }
+
             // 1. Guardar precio de cada artículo (acepta 0 si no se ha llenado)
             foreach ($articulos as $art) {
                 DB::table('proyecto_articulos')
@@ -1116,6 +1153,7 @@ class ERPController extends Controller
                 'proyecto_id' => $proyecto['proyecto_id'],
                 'subtotal' => $totales['subtotal'] ?? 0,
                 'envio' => (float)($totales['envio'] ?? 0),
+                'instalacion' => (float)($totales['instalacion'] ?? 0),
                 'descuento' => $totales['descuento'] ?? 0,
                 'iva' => $totales['iva'] ?? 0,
                 'total' => $totales['total'] ?? 0,
@@ -1224,7 +1262,7 @@ class ERPController extends Controller
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
-        if (!in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA'])) {
+        if (!in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'VENDEDOR/DISEÑADOR'])) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a logística.');
         }
 
@@ -1311,6 +1349,31 @@ class ERPController extends Controller
     public function guardarRetorno(Request $request)
     {
         try {
+            if ($request->has('id') && $request->has('estatus')) {
+                // Es una actualización de estatus de retorno (Hecha por Logística)
+                DB::table('retornos')->where('id', $request->id)->update([
+                    'estatus' => $request->estatus,
+                    'updated_at' => now()
+                ]);
+
+                // Registrar interacción opcional en el historial del proyecto
+                if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                    $interaccion = DB::table('interacciones')->where('nombre', 'ACTUALIZACION DE ESTATUS DE RETORNO')->first();
+                    $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'ACTUALIZACION DE ESTATUS DE RETORNO') : 'ACTUALIZACION DE ESTATUS DE RETORNO';
+
+                    DB::table('proyecto_interacciones')->insert([
+                        'proyecto_id' => $request->proyecto_id,
+                        'interaccion_id' => $interaccionId,
+                        'user_id' => auth()->id(),
+                        'comentarios' => "El estatus del retorno ha sido actualizado a: " . $request->estatus,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+                return response()->json(['success' => true]);
+            }
+
+            // Flujo original (Hecho por Vendedor/Diseñador al crear la solicitud)
             if (\Illuminate\Support\Facades\Schema::hasTable('retornos')) {
                 DB::table('retornos')->insert([
                     'proyecto_id' => $request->proyecto_id,
