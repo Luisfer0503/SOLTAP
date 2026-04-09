@@ -41,17 +41,17 @@ body{
 .tabla{
     width:100%;
     border-collapse:collapse;
-    margin-top: 15px;
+    margin-top: 10px;
 }
 .tabla th{
     border:1px solid #000;
     background:#e6e6e6;
-    padding:5px;
+    padding:3px;
     font-size:9px;
 }
 .tabla td{
     border:1px solid #000;
-    padding:5px;
+    padding:3px;
     font-size:9px;
     vertical-align:top;
 }
@@ -154,10 +154,10 @@ tr { page-break-inside:avoid; }
 <thead>
 <tr>
 <th width="5%">Cant.</th>
-<th width="50%">Descripción del artículo (Dimensiones cm)</th>
+<th width="60%">Descripción del artículo (Dimensiones cm)</th>
 <th width="10%">Estándar</th>
 <th width="10%">Personalizado</th>
-<th width="25%">Imagen</th>
+<th width="15%">Imagen</th>
 </tr>
 </thead>
 
@@ -178,7 +178,7 @@ tr { page-break-inside:avoid; }
 </span>
 
 <!-- MEDIDAS -->
-<table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
+<table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 2px; margin-bottom: 2px; border-collapse: collapse;">
    <tr style="text-align: center;">
     <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">L/A</td>
     <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
@@ -205,8 +205,7 @@ tr { page-break-inside:avoid; }
 </tr>
 </table>
 
-<br>
-{{ $item['descripcion'] }}
+<div style="margin-top: 3px;">{{ $item['descripcion'] }}</div>
 
 </td>
 
@@ -242,7 +241,7 @@ if (!empty($item['imagen'])) {
 @endphp
 
 @if($imagePath)
-<img src="{{ $imagePath }}" style="width:220px; height:220px; object-fit:contain; display: block; margin: 0 auto;">
+<img src="{{ $imagePath }}" style="width:80px; height:80px; object-fit:contain; display: block; margin: 0 auto;">
 @else
 N/A
 @endif

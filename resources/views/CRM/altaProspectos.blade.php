@@ -91,11 +91,11 @@
                             <input type="date" name="FechaNacimiento" value="{{ old('FechaNacimiento') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
                             <select name="Sexo" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Seleccionar...</option>
-                                <option value="Masculino" @selected(old('Sexo') == 'Masculino')>Masculino</option>
-                                <option value="Femenino" @selected(old('Sexo') == 'Femenino')>Femenino</option>
+                                <option value="Masculino" @selected(old('Sexo') == 'Masculino')>Hombre</option>
+                                <option value="Femenino" @selected(old('Sexo') == 'Femenino')>Mujer</option>
                                 <option value="Otro" @selected(old('Sexo') == 'Otro')>Otro</option>
                             </select>
                         </div>

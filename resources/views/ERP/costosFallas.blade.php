@@ -39,7 +39,14 @@
                                     <tbody>
                                         <template x-for="(mat, matIndex) in falla.materiales_pendientes" :key="matIndex">
                                             <tr class="border-t">
-                                                <td class="py-3 text-sm text-gray-700" x-text="mat.material"></td>
+                                                <td class="py-3 text-sm text-gray-700">
+                                                    <template x-if="mat.isNew">
+                                                        <input type="text" x-model="mat.material" required class="w-full text-sm border-gray-300 rounded focus:ring-green-500 focus:border-green-500 uppercase" placeholder="Nombre del material">
+                                                    </template>
+                                                    <template x-if="!mat.isNew">
+                                                        <span x-text="mat.material"></span>
+                                                    </template>
+                                                </td>
                                                 <td class="py-3">
                                                     <div class="relative flex justify-end">
                                                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
@@ -50,7 +57,10 @@
                                         </template>
                                     </tbody>
                                 </table>
-                                <div class="flex justify-end mt-4">
+                                <div class="flex justify-between items-center mt-4">
+                                    <button type="button" @click="agregarMaterial(index)" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition flex items-center text-sm">
+                                        <i class="ph ph-plus mr-2"></i> Agregar Material
+                                    </button>
                                     <button type="submit" class="px-5 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-md flex items-center" :disabled="falla.guardando">
                                         <i class="ph ph-floppy-disk mr-2" x-show="!falla.guardando"></i>
                                         <i class="ph ph-spinner animate-spin mr-2" x-show="falla.guardando"></i>
@@ -70,6 +80,14 @@
     function costosFallasApp() {
         return {
             fallas: @json($fallas).map(f => ({...f, guardando: false})),
+
+            agregarMaterial(index) {
+                this.fallas[index].materiales_pendientes.push({
+                    material: '',
+                    costo: '',
+                    isNew: true
+                });
+            },
             
             async guardarCostos(index) {
                 const falla = this.fallas[index];

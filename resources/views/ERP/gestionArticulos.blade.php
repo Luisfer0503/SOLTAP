@@ -485,8 +485,8 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
-                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Nogal, Chocolate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color (Opcional)</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Nogal, Chocolate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                 </div>
                             </template>
@@ -514,12 +514,12 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
-                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Blanco, Gris" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color (Opcional)</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Blanco, Gris" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Textura</label>
-                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Veta, Textil" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Textura (Opcional)</label>
+                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Veta, Textil" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                 </div>
                             </template>
@@ -566,12 +566,12 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Patrón</label>
-                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Rayas, Floral" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Dibujo / Patrón (Opcional)</label>
+                                        <input type="text" x-model="formularioMaterial.dibujo" placeholder="Ej. Liso, Rayas, Floral" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color</label>
-                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Gris Oxford, Beige" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Color (Opcional)</label>
+                                        <input type="text" x-model="formularioMaterial.color" placeholder="Ej. Gris Oxford, Beige" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     </div>
                                 </div>
                             </template>

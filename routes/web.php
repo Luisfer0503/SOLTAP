@@ -94,6 +94,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/escaner-produccion', [ERPController::class, 'escanerProduccion'])->name('escanerProduccion');
     Route::get('/reporteEstatusProyecto', [ERPController::class, 'reporteEstatusProyecto'])->name('reporteEstatusProyecto');
     Route::get('/erp/proyecto-interacciones/{id}', [ERPController::class, 'obtenerHistorialInteracciones']);
+    Route::post('/erp/generar-acta-entrega', [\App\Http\Controllers\ERPController::class, 'generarActaEntregaPdf'])->name('generarActaEntregaPdf');
+    
 
     Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');
 
@@ -111,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/erp/logistica/retorno', [App\Http\Controllers\ERPController::class, 'guardarRetorno'])->name('guardarRetorno');
     Route::post('/erp/guardar-verificacion-articulos', [App\Http\Controllers\ERPController::class, 'guardarVerificacionArticulos']);
     Route::get('/erp/proyecto-historial-pdf/{id}', [ERPController::class, 'imprimirHistorialProyecto'])->name('proyecto.historial.pdf');
+
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');

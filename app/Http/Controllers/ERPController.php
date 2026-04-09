@@ -125,6 +125,26 @@ class ERPController extends Controller
           }
 
           $articulos = $queryArticulos->get();
+          
+          // Obtener el historial de interacciones para sacar la última de cada proyecto
+          $historiales = [];
+          if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+              $historiales = DB::table('proyecto_interacciones')
+                  ->whereIn('proyecto_id', $projectIds)
+                  ->orderBy('created_at', 'desc')
+                  ->orderBy('id', 'desc')
+                  ->get()
+                  ->groupBy('proyecto_id');
+          }
+
+          $interaccionesMap = [];
+          if (\Illuminate\Support\Facades\Schema::hasTable('interacciones')) {
+              $interaccionesCat = DB::table('interacciones')->get();
+              foreach ($interaccionesCat as $int) {
+                  $pk = $int->id ?? $int->interaccion_id ?? $int->nombre;
+                  $interaccionesMap[$pk] = $int->nombre;
+              }
+          }
 
           // Attach articles to projects
           foreach ($proyectos as $p) {
@@ -134,6 +154,14 @@ class ERPController extends Controller
                   }
                   return $art;
               });
+              
+              // Asignar la última interacción al proyecto
+              if (isset($historiales[$p->id]) && $historiales[$p->id]->isNotEmpty()) {
+                  $ultimo = $historiales[$p->id]->first();
+                  $p->ultima_interaccion = $interaccionesMap[$ultimo->interaccion_id] ?? $ultimo->interaccion_id;
+              } else {
+                  $p->ultima_interaccion = $p->estatus ?? 'En Proceso';
+              }
           }
   
           // Obtenemos los usuarios y sus áreas para los campos ORIGINÓ y RESOLVIÓ
@@ -266,7 +294,7 @@ class ERPController extends Controller
                   'cantidad' => $request->cantidad,
                   'categoria_id' => $request->falla_categoria ?: null,
                   'subcategoria_id' => $request->falla_subcategoria ?: null,
-                  'descripcion' => $request->descripcion,
+                  'descripcion' => mb_strtoupper((string) $request->descripcion),
                   'hh_minutos' => $request->hh_minutos,
                   'costo_hh' => $request->costo_hh,
                   'costo_materiales' => $request->costo_materiales,
@@ -296,7 +324,7 @@ class ERPController extends Controller
                       'proyecto_id' => $request->proyecto_id,
                       'interaccion_id' => $interaccionId,
                       'user_id' => auth()->id(),
-                      'comentarios' => "Reporte de falla en el artículo ID " . $request->articulo_id . ".\nCategoría: " . $categoriaNombre . ".\nDescripción: " . $request->descripcion . ".\nCosto Total Asignado: $" . $request->costo_total,
+                      'comentarios' => mb_strtoupper("Reporte de falla en el artículo ID " . $request->articulo_id . ".\nCategoría: " . $categoriaNombre . ".\nDescripción: " . $request->descripcion . ".\nCosto Total Asignado: $" . $request->costo_total),
                       'created_at' => now(),
                       'updated_at' => now()
                   ]);
@@ -409,8 +437,8 @@ class ERPController extends Controller
         try {
             $proyecto_id = $request->input('proyecto_id');
             $pagos = $request->input('pagos'); // Recibir plan de pagos
-            $rfc = $request->input('rfc');
-            $condiciones = $request->input('condiciones');
+            $rfc = mb_strtoupper((string) $request->input('rfc'));
+            $condiciones = mb_strtoupper((string) $request->input('condiciones'));
             
             // Guardar/Actualizar RFC y Condiciones en proyecto_detalles
             DB::table('proyecto_detalles')->updateOrInsert(
@@ -510,7 +538,7 @@ class ERPController extends Controller
                     foreach ($pagos as $index => $pago) {
                         DB::table('plan_pagos')->insert([
                             'cotizacion_id' => $cotizacionId,
-                            'nombre' => $pago['nombre'],
+                            'nombre' => mb_strtoupper((string) $pago['nombre']),
                             'numero_pago' => $index + 1, // 1, 2, 3...
                             'total_pagos_plan' => $totalPagosPlan, // Total de divisiones (ej. 10)
                             'porcentaje' => $pago['porcentaje'],
@@ -649,6 +677,52 @@ class ERPController extends Controller
         }
     }
 
+    public function generarActaEntregaPdf(Request $request)
+    {
+        try {
+            $proyecto_id = $request->input('proyecto_id');
+
+            // 1. Obtener datos del proyecto
+            $proyectoData = DB::table('Proyectos')
+                ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+                ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+                ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+                ->leftJoin('proyecto_detalles', 'Proyectos.proyecto_id', '=', 'proyecto_detalles.detalles_id')
+                ->select(
+                    'Proyectos.proyecto_id',
+                    'Proyectos.nombre as nombre_proyecto',
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre_corto"),
+                    DB::raw("COALESCE(P1.telefono, P2.telefono) as telefono"),
+                    DB::raw("COALESCE(P1.correo, P2.correo) as correo"),
+                    DB::raw("COALESCE(proyecto_detalles.direccion_entrega, NULLIF(CONCAT_WS(', ', COALESCE(P1.calle, P2.calle), COALESCE(P1.municipio, P2.municipio)), '')) as direccion"),
+                    'proyecto_detalles.requiere_instalacion',
+                    'proyecto_detalles.requiere_desemplaye',
+                    'proyecto_detalles.requiere_maniobraje'
+                )
+                ->where('Proyectos.proyecto_id', $proyecto_id)
+                ->first();
+
+            if (!$proyectoData) {
+                return response()->json(['error' => 'Proyecto no encontrado'], 404);
+            }
+            
+            $proyecto = (array)$proyectoData;
+
+            // 2. Obtener artículos
+            $articulos = DB::table('proyecto_articulos')
+                ->where('proyecto_id', $proyecto_id)
+                ->select('nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cubicaje', 'peso', 'cantidad', 'imagen')
+                ->get()
+                ->map(function($item){ return (array)$item; })
+                ->toArray();
+
+            $pdf = Pdf::loadView('ERP.pdf_acta_entrega', compact('proyecto', 'articulos'))->setPaper('letter', 'landscape');
+            return $pdf->download('Acta_Entrega_' . $proyecto['nombre_proyecto'] . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function vistaProduccionProyecto($id)
     {
         $proyecto = DB::table('Proyectos')
@@ -734,7 +808,7 @@ class ERPController extends Controller
                     'proyecto_id' => $request->proyecto_id,
                     'interaccion_id' => $request->interaccion_id,
                     'user_id' => auth()->id(),
-                    'comentarios' => $request->comentarios,
+                    'comentarios' => mb_strtoupper((string) $request->comentarios),
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
@@ -1085,7 +1159,7 @@ class ERPController extends Controller
                       'proyecto_id' => $request->proyecto_id,
                       'interaccion_id' => $request->interaccion_id,
                       'user_id' => auth()->id(),
-                      'comentarios' => $request->comentarios,
+                      'comentarios' => mb_strtoupper((string) $request->comentarios),
                       'created_at' => now(),
                       'updated_at' => now()
                   ]);
@@ -1333,7 +1407,7 @@ class ERPController extends Controller
                 ['detalles_id' => $request->proyecto_id],
                 [ // Convert 'si'/'no' to 1/0 for the database
                     'es_planta_baja' => ($request->es_planta_baja === 'si') ? 1 : 0,
-                    'condiciones_acceso' => $request->condiciones_acceso,
+                    'condiciones_acceso' => mb_strtoupper((string) $request->condiciones_acceso),
                     'requiere_instalacion' => $request->requiere_instalacion ? 1 : 0,
                     'requiere_desemplaye' => $request->requiere_desemplaye ? 1 : 0,
                     'requiere_emplaye' => $request->requiere_emplaye ? 1 : 0,
@@ -1378,9 +1452,9 @@ class ERPController extends Controller
                 DB::table('retornos')->insert([
                     'proyecto_id' => $request->proyecto_id,
                     'articulo_id' => $request->articulo_id,
-                    'destinatario' => $request->destinatario,
-                    'ubicacion_interna' => $request->ubicacion_interna,
-                    'persona_logistica' => $request->persona_logistica,
+                    'destinatario' => mb_strtoupper((string) $request->destinatario),
+                    'ubicacion_interna' => mb_strtoupper((string) $request->ubicacion_interna),
+                    'persona_logistica' => mb_strtoupper((string) $request->persona_logistica),
                     'estatus' => 'En Revisión',
                     'created_at' => now(),
                     'updated_at' => now()
@@ -1396,7 +1470,7 @@ class ERPController extends Controller
                     'proyecto_id' => $request->proyecto_id,
                     'interaccion_id' => $interaccionId,
                     'user_id' => auth()->id(),
-                    'comentarios' => "Se ha generado un reporte de retorno.\nArtículo: " . $request->articulo_nombre . "\nDestinatario: " . $request->destinatario . "\nUbicación: " . $request->ubicacion_interna . "\nPersona a cargo: " . $request->persona_logistica,
+                    'comentarios' => mb_strtoupper("Se ha generado un reporte de retorno.\nArtículo: " . $request->articulo_nombre . "\nDestinatario: " . $request->destinatario . "\nUbicación: " . $request->ubicacion_interna . "\nPersona a cargo: " . $request->persona_logistica),
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
@@ -1441,6 +1515,7 @@ class ERPController extends Controller
 
       public function guardarCategoria(Request $request)
       {
+          $request->merge(['nombre' => mb_strtoupper((string) $request->nombre)]);
           $request->validate([
               'nombre' => 'required|string|max:100|unique:categorias,nombre',
           ]);
@@ -1492,6 +1567,11 @@ class ERPController extends Controller
               'descripcion'
           ]);
 
+          if (isset($data['sku'])) $data['sku'] = mb_strtoupper((string) $data['sku']);
+          if (isset($data['nombre'])) $data['nombre'] = mb_strtoupper((string) $data['nombre']);
+          if (isset($data['dimensiones'])) $data['dimensiones'] = mb_strtoupper((string) $data['dimensiones']);
+          if (isset($data['descripcion'])) $data['descripcion'] = mb_strtoupper((string) $data['descripcion']);
+
           if ($request->hasFile('foto')) {
               $file = $request->file('foto');
               $filename = time() . '_' . $file->getClientOriginalName();
@@ -1523,6 +1603,15 @@ class ERPController extends Controller
               $proyecto_id = $request->proyecto_id;
               $incoming_ids = []; // Para rastrear qué IDs se mantienen/actualizan
 
+              // Verificar y crear columnas de dimensiones de división si no existen
+              if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'alto_division')) {
+                  \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                      $table->decimal('alto_division', 10, 2)->default(0)->nullable();
+                      $table->decimal('ancho_division', 10, 2)->default(0)->nullable();
+                      $table->decimal('profundo_division', 10, 2)->default(0)->nullable();
+                  });
+              }
+
               $articulos = $request->articulos ?? [];
 
               foreach ($articulos as $index => $item) {
@@ -1530,8 +1619,8 @@ class ERPController extends Controller
                       'proyecto_id' => $request->proyecto_id,
                       'articulo_produccion_id' => $item['id_articulo_produccion'] ?? null,
                       'categoria_id' => $item['categoria_articulo_id'] ?? null,
-                      'nombre' => $item['nombre'],
-                      'descripcion' => $item['descripcion'] ?? null,
+                      'nombre' => mb_strtoupper((string) $item['nombre']),
+                      'descripcion' => isset($item['descripcion']) ? mb_strtoupper((string) $item['descripcion']) : null,
                       'alto' => $item['alto'] ?? 0,
                       'ancho' => $item['ancho'] ?? 0,
                       'profundo' => $item['profundo'] ?? 0,
@@ -1540,6 +1629,9 @@ class ERPController extends Controller
                       'cantidad' => $item['cantidad'] ?? 1,
                       'tiene_division' => $item['tiene_division'] ?? 0,
                       'piezas_divididas' => $item['piezas_divididas'] ?? 0,
+                      'alto_division' => $item['alto_division'] ?? 0,
+                      'ancho_division' => $item['ancho_division'] ?? 0,
+                      'profundo_division' => $item['profundo_division'] ?? 0,
                       'created_at' => now(),
                       'updated_at' => now()
                   ];
@@ -1588,7 +1680,7 @@ class ERPController extends Controller
                             'proyecto_articulo_id' => $proyectoArticuloId,
                             'tipo_material' => $mat['tipo'] ?? 'Otro',
                             'material_id' => $mat['material_id'] ?? null,
-                            'descripcion' => $mat['descripcion'] ?? '' // Para casos especiales como Herrería
+                            'descripcion' => isset($mat['descripcion']) ? mb_strtoupper((string) $mat['descripcion']) : '' // Para casos especiales como Herrería
                         ]);
                     }
                   }
@@ -1672,6 +1764,7 @@ class ERPController extends Controller
       }
       public function guardarNuevaChapa(Request $request)
       {
+          $request->merge(['nombre' => mb_strtoupper((string) $request->nombre)]);
           $validator = Validator::make($request->all(), [
               'nombre' => 'required|string|max:255|unique:chapas,nombre',
           ]);
@@ -1733,6 +1826,12 @@ class ERPController extends Controller
           if (!$categoria_id) {
               return response()->json(['success' => false, 'message' => 'Tipo de material no válido'], 400);
           }
+
+          $request->merge([
+              'nombre' => mb_strtoupper((string) $request->nombre),
+              'color' => mb_strtoupper((string) $request->color),
+              'dibujo' => mb_strtoupper((string) $request->dibujo),
+          ]);
   
           $rules = [
               'nombre' => 'required|string|max:255',
@@ -1747,21 +1846,21 @@ class ERPController extends Controller
   
           if ($tipo === 'madera') {
               $rules['chapa_id'] = 'required|exists:chapas,chapa_id';
-              $rules['color'] = 'required|string|max:100';
+              $rules['color'] = 'nullable|string|max:100';
               $data['chapa_id'] = $request->chapa_id;
               $data['color'] = $request->color;
           } elseif ($tipo === 'melamina') {
               $rules['proveedor_id'] = 'required|exists:proveedores,proveedor_id';
-              $rules['color'] = 'required|string|max:100';
-              $rules['dibujo'] = 'required|string|max:100';
+              $rules['color'] = 'nullable|string|max:100';
+              $rules['dibujo'] = 'nullable|string|max:100';
               $data['proveedor_id'] = $request->proveedor_id;
               $data['color'] = $request->color;
               $data['dibujo'] = $request->dibujo;
           } elseif ($tipo === 'tela') {
               $rules['proveedor_id'] = 'required|exists:proveedores,proveedor_id';
               $rules['submaterial_id'] = 'nullable|exists:submateriales,submaterial_id'; // Coleccion
-              $rules['dibujo'] = 'required|string|max:100';
-              $rules['color'] = 'required|string|max:100';
+              $rules['dibujo'] = 'nullable|string|max:100';
+              $rules['color'] = 'nullable|string|max:100';
               $data['proveedor_id'] = $request->proveedor_id;
               $data['submaterial_id'] = $request->submaterial_id;
               $data['dibujo'] = $request->dibujo;
@@ -1997,7 +2096,7 @@ class ERPController extends Controller
         // Role check
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
-        if (!in_array($role, ['ADMIN'])) {
+        if (!in_array($role, ['ADMIN', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'])) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
 
@@ -2049,17 +2148,30 @@ class ERPController extends Controller
             // Create a map of new costs from the request
             $nuevosCostosMap = [];
             foreach ($materialesNuevos as $matNuevo) {
-                $nuevosCostosMap[$matNuevo['material']] = (float)$matNuevo['costo'];
+                if (!empty(trim($matNuevo['material']))) {
+                    $nuevosCostosMap[trim($matNuevo['material'])] = (float)$matNuevo['costo'];
+                }
             }
 
             // Update original materials list with new costs
             $costoMaterialesTotal = 0;
             foreach ($materialesOriginales as &$matOriginal) {
                 // If a new cost was submitted for this material, update it
-                if (array_key_exists($matOriginal['material'], $nuevosCostosMap)) {
-                    $matOriginal['costo'] = $nuevosCostosMap[$matOriginal['material']];
+                $nombreOriginal = trim($matOriginal['material']);
+                if (array_key_exists($nombreOriginal, $nuevosCostosMap)) {
+                    $matOriginal['costo'] = $nuevosCostosMap[$nombreOriginal];
+                    unset($nuevosCostosMap[$nombreOriginal]);
                 }
                 $costoMaterialesTotal += (float)($matOriginal['costo'] ?? 0);
+            }
+
+            // Add any completely new materials added from the cost assignment screen
+            foreach ($nuevosCostosMap as $nuevoMaterial => $nuevoCosto) {
+                $materialesOriginales[] = [
+                    'material' => mb_strtoupper((string) $nuevoMaterial),
+                    'costo' => $nuevoCosto
+                ];
+                $costoMaterialesTotal += $nuevoCosto;
             }
 
             $costoTotal = (float)$falla->costo_hh + $costoMaterialesTotal;

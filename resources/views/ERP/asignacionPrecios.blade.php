@@ -90,6 +90,13 @@
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
                                         <i class="ph ph-factory mr-1"></i> Producción
                                     </button>
+                                    
+                                    <button @click="imprimirActaPdf(p)" 
+                                            class="px-3 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            title="Generar Acta de Entrega"
+                                            :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
+                                        <i class="ph ph-clipboard-text mr-1"></i> Acta
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -482,6 +489,7 @@
             articulosProduccion: [],
             tiempoEntregaProduccion: '',
             generandoPdf: false,
+            generandoActaPdf: false,
 
             get proyectosFiltrados() {
                 if (this.filtro === '') {
@@ -691,7 +699,7 @@
                     if (n === 1) nombre = 'Pago Único (Liquidación)';
                     else if (i === 0) nombre = 'Anticipo';
                     else if (i === n - 1) nombre = 'Liquidación';
-                    else nombre = `Pago ${i + 1}`; // Consecutivos intermedios
+                    else nombre = `Pago ${i}`; // Consecutivos intermedios
                     
                     this.listaPagos.push({
                         nombre: nombre,
@@ -975,6 +983,36 @@
                     alert('Ocurrió un error: ' + (e.message || 'Error desconocido'));
                 } finally {
                     this.generandoPdf = false;
+                }
+            },
+
+            async imprimirActaPdf(proyecto) {
+                this.generandoActaPdf = true;
+                try {
+                    const response = await fetch('{{ url("erp/generar-acta-entrega") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ proyecto_id: proyecto.proyecto_id })
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const nombreArchivo = proyecto.nombre_proyecto ? `Acta_Entrega_${proyecto.nombre_proyecto}.pdf` : 'Acta_Entrega.pdf';
+                        a.download = nombreArchivo;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } else {
+                        alert('Error al generar el acta de entrega.');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Ocurrió un error: ' + (e.message || 'Error desconocido'));
+                } finally {
+                    this.generandoActaPdf = false;
                 }
             },
 

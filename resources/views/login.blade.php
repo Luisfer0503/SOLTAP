@@ -11,8 +11,8 @@
 
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-200">
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 mb-4 border border-blue-100">
-                <i class="ph ph-user text-3xl"></i>
+            <div class="flex justify-center mb-6">
+                <img src="{{ asset('archivos/logosshctmm.png') }}" alt="Logo Casa Tapier" class="h-24 w-auto object-contain">
             </div>
             <h2 class="text-2xl font-bold text-gray-800">Bienvenido</h2>
             <p class="text-gray-500 text-sm mt-1">Ingresa a tu cuenta para continuar</p>

@@ -135,11 +135,13 @@
             </a>
             @endif
             
-            @if(in_array($role, ['ADMIN']))
+            @if(in_array($role, ['ADMIN', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS']))
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Administración</p>
+            @if(in_array($role, ['ADMIN']))
             <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-users-three text-lg mr-3"></i> Gestión de Usuarios
             </a>
+            @endif
             <a href="{{ route('costosFallas') }}" class="{{ request()->routeIs('costosFallas') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-currency-dollar text-lg mr-3"></i> Costos de Fallas
             </a>

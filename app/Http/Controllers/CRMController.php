@@ -68,9 +68,9 @@ class CRMController extends Controller
             $path = $file->storeAs('fotos', $filename, 'public');
 
             $vendedor = new Vendedor();
-            $vendedor->nombre = $request->nombre;
-            $vendedor->apellido_paterno = $request->apellido_paterno;
-            $vendedor->apellido_materno = $request->apellido_materno;
+            $vendedor->nombre = mb_strtoupper((string) $request->nombre);
+            $vendedor->apellido_paterno = mb_strtoupper((string) $request->apellido_paterno);
+            $vendedor->apellido_materno = mb_strtoupper((string) $request->apellido_materno);
             $vendedor->empresa_id = $request->empresa;
             $vendedor->foto = $path;
             $vendedor->save();
@@ -120,9 +120,9 @@ class CRMController extends Controller
             }
 
             $data = [
-                'nombre' => $request->nombre,
-                'apellido_paterno' => $request->apellido_paterno,
-                'apellido_materno' => $request->apellido_materno,
+                'nombre' => mb_strtoupper((string) $request->nombre),
+                'apellido_paterno' => mb_strtoupper((string) $request->apellido_paterno),
+                'apellido_materno' => mb_strtoupper((string) $request->apellido_materno),
                 'correo' => $request->correo,
                 'telefono' => $request->telefono,
                 'empresa_id' => $request->empresa,
@@ -256,20 +256,20 @@ class CRMController extends Controller
             DB::beginTransaction();
             try {
                 $prospecto = new \App\Models\Prospecto();
-                $prospecto->nombre = $request->Nombre;
-                $prospecto->apellido_paterno = $request->ApellidoPat;
-                $prospecto->apellido_materno = $request->ApellidoMat;
+                $prospecto->nombre = mb_strtoupper((string) $request->Nombre);
+                $prospecto->apellido_paterno = mb_strtoupper((string) $request->ApellidoPat);
+                $prospecto->apellido_materno = mb_strtoupper((string) $request->ApellidoMat);
                 $prospecto->fecha_nacimiento = $request->FechaNacimiento;
                 $prospecto->sexo = $request->Sexo;
-                $prospecto->ocupacion = $request->Ocupacion;
+                $prospecto->ocupacion = mb_strtoupper((string) $request->Ocupacion);
                 $prospecto->correo = $request->Correo;
                 $prospecto->telefono = $request->Telefono;
                 $prospecto->estado_id = $request->IdEstado;
-                $prospecto->municipio = $request->Municipio;
+                $prospecto->municipio = mb_strtoupper((string) $request->Municipio);
                 $prospecto->codigo_postal = $request->CodigoPostal;
-                $prospecto->calle = $request->Calle;
+                $prospecto->calle = mb_strtoupper((string) $request->Calle);
                 // Si la dirección de entrega es diferente, guardarla; si no, usar la dirección del prospecto
-                $prospecto->direccion_entrega = ($request->DireccionDiferente === 'si') ? $request->DireccionEntrega : $request->Calle . ', ' . $request->Municipio;
+                $prospecto->direccion_entrega = mb_strtoupper((string) (($request->DireccionDiferente === 'si') ? $request->DireccionEntrega : $request->Calle . ', ' . $request->Municipio));
                 $prospecto->maps = $request->Maps;
                 $prospecto->fecha = $request->Fecha . ' ' . $request->Hora;
                 $prospecto->empresa_id = $request->IdEmpresa;
@@ -287,8 +287,8 @@ class CRMController extends Controller
                 $prospecto->interaccion_id = 1; // Valor fijo por defecto
                 $prospecto->enfoque_id = $request->IdEnfoque;
                 $prospecto->canal_id = $request->IdCanalDistribuccion;
-                $prospecto->proyecto = $request->NombreProyectoCompleto;
-                $prospecto->descripcion = $request->Descripcion;
+                $prospecto->proyecto = mb_strtoupper((string) $request->NombreProyectoCompleto);
+                $prospecto->descripcion = mb_strtoupper((string) $request->Descripcion);
 
                 $prospecto->tiene_envio = ($request->TieneEnvio === 'si') ? 1 : 0;
                 $prospecto->tiene_iva = ($request->TieneIva === 'si') ? 1 : 0;
@@ -525,7 +525,7 @@ class CRMController extends Controller
                     // Insertar proyecto
                     $proyectoData = [
                         'cliente_id' => $clienteId,
-                        'nombre' => $request->input('nombre_proyecto'),
+                        'nombre' => mb_strtoupper((string) $request->input('nombre_proyecto')),
                         'estatus' => null
                     ];
                     $proyectoId = DB::table('Proyectos')->insertGetId($proyectoData);
@@ -536,10 +536,10 @@ class CRMController extends Controller
                         'cliente_id' => $clienteId,
                         'empresa_id' => $request->input('empresa_id'),
                         'maps' => $request->input('maps'),
-                        'descripcion' => $request->input('descripcion'),
+                        'descripcion' => mb_strtoupper((string) $request->input('descripcion')),
                         'enfoque_id' => $request->input('enfoque_id'),
                         'canal_id' => $request->input('canal_id'),
-                        'direccion_entrega' => ($request->input('cambiar_direccion') === 'si') ? $request->input('direccion_entrega') : null,
+                        'direccion_entrega' => ($request->input('cambiar_direccion') === 'si') ? mb_strtoupper((string) $request->input('direccion_entrega')) : null,
                     ];
 
                     DB::table('proyecto_detalles')->insert($detallesData);
@@ -643,25 +643,25 @@ class CRMController extends Controller
             ], $messages);
 
             $data = [
-                'nombre' => $request->Nombre,
-                'apellido_paterno' => $request->ApellidoPat,
-                'apellido_materno' => $request->ApellidoMat,
+                'nombre' => mb_strtoupper((string) $request->Nombre),
+                'apellido_paterno' => mb_strtoupper((string) $request->ApellidoPat),
+                'apellido_materno' => mb_strtoupper((string) $request->ApellidoMat),
                 'fecha_nacimiento' => $request->FechaNacimiento,
                 'sexo' => $request->Sexo,
-                'ocupacion' => $request->Ocupacion,
+                'ocupacion' => mb_strtoupper((string) $request->Ocupacion),
                 'correo' => $request->Correo,
                 'telefono' => $request->Telefono,
                 'estado_id' => $request->IdEstado,
-                'municipio' => $request->Municipio,
+                'municipio' => mb_strtoupper((string) $request->Municipio),
                 'codigo_postal' => $request->CodigoPostal,
-                'calle' => $request->Calle,
-                'direccion_entrega' => ($request->DireccionDiferente === 'si') ? $request->DireccionEntrega : $request->Calle . ', ' . $request->Municipio,
+                'calle' => mb_strtoupper((string) $request->Calle),
+                'direccion_entrega' => mb_strtoupper((string) (($request->DireccionDiferente === 'si') ? $request->DireccionEntrega : $request->Calle . ', ' . $request->Municipio)),
                 'maps' => $request->Maps,
                 'empresa_id' => $request->IdEmpresa,
                 'enfoque_id' => $request->IdEnfoque,
                 'canal_id' => $request->IdCanalDistribuccion,
-                'proyecto' => $request->NombreProyectoCompleto,
-                'descripcion' => $request->Descripcion,
+                'proyecto' => mb_strtoupper((string) $request->NombreProyectoCompleto),
+                'descripcion' => mb_strtoupper((string) $request->Descripcion),
                 'tiene_envio' => ($request->TieneEnvio === 'si') ? 1 : 0,
                 'tiene_iva' => ($request->TieneIva === 'si') ? 1 : 0,
                 'iva' => ($request->TieneIva === 'si') ? $request->IvaPorcentaje : 0,

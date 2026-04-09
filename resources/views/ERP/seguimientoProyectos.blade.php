@@ -63,7 +63,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Cliente</th>
                         <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Progreso</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Estatus</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Última Interacción</th>
                         <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
@@ -210,25 +210,11 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <template x-if="p.estatus == 'Cotización Pendiente'">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-                                    Por Cotizar
-                                </span>
-                            </template>
-                            <template x-if="p.estatus == 'En Proceso'">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                    En Diseño
-                                </span>
-                            </template>
-                            <template x-if="p.estatus == 'Cerrado / Ganado'">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
-                                    <i class="ph ph-check mr-1"></i> Ganado
-                                </span>
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    <span x-text="p.estatus"></span>
-                                </span>
-                            </template>
+                        <td class="px-6 py-4 text-center align-middle">
+                            <span class="px-3 py-1.5 inline-flex text-[11px] leading-snug font-bold rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm text-center" 
+                                  style="max-width: 220px; white-space: normal;" 
+                                  x-text="p.ultima_interaccion">
+                            </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end items-center space-x-3">
@@ -269,9 +255,9 @@
                                     <table class="min-w-full text-sm">
                                         <thead class="bg-gray-100 text-xs text-gray-500 uppercase">
                                             <tr>
-                                                <th class="px-4 py-3 text-left w-1/3">Artículo</th>
-                                                <th class="px-4 py-3 text-center w-1/4" x-show="!isDireccion  && !isVendedor">
-                                                    <div class="flex items-center justify-center gap-2">
+                                                <th class="px-4 py-3 text-left w-[55%]">Artículo</th>
+                                                <th class="px-4 py-3 text-right w-[25%]" x-show="!isDireccion  && !isVendedor">
+                                                    <div class="flex items-center justify-end gap-2">
                                                         <span>Verificación (Etapas)</span>
                                                         <button @click.stop="guardarVerificacion()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-2 py-1 rounded shadow-sm flex items-center transition" :disabled="guardandoVerificacion" title="Guardar cambios de etapas">
                                                             <i class="ph ph-floppy-disk mr-1" x-show="!guardandoVerificacion"></i>
@@ -280,7 +266,7 @@
                                                         </button>
                                                     </div>
                                                 </th>
-                                                <th class="px-4 py-3 text-left" x-show="!isDireccion ">Observaciones</th>
+                                                <th class="px-4 py-3 text-right w-[20%]" x-show="!isDireccion ">Observaciones</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-100">
@@ -303,12 +289,12 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 align-middle" x-show="!isDireccion">
-                                                        <div class="flex flex-col items-center">
+                                                    <td class="px-4 py-3 align-middle text-right" x-show="!isDireccion">
+                                                        <div class="flex flex-col items-end">
                                                             <div class="mb-2">
                                                                 <span class="text-xs font-bold" :class="getRowProgress(art) === 100 ? 'text-green-600' : 'text-gray-600'" x-text="getRowProgress(art) + '%'"></span>
                                                             </div>
-                                                            <div class="flex justify-center space-x-2">
+                                                            <div class="flex justify-end space-x-2">
                                                             <template x-for="(check, i) in art.checks">
                                                                     <div class="flex flex-col items-center cursor-pointer group" @click.stop="toggleCheck(index, i)" x-show="(i===0 && canSeeProduccion()) || (i===1 && canSeeDV()) || (i===2 && canSeeLogistica())">
                                                                     <div class="w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shadow-sm mb-1"
@@ -322,16 +308,14 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 align-top" x-show="!isDireccion">
-                                                        <div class="space-y-2 w-64">
-                                                            <div class="flex items-center gap-2">
-                                                                <button type="button" @click="verFallasArticulo(art)" class="shrink-0 px-2 py-1.5 bg-gray-600 text-white rounded text-xs font-bold hover:bg-gray-700 flex items-center shadow-sm" title="Ver Historial de Fallas">
-                                                                    <i class="ph ph-list-magnifying-glass mr-1"></i> Ver Fallas
-                                                                </button>
-                                                                    <button type="button" @click="abrirModalFalla({ id: p.id, nombre: p.nombre, disenador: p.disenador }, art)" class="shrink-0 px-2 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 flex items-center shadow-sm">
-                                                                    <i class="ph ph-plus mr-1"></i> Falla
-                                                                </button>
-                                                            </div>
+                                                    <td class="px-4 py-3 align-top text-right" x-show="!isDireccion">
+                                                        <div class="flex justify-end gap-2">
+                                                            <button type="button" @click="verFallasArticulo(art)" class="shrink-0 px-2 py-1.5 bg-gray-600 text-white rounded text-xs font-bold hover:bg-gray-700 flex items-center shadow-sm" title="Ver Historial de Fallas">
+                                                                <i class="ph ph-list-magnifying-glass mr-1"></i> Fallas
+                                                            </button>
+                                                            <button type="button" @click="abrirModalFalla({ id: p.id, nombre: p.nombre, disenador: p.disenador }, art)" class="shrink-0 px-2 py-1.5 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 flex items-center shadow-sm" title="Reportar Falla">
+                                                                <i class="ph ph-plus mr-1"></i> Falla
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
