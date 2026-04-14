@@ -2,6 +2,16 @@
 
 @section('contenido')
 
+@php
+    $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+    $role = strtoupper($userRoleName);
+    $isAdmin = in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION']);
+    $isVendedor = $role === 'VENDEDOR/DISEÑADOR';
+    $isAdminCobranza = in_array($role, ['ADMINISTRACIÓN', 'ADMINISTRACION']);
+    $isDvMkt = in_array($role, ['COORD. DV&MKT']);
+    $isDvSolferino = in_array($role, ['COORD. DV SOLFERINO']);
+@endphp
+
     <style>
         /* Ocultar flechas (spinners) en inputs numéricos */
         input[type=number]::-webkit-inner-spin-button, 
@@ -64,8 +74,38 @@
 
             <template x-if="proyectoSeleccionado">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-800" x-text="proyectoSeleccionado.nombre_proyecto"></h3>
-                    <p class="text-sm text-gray-500 mb-6" x-text="`Cliente: ${proyectoSeleccionado.cliente_nombre}`"></p>
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800" x-text="proyectoSeleccionado.nombre_proyecto"></h3>
+                            <p class="text-sm text-gray-500" x-text="`Cliente: ${proyectoSeleccionado.cliente_nombre}`"></p>
+                        </div>
+                        
+                        <!-- Medidor de Porcentaje Pagado -->
+                        <div class="flex flex-col items-center justify-center w-40">
+                            <div class="relative w-32 h-16">
+                                <svg viewBox="0 0 100 55" class="w-full h-full overflow-visible">
+                                    <defs>
+                                        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#ef4444" />
+                                            <stop offset="50%" stop-color="#eab308" />
+                                            <stop offset="100%" stop-color="#22c55e" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gaugeGradient)" stroke-width="12" stroke-linecap="round" />
+                                    
+                                    <g :style="`transform: rotate(${ (Math.min(1, Math.max(0, proyectoSeleccionado.total_plan > 0 ? (proyectoSeleccionado.total_pagado / proyectoSeleccionado.total_plan) : 0)) * 180) - 90 }deg); transform-origin: 50px 50px; transition: transform 1s ease-out;`">
+                                        <circle cx="50" cy="50" r="6" fill="#374151" />
+                                        <polygon points="46,50 54,50 50,15" fill="#374151" stroke="#374151" stroke-width="1" stroke-linejoin="round" />
+                                        <circle cx="50" cy="50" r="2" fill="#ffffff" />
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="text-center mt-2">
+                                <span class="text-xl font-black text-gray-800 leading-none" x-text="`${(Math.min(100, Math.max(0, proyectoSeleccionado.total_plan > 0 ? (proyectoSeleccionado.total_pagado / proyectoSeleccionado.total_plan * 100) : 0))).toFixed(1)}%`"></span>
+                                <span class="text-[10px] uppercase font-bold text-gray-500 block leading-none mt-1">Pagado</span>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Resumen de Pagos -->
                     <div class="grid grid-cols-4 gap-4 mb-8">
@@ -97,28 +137,31 @@
                                     <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Monto Pagado</th>
                                     <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Pendiente</th>
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Estatus</th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Registrar Abono</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase" x-show="canCobrar(proyectoSeleccionado)">Registrar Abono</th>
+                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase" x-show="canValidar(proyectoSeleccionado)">Validación</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <template x-for="pago in planPagos" :key="pago.id">
-                                    <tr :class="{ 'bg-green-50': pago.estatus === 'pagado' }">
+                                    <tr :class="{ 'bg-green-50': pago.estatus === 'pagado' && pago.validado, 'bg-orange-50': !pago.validado && pago.monto_pagado > 0 }">
                                         <td class="px-4 py-3 text-sm font-bold text-gray-800" x-text="pago.nombre"></td>
                                         <td class="px-4 py-3 text-sm text-right" x-text="money(pago.monto)"></td>
-                                        <td class="px-4 py-3 text-sm text-right font-bold text-green-700" x-text="money(pago.monto_pagado)"></td>
-                                        <td class="px-4 py-3 text-sm text-right font-bold text-red-700" x-text="money(pago.monto - pago.monto_pagado)"></td>
+                                        <td class="px-4 py-3 text-sm text-right font-bold" 
+                                            :class="pago.validado ? 'text-green-700' : (pago.monto_pagado > 0 ? 'text-yellow-600' : 'text-gray-500')" 
+                                            :title="!pago.validado && pago.monto_pagado > 0 ? 'Pago recibido, pendiente de validación' : ''" x-text="money(pago.monto_pagado)"></td>                                        <td class="px-4 py-3 text-sm text-right font-bold text-red-700" x-text="money(pago.monto - pago.monto_pagado)"></td>
                                         <td class="px-4 py-3 text-center">
-                                            <span class="px-2 py-1 text-xs font-bold rounded-full"
+                                            <span class="px-2 py-1 text-xs font-bold rounded-full inline-block text-center"
                                                   :class="{
-                                                      'bg-green-100 text-green-800': pago.estatus === 'pagado',
-                                                      'bg-yellow-100 text-yellow-800': pago.estatus === 'parcial',
-                                                      'bg-red-100 text-red-800': pago.estatus === 'pendiente'
+                                                      'bg-green-100 text-green-800': pago.estatus === 'pagado' && pago.validado,
+                                                      'bg-orange-100 text-orange-800': !pago.validado && pago.monto_pagado > 0,
+                                                      'bg-yellow-100 text-yellow-800': pago.estatus === 'parcial' && pago.validado,
+                                                      'bg-red-100 text-red-800': pago.estatus === 'pendiente' && pago.monto_pagado == 0
                                                   }"
-                                                  x-text="pago.estatus">
+                                                  x-text="(!pago.validado && pago.monto_pagado > 0) ? 'Validación pendiente' : pago.estatus.charAt(0).toUpperCase() + pago.estatus.slice(1)">
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <form @submit.prevent="registrarAbono(pago)" x-show="pago.estatus !== 'pagado'">
+                                        <td class="px-4 py-3" x-show="canCobrar(proyectoSeleccionado)">
+                                            <form @submit.prevent="registrarAbono(pago)" x-show="pago.estatus !== 'pagado' && !pago.validado">
                                                 <div class="flex items-center gap-2">
                                                     <div class="relative">
                                                         <span class="absolute left-2 top-1.5 text-gray-500 text-xs">$</span>
@@ -129,6 +172,14 @@
                                                     </button>
                                                 </div>
                                             </form>
+                                        </td>
+                                        <td class="px-4 py-3 text-center" x-show="canValidar(proyectoSeleccionado)">
+                                            <button type="button" @click="validarPago(pago)" x-show="pago.monto_pagado > 0 && !pago.validado" class="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 shadow-sm inline-flex items-center" title="Validar Pago">
+                                                <i class="ph ph-check-circle mr-1"></i> Validar
+                                            </button>
+                                            <span x-show="pago.validado" class="text-green-600 font-bold text-xs inline-flex items-center">
+                                                <i class="ph ph-shield-check mr-1 text-lg"></i> Validado
+                                            </span>
                                         </td>
                                     </tr>
                                 </template>
@@ -149,6 +200,43 @@ function cobranzaApp() {
         proyectoSeleccionado: null,
         planPagos: [],
         cargando: false,
+        isAdmin: @json($isAdmin),
+        isVendedor: @json($isVendedor),
+        isAdminCobranza: @json($isAdminCobranza),
+        isDvMkt: @json($isDvMkt),
+        isDvSolferino: @json($isDvSolferino),
+
+        canCobrar(proyecto) {
+            if (!proyecto) return false;
+            let emp = (proyecto.empresa_nombre || proyecto.nombre_proyecto || '').toLowerCase();
+            let isCT = emp.includes('casa tapier') || emp.startsWith('ct-');
+            let isSH = emp.includes('solferino') || emp.startsWith('sh-');
+            
+            if (this.isAdmin) return true;
+            
+            if (isCT) {
+                return this.isVendedor || this.isAdminCobranza || this.isDvMkt;
+            } else if (isSH) {
+                return this.isDvMkt;
+            }
+            return false;
+        },
+        
+        canValidar(proyecto) {
+            if (!proyecto) return false;
+            let emp = (proyecto.empresa_nombre || proyecto.nombre_proyecto || '').toLowerCase();
+            let isCT = emp.includes('casa tapier') || emp.startsWith('ct-');
+            let isSH = emp.includes('solferino') || emp.startsWith('sh-');
+            
+            if (this.isAdmin) return true;
+            
+            if (isCT) {
+                return this.isAdminCobranza || this.isDvMkt;
+            } else if (isSH) {
+                return this.isDvSolferino;
+            }
+            return false;
+        },
 
         get proyectosFiltrados() {
             if (this.filtro === '') return this.proyectos;
@@ -175,6 +263,7 @@ function cobranzaApp() {
                 if (!response.ok) throw new Error('Error de red');
                 let plan = await response.json();
                 this.planPagos = plan.map(p => ({...p, abono: ''}));
+                this.actualizarResumenProyecto();
             } catch (error) {
                 console.error('Error al cargar plan de pagos:', error);
                 alert('No se pudo cargar el plan de pagos.');
@@ -186,6 +275,20 @@ function cobranzaApp() {
         async registrarAbono(pago) {
             if (!pago.abono || parseFloat(pago.abono) <= 0) {
                 alert('Por favor, ingrese un monto de abono válido.'); return;
+            }
+
+            const abono = parseFloat(pago.abono);
+            const saldoPendiente = parseFloat(this.proyectoSeleccionado.saldo_pendiente);
+
+            if (abono > saldoPendiente) {
+                const saldoFavor = abono - saldoPendiente;
+                if (!confirm(`Advertencia: Revisa los campos de Cobranza para asegurarte que tu cliente tiene saldo a favor si es que la cantidad registrada tendra saldo a favor por si existe algun error.\n\nMonto ingresado: ${this.money(abono)}\nSaldo a favor resultante: ${this.money(saldoFavor)}\n\n¿Desea continuar?`)) {
+                    return;
+                }
+            } else {
+                if (!confirm(`¿Está seguro de que desea registrar un abono por ${this.money(abono)}?`)) {
+                    return;
+                }
             }
 
             try {
@@ -211,16 +314,40 @@ function cobranzaApp() {
             }
         },
 
+        async validarPago(pago) {
+            if (!confirm('¿Seguro que desea validar este pago? Esta acción no se puede deshacer.')) return;
+
+            try {
+                const response = await fetch('{{ route("registrarPago") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: JSON.stringify({ validar_pago: true, pago_id: pago.id })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    this.planPagos = result.plan.map(p => ({...p, abono: ''}));
+                    this.actualizarResumenProyecto();
+                } else {
+                    alert('Error: ' + (result.message || 'Ocurrió un error.'));
+                }
+            } catch (error) {
+                console.error('Error al validar pago:', error);
+                alert('Error de conexión al validar el pago.');
+            }
+        },
+
         actualizarResumenProyecto() {
-            const totalPagado = this.planPagos.reduce((sum, p) => sum + parseFloat(p.monto_pagado), 0);
+            const totalPagado = this.planPagos.reduce((sum, p) => sum + (p.validado ? parseFloat(p.monto_pagado) : 0), 0);         
             const totalPlan = this.planPagos.reduce((sum, p) => sum + parseFloat(p.monto), 0);
             
             this.proyectoSeleccionado.total_pagado = totalPagado;
+            this.proyectoSeleccionado.total_plan = totalPlan;
             this.proyectoSeleccionado.saldo_pendiente = totalPlan - totalPagado;
 
             const index = this.proyectos.findIndex(p => p.proyecto_id === this.proyectoSeleccionado.proyecto_id);
             if (index !== -1) {
                 this.proyectos[index].total_pagado = totalPagado;
+                this.proyectos[index].total_plan = totalPlan;
                 this.proyectos[index].saldo_pendiente = totalPlan - totalPagado;
                 this.proyectos[index].saldo_afavor = this.proyectoSeleccionado.saldo_afavor;
             }

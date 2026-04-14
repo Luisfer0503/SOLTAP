@@ -28,7 +28,7 @@
                             </div>
                         </div>
                         <div class="p-6">
-                            <form @submit.prevent="guardarCostos(index)">
+                            <form @submit.prevent="guardarCostos(falla)">
                                 <table class="min-w-full">
                                     <thead class="text-xs text-gray-500 uppercase">
                                         <tr>
@@ -58,7 +58,7 @@
                                     </tbody>
                                 </table>
                                 <div class="flex justify-between items-center mt-4">
-                                    <button type="button" @click="agregarMaterial(index)" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition flex items-center text-sm">
+                                    <button type="button" @click="agregarMaterial(falla)" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition flex items-center text-sm">
                                         <i class="ph ph-plus mr-2"></i> Agregar Material
                                     </button>
                                     <button type="submit" class="px-5 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-md flex items-center" :disabled="falla.guardando">
@@ -79,18 +79,17 @@
 <script>
     function costosFallasApp() {
         return {
-            fallas: @json($fallas).map(f => ({...f, guardando: false})),
+            fallas: Object.values(@json($fallas) || {}).map(f => ({...f, guardando: false})),
 
-            agregarMaterial(index) {
-                this.fallas[index].materiales_pendientes.push({
+            agregarMaterial(falla) {
+                falla.materiales_pendientes.push({
                     material: '',
                     costo: '',
                     isNew: true
                 });
             },
             
-            async guardarCostos(index) {
-                const falla = this.fallas[index];
+            async guardarCostos(falla) {
                 falla.guardando = true;
 
                 const payload = {
@@ -109,7 +108,7 @@
                     if (response.ok && result.success) {
                         alert(result.message);
                         // Remove the item from the list as it's now costed
-                        this.fallas.splice(index, 1);
+                        this.fallas = this.fallas.filter(f => f.falla_id !== falla.falla_id);
                     } else {
                         alert('Error: ' + (result.message || 'No se pudieron guardar los costos.'));
                     }

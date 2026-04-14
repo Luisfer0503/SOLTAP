@@ -38,7 +38,7 @@
                     $canAccessERP = in_array($role, ['ADMIN', 'VENDEDOR/DISEÑADOR']);
                     $canAccessSeguimiento =  $canAccessCRM ||$canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan) || in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']) ;
                     $canAccessAsignacionPrecios = $canAccessERP || in_array($role, ['COORD. DV SOLFERINO', 'COORD. DV&MKT', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
-                    $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION']);
+                    $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION', 'VENDEDOR/DISEÑADOR']);
                     $canAccessLogistica = in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'VENDEDOR/DISEÑADOR']);
                     $canAccessEscaner = in_array($role, ['ADMIN']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan);
                     
@@ -145,7 +145,16 @@
             <a href="{{ route('costosFallas') }}" class="{{ request()->routeIs('costosFallas') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-currency-dollar text-lg mr-3"></i> Costos de Fallas
             </a>
+            <a href="{{ route('terminos.index') }}" class="{{ request()->routeIs('terminos.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-file-text text-lg mr-3"></i> Términos y Condiciones Casa Tapier
+            </a>
+
+            <a href="{{ route('terminos_solferino.index') }}" class="{{ request()->routeIs('terminos_solferino.index') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-file-text text-lg mr-3"></i> Términos y Condiciones Solferino
+            </a>
             @endif
+            
+            
 
             <p class="px-6 text-xs font-bold text-slate-500 uppercase tracking-wider mt-6 mb-2">Cuenta</p>
             <a href="#" onclick="event.preventDefault(); if(confirm('¿Estás seguro de que deseas salir del sistema?')) { document.getElementById('logout-form').submit(); }" class="flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition">

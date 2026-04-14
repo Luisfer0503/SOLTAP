@@ -422,8 +422,16 @@ class ERPController extends Controller
                 ]);
             }
 
-            // 3. Generar PDF usando la vista
-            $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId'));
+            // 3. Obtener Términos y Condiciones
+            $nombreProyecto = mb_strtoupper((string)($proyecto['nombre_proyecto'] ?? ''));
+            if (str_starts_with($nombreProyecto, 'SH-')) {
+                $terminos = DB::table('terminos_solferino')->orderBy('termino_id', 'asc')->get();
+            } else {
+                $terminos = DB::table('terminos')->orderBy('termino_id', 'asc')->get();
+            }
+
+            // 4. Generar PDF usando la vista
+            $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'terminos'));
             
             // Retornar el PDF como descarga
             return $pdf->download('Cotizacion_' . $proyecto['nombre_proyecto'] . '.pdf');
@@ -438,6 +446,11 @@ class ERPController extends Controller
             $proyecto_id = $request->input('proyecto_id');
             $pagos = $request->input('pagos'); // Recibir plan de pagos
             $rfc = mb_strtoupper((string) $request->input('rfc'));
+            
+            if (empty(trim($rfc))) {
+                $rfc = 'XAXX010101000';
+            }
+            
             $condiciones = mb_strtoupper((string) $request->input('condiciones'));
             
             // Guardar/Actualizar RFC y Condiciones en proyecto_detalles
@@ -582,6 +595,13 @@ class ERPController extends Controller
             $proyecto_id = $request->input('proyecto_id');
             $articulos_ids = $request->input('articulos_ids');
 
+            // Verificar y crear columna de folio de producción si no existe
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_detalles', 'folio_produccion')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_detalles', function ($table) {
+                    $table->integer('folio_produccion')->nullable()->unique();
+                });
+            }
+
             // 1. Obtener datos del proyecto
             $proyectoData = DB::table('Proyectos')
                 ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
@@ -604,7 +624,8 @@ class ERPController extends Controller
                     DB::raw("CONCAT_WS(' ', vendedores.nombre, vendedores.apellido_paterno) as vendedor_nombre"),
                     DB::raw("COALESCE(P1.municipio, P2.municipio) as municipio"),
                     DB::raw("COALESCE(E1.nombre, E2.nombre) as estado"),
-                    'tiempo_disenno.nombre as tiempo_entrega'
+                    'tiempo_disenno.nombre as tiempo_entrega',
+                    'proyecto_detalles.folio_produccion'
                 )
                 ->where('Proyectos.proyecto_id', $proyecto_id)
                 ->first();
@@ -614,6 +635,19 @@ class ERPController extends Controller
             }
             
             $proyecto = (array)$proyectoData;
+
+            // Asignar y generar el folio si no existe
+            if (empty($proyecto['folio_produccion'])) {
+                $maxFolio = DB::table('proyecto_detalles')->max('folio_produccion');
+                $nuevoFolio = ($maxFolio ? $maxFolio : 0) + 1;
+                
+                DB::table('proyecto_detalles')->updateOrInsert(
+                    ['detalles_id' => $proyecto_id],
+                    ['folio_produccion' => $nuevoFolio]
+                );
+                
+                $proyecto['folio_produccion'] = $nuevoFolio;
+            }
 
             if (!empty($request->input('tiempo_entrega'))) {
                 $proyecto['tiempo_entrega'] = $request->input('tiempo_entrega');
@@ -856,9 +890,13 @@ class ERPController extends Controller
         $query = DB::table('proyecto_interacciones')->where('proyecto_id', $proyecto_id);
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_interacciones', 'user_id')) {
-            $query->leftJoin('users', 'proyecto_interacciones.user_id', '=', 'users.id')->select('proyecto_interacciones.*', 'users.name as usuario_nombre');
+            $query->leftJoin('users', 'proyecto_interacciones.user_id', '=', 'users.id')
+                  ->leftJoin('roles', 'users.role', '=', 'roles.id')
+                  ->select('proyecto_interacciones.*', 'users.name as usuario_nombre', 'roles.nombre as rol_nombre');
         } elseif (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_interacciones', 'usuario_id')) {
-            $query->leftJoin('users', 'proyecto_interacciones.usuario_id', '=', 'users.id')->select('proyecto_interacciones.*', 'users.name as usuario_nombre');
+            $query->leftJoin('users', 'proyecto_interacciones.usuario_id', '=', 'users.id')
+                  ->leftJoin('roles', 'users.role', '=', 'roles.id')
+                  ->select('proyecto_interacciones.*', 'users.name as usuario_nombre', 'roles.nombre as rol_nombre');
         } else {
             $query->select('proyecto_interacciones.*');
         }
@@ -883,8 +921,14 @@ class ERPController extends Controller
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $role = strtoupper($userRoleName);
-        if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION'])) {
+        if (!in_array($role, ['ADMIN', 'COORD. DV SOLFERINO', 'COORD. DV&MKT', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION', 'VENDEDOR/DISEÑADOR'])) {
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a cobranza.');
+        }
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'validado')) {
+            \Illuminate\Support\Facades\Schema::table('plan_pagos', function ($table) {
+                $table->boolean('validado')->default(0);
+            });
         }
 
         // 1. Find the latest cotizacion_id for each project that has a payment plan.
@@ -897,13 +941,13 @@ class ERPController extends Controller
         $paymentSummaries = DB::table('plan_pagos')
             ->select(
                 'cotizacion_id',
-                DB::raw('SUM(monto_pagado) as total_pagado'),
+                DB::raw('SUM(CASE WHEN validado = 1 THEN monto_pagado ELSE 0 END) as total_pagado'),
                 DB::raw('SUM(monto) as total_plan')
             )
             ->groupBy('cotizacion_id');
 
         // 3. Now, get the full project details using these cotizacion_ids and join summaries.
-        $proyectos = DB::table('Proyectos as pr')
+        $query = DB::table('Proyectos as pr')
             ->joinSub($latestCotizacionesConPlan, 'latest_c', function ($join) {
                 $join->on('pr.proyecto_id', '=', 'latest_c.proyecto_id');
             })
@@ -911,12 +955,15 @@ class ERPController extends Controller
             ->joinSub($paymentSummaries, 'summaries', function ($join) {
                 $join->on('cotizaciones.cotizacion_id', '=', 'summaries.cotizacion_id');
             })
+            ->leftJoin('proyecto_detalles as pd', 'pr.proyecto_id', '=', 'pd.detalles_id')
+            ->leftJoin('empresas as emp', 'pd.empresa_id', '=', 'emp.empresa_id')
             ->leftJoin('Clientes', 'pr.cliente_id', '=', 'Clientes.cliente_id')
             ->leftJoin('Prospectos as P1', 'pr.prospecto_id', '=', 'P1.prospecto_id')
             ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
             ->select(
                 'pr.proyecto_id',
                 'pr.nombre as nombre_proyecto',
+                'emp.nombre as empresa_nombre',
                 DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
                 'cotizaciones.total as total_cotizacion',
                 'cotizaciones.cotizacion_id',
@@ -924,8 +971,21 @@ class ERPController extends Controller
                 'summaries.total_pagado',
                 'summaries.total_plan'
             )
-            ->orderBy('pr.proyecto_id', 'desc')
-            ->get();
+            ->orderBy('pr.proyecto_id', 'desc');
+
+        if (in_array($role, ['VENDEDOR/DISEÑADOR', 'ADMINISTRACIÓN', 'ADMINISTRACION'])) {
+            $query->where(function($q) {
+                $q->where('emp.nombre', 'LIKE', '%Casa Tapier%')
+                  ->orWhere('pr.nombre', 'LIKE', 'CT-%');
+            });
+        } elseif ($role === 'COORD. DV SOLFERINO') {
+            $query->where(function($q) {
+                $q->where('emp.nombre', 'LIKE', '%Solferino%')
+                  ->orWhere('pr.nombre', 'LIKE', 'SH-%');
+            });
+        }
+
+        $proyectos = $query->get();
 
         // 4. Calculate the pending balance
         foreach ($proyectos as $proyecto) {
@@ -954,6 +1014,40 @@ class ERPController extends Controller
 
     public function registrarPago(Request $request)
     {
+        if ($request->has('validar_pago') && $request->validar_pago == true) {
+            $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+            $role = strtoupper($userRoleName);
+
+            if (!in_array($role, ['ADMIN', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'DIRECCIÓN', 'DIRECCION'])) {
+                return response()->json(['success' => false, 'message' => 'No tienes permisos para validar pagos.'], 403);
+            }
+
+            DB::table('plan_pagos')->where('id', $request->pago_id)->update(['validado' => 1]);
+            
+            $pagoInicial = DB::table('plan_pagos')->where('id', $request->pago_id)->first();
+            $cotizacion = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones') && isset($cotizacion->proyecto_id)) {
+                $interaccion = DB::table('interacciones')->where('nombre', 'VALIDACIÓN DE PAGO')->first();
+                $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'VALIDACIÓN DE PAGO') : 'VALIDACIÓN DE PAGO';
+
+                DB::table('proyecto_interacciones')->insert([
+                    'proyecto_id' => $cotizacion->proyecto_id,
+                    'interaccion_id' => $interaccionId,
+                    'user_id' => auth()->id(),
+                    'comentarios' => 'Se validó el pago para el concepto: ' . $pagoInicial->nombre . '.',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            $planActualizado = DB::table('plan_pagos')
+                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
+                ->orderBy('numero_pago', 'asc')
+                ->get();
+            
+            return response()->json(['success' => true, 'message' => 'Pago validado correctamente.', 'plan' => $planActualizado]);
+        }
+
         $validator = Validator::make($request->all(), [
             'pago_id' => 'required|exists:plan_pagos,id',
             'monto_abono' => 'required|numeric|min:0.01',
@@ -1021,6 +1115,7 @@ class ERPController extends Controller
                     ->update([
                         'monto_pagado' => $nuevoPagado,
                         'estatus' => $esPagadoTotalmente ? 'pagado' : 'parcial',
+                        'validado' => 0,
                         'fecha_pago_real' => $fechaPago,
                         'updated_at' => now(),
                     ]);
@@ -2066,9 +2161,13 @@ class ERPController extends Controller
         $query = DB::table('proyecto_interacciones')->where('proyecto_id', $proyecto_id);
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_interacciones', 'user_id')) {
-            $query->leftJoin('users', 'proyecto_interacciones.user_id', '=', 'users.id')->select('proyecto_interacciones.*', 'users.name as usuario_nombre');
+            $query->leftJoin('users', 'proyecto_interacciones.user_id', '=', 'users.id')
+                  ->leftJoin('roles', 'users.role', '=', 'roles.id')
+                  ->select('proyecto_interacciones.*', 'users.name as usuario_nombre', 'roles.nombre as rol_nombre');
         } elseif (\Illuminate\Support\Facades\Schema::hasColumn('proyecto_interacciones', 'usuario_id')) {
-            $query->leftJoin('users', 'proyecto_interacciones.usuario_id', '=', 'users.id')->select('proyecto_interacciones.*', 'users.name as usuario_nombre');
+            $query->leftJoin('users', 'proyecto_interacciones.usuario_id', '=', 'users.id')
+                  ->leftJoin('roles', 'users.role', '=', 'roles.id')
+                  ->select('proyecto_interacciones.*', 'users.name as usuario_nombre', 'roles.nombre as rol_nombre');
         } else {
             $query->select('proyecto_interacciones.*');
         }
@@ -2121,7 +2220,7 @@ class ERPController extends Controller
 
             $falla->materiales_pendientes = array_values($pendientes); // re-index
             return $falla;
-        })->filter(); // remove nulls
+        })->filter()->values(); // remove nulls and re-index
 
         return view('ERP.costosFallas', ['fallas' => $fallasPendientes]);
     }
@@ -2189,6 +2288,73 @@ class ERPController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editarTerminos()
+    {
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        if (!in_array(strtoupper($userRoleName), ['ADMIN'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
+        $terminos = DB::table('terminos')->orderBy('termino_id', 'asc')->get();
+        return view('ERP.terminos', compact('terminos'));
+    }
+
+    public function guardarTerminos(Request $request)
+    {
+        try {
+            $terminos = $request->input('terminos', []);
+            
+            foreach ($terminos as $term) {
+                DB::table('terminos')
+                    ->where('termino_id', $term['termino_id'])
+                    ->update(['contenido' => $term['contenido']]);
+            }
+            return response()->json(['success' => true, 'message' => 'Términos actualizados.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function editarTerminosSolferino()
+    {
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        if (!in_array(strtoupper($userRoleName), ['ADMIN'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
+        $terminos = DB::table('terminos_solferino')->orderBy('termino_id', 'asc')->get();
+        return view('ERP.terminos_solferino', compact('terminos'));
+    }
+
+    public function guardarTerminosSolferino(Request $request)
+    {
+        try {
+            $terminos = $request->input('terminos', []);
+            
+            foreach ($terminos as $term) {
+                DB::table('terminos_solferino')
+                    ->where('termino_id', $term['termino_id'])
+                    ->update(['contenido' => $term['contenido']]);
+                if (isset($term['termino_id']) && $term['termino_id']) {
+                    DB::table('terminos_solferino')
+                        ->where('termino_id', $term['termino_id'])
+                        ->update([
+                            'nombre' => mb_strtoupper((string) $term['nombre']),
+                            'contenido' => $term['contenido']
+                        ]);
+                } else {
+                    DB::table('terminos_solferino')->insert([
+                        'nombre' => mb_strtoupper((string) $term['nombre']),
+                        'contenido' => $term['contenido']
+                    ]);
+                }
+            }
+            return response()->json(['success' => true, 'message' => 'Términos actualizados.']);
+        } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

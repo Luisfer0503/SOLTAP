@@ -8,7 +8,7 @@
     <div x-data="clientesModule()" x-cloak>
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <input x-model="searchTerm" type="text" placeholder="Buscar por ID o nombre..." class="rounded-lg border px-3 py-2 w-80" />
+                <input x-model="searchTerm" type="text" placeholder="Buscar por ID o nombre..." class="rounded-lg border px-3 py-2 w-80 uppercase" />
             </div>
             <div class="text-sm text-gray-500">Total: <span x-text="clients.length"></span></div>
         </div>
@@ -82,17 +82,17 @@
                     </div>
                     <div>
                         <label class="block text-xs text-gray-600">Municipio</label>
-                        <input x-model="municipioEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2">
+                        <input x-model="municipioEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2 uppercase">
                     </div>
                     <div>
                         <label class="block text-xs text-gray-600">Calle</label>
-                        <input x-model="calleEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2">
+                        <input x-model="calleEntrega" @input="generarMapsEntrega()" class="w-full rounded border px-2 py-2 uppercase">
                     </div>
                 </div>
 
                 <div class="mt-4">
                     <label class="block text-xs text-gray-600">Descripción</label>
-                    <textarea x-model="descripcion" class="w-full rounded border px-2 py-2" rows="3"></textarea>
+                    <textarea x-model="descripcion" class="w-full rounded border px-2 py-2 uppercase" rows="3"></textarea>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -111,7 +111,7 @@
                     <label class="block text-xs text-gray-600">Nombre del Proyecto</label>
                     <div class="flex gap-2 mt-1">
                         <input type="text" readonly x-model="prefijoProyecto" class="w-40 rounded border px-2 py-2 bg-gray-100">
-                        <input type="text" x-model="partePersonalizada" @input="actualizarNombreCompleto()" placeholder="Parte personalizada..." class="flex-1 rounded border px-2 py-2">
+                    <input type="text" x-model="partePersonalizada" @input="actualizarNombreCompleto()" placeholder="Parte personalizada..." class="flex-1 rounded border px-2 py-2 uppercase">
                     </div>
                     <input type="hidden" x-model="nombreProyectoCompleto">
                 </div>

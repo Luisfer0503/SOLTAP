@@ -108,18 +108,18 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                             <input type="text" name="nombre" value="{{ old('nombre') }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
+                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition uppercase">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
                             <input type="text" name="apellido_paterno" value="{{ old('apellido_paterno') }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
+                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition uppercase">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
                             <input type="text" name="apellido_materno" value="{{ old('apellido_materno') }}" required 
-                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition">
+                                class="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-blue-500 transition uppercase">
                         </div>
 
                         <div>

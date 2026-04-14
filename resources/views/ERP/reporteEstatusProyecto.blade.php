@@ -107,16 +107,19 @@
 
                     <div x-show="!cargandoHistorial && historial.length > 0" class="space-y-4">
                         <template x-for="item in historial" :key="item.id">
-                            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 relative overflow-hidden">
-                                <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
+                            <div class="p-4 rounded-lg shadow-sm border relative overflow-hidden" :class="getClassesPorRol(item.rol_nombre)">
+                                <div class="absolute left-0 top-0 bottom-0 w-1 bg-black opacity-20"></div>
                                 <div class="flex justify-between items-start mb-2 pl-2">
                                     <div>
-                                        <span class="font-bold text-gray-800 text-md" x-text="item.interaccion_nombre"></span>
-                                        <span class="text-xs text-gray-500 ml-2 font-medium bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full" x-show="item.usuario_nombre"><i class="ph ph-user mr-1"></i><span x-text="item.usuario_nombre"></span></span>
+                                        <span class="font-bold text-md" :class="getTextDarkPorRol(item.rol_nombre)" x-text="item.interaccion_nombre"></span>
+                                        <span class="text-xs ml-2 font-medium bg-black bg-opacity-10 border border-black border-opacity-10 px-2 py-0.5 rounded-full inline-flex items-center" x-show="item.usuario_nombre" :class="getTextDarkPorRol(item.rol_nombre)">
+                                            <i class="ph ph-user mr-1"></i>
+                                            <span x-text="item.usuario_nombre + (item.rol_nombre ? ' (' + item.rol_nombre + ')' : '')"></span>
+                                        </span>
                                     </div>
-                                    <span class="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded" x-text="item.fecha_formateada"></span>
+                                    <span class="text-xs font-mono bg-black bg-opacity-10 px-2 py-1 rounded" :class="getTextDarkPorRol(item.rol_nombre)" x-text="item.fecha_formateada"></span>
                                 </div>
-                                <p class="text-sm text-gray-600 pl-2 mt-2" x-show="item.comentarios" x-text="item.comentarios"></p>
+                                <p class="text-sm pl-2 mt-2" x-show="item.comentarios" :class="getTextMutedPorRol(item.rol_nombre)" x-text="item.comentarios"></p>
                             </div>
                         </template>
                     </div>
@@ -138,6 +141,46 @@
             cargandoHistorial: false,
             guardando: false,
             form: { interaccion_id: '', comentarios: '' },
+            
+            getClassesPorRol(rol) {
+                if (!rol) return 'bg-white border-gray-200';
+                rol = rol.toUpperCase();
+                
+                if (['DIRECCIÓN', 'DIRECCION'].includes(rol)) return 'bg-[#ffffff] border-gray-200';
+                if (['ADMIN'].includes(rol)) return 'bg-[#f7afc2] border-[#f7afc2]';
+                if (['ADMINISTRACIÓN', 'ADMINISTRACION'].includes(rol)) return 'bg-[#b86b4b] border-[#b86b4b]';
+                if (['COORD. DV SOLFERINO', 'COORD. DV&MKT'].includes(rol)) return 'bg-[#39200f] border-[#39200f]';
+                if (['VENDEDOR/DISEÑADOR'].includes(rol)) return 'bg-[#e0d4c4] border-[#e0d4c4]';
+                if (['SUP. BARNIZ Y LIJADO', 'SUP. CARPINTERÍA', 'SUP. CARPINTERIA'].includes(rol)) return 'bg-[#9c9c9c] border-[#9c9c9c]';
+                if (['COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS'].includes(rol)) return 'bg-[#000000] border-[#000000]';
+                if (['COORD. LOGÍSTICA', 'COORD. LOGISTICA'].includes(rol)) return 'bg-[#3f7005] border-[#3f7005]';
+                if (['LOGÍSTICA', 'LOGISTICA'].includes(rol)) return 'bg-[#81b60a] border-[#81b60a]';
+                if (['COORD. INSTALACIÓN', 'COORD. INSTALACION'].includes(rol)) return 'bg-[#cc620b] border-[#cc620b]';
+                
+                // Otros roles que no fueron modificados
+                if (['PRODUCCIÓN', 'PRODUCCION'].includes(rol)) return 'bg-blue-100 border-blue-300';
+                if (['ALMACÉN', 'ALMACEN'].includes(rol)) return 'bg-purple-500 border-purple-700';
+                
+                return 'bg-white border-gray-200';
+            },
+
+            getTextDarkPorRol(rol) {
+                if (!rol) return 'text-gray-800';
+                rol = rol.toUpperCase();
+                if (['COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS', 'COORD. INSTALACIÓN', 'COORD. INSTALACION', 'COORD. DV SOLFERINO', 'COORD. DV&MKT', 'ALMACÉN', 'ALMACEN', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA'].includes(rol)) {
+                    return 'text-white';
+                }
+                return 'text-gray-800';
+            },
+
+            getTextMutedPorRol(rol) {
+                if (!rol) return 'text-gray-600';
+                rol = rol.toUpperCase();
+                if (['COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS', 'COORD. INSTALACIÓN', 'COORD. INSTALACION', 'COORD. DV SOLFERINO', 'COORD. DV&MKT', 'ALMACÉN', 'ALMACEN', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA'].includes(rol)) {
+                    return 'text-gray-100';
+                }
+                return 'text-gray-600';
+            },
 
             get proyectosFiltrados() {
                 if (this.filtro === '') return this.proyectos;

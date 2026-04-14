@@ -56,6 +56,10 @@ body{
     vertical-align:top;
 }
 
+.tabla td table td {
+    border: none;
+}
+
 /* EVITAR CORTES EN PDF */
 table { page-break-inside:auto; }
 tr { page-break-inside:avoid; }
@@ -102,7 +106,7 @@ tr { page-break-inside:avoid; }
     <img src="{{ public_path('archivos/logo.png') }}" style="width:180px;">
 </td>
 <td width="40%" style="vertical-align: top;">
-            <div style="width: 100%; border: 1px solid #ccc;">
+            <div style="width: 100%; border: 1px solid #ccc; margin-bottom: 5px;">
                 <!-- REMISION LABEL (NEGRO) -->
                 <div style="background-color: #333; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
                   Asesor/Diseñador
@@ -111,9 +115,13 @@ tr { page-break-inside:avoid; }
                 <div style="background-color: #fff; color: #000; text-align: center; font-weight: bold; padding: 5px; font-size: 12px;">
                      {{ $proyecto['vendedor_nombre'] ?? 'N/A' }}
                 </div>
-                <!-- NUMERO CLIENTE (NEGRO) -->
+            </div>
+            <div style="width: 100%; border: 1px solid #ccc;">
                 <div style="background-color: #333; color: #fff; text-align: center; font-weight: bold; padding: 2px; font-size: 10px;">
-                &nbsp;
+                  Folio de Producción
+                </div>
+                <div style="background-color: #fff; color: #e60000; text-align: center; font-weight: bold; padding: 5px; font-size: 12px;">
+                     OP-{{ str_pad($proyecto['folio_produccion'] ?? 0, 4, '0', STR_PAD_LEFT) }}
                 </div>
             </div>
 </tr>
@@ -178,29 +186,29 @@ tr { page-break-inside:avoid; }
 </span>
 
 <!-- MEDIDAS -->
-<table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 2px; margin-bottom: 2px; border-collapse: collapse;">
+<table style="width: 100%; font-size: 8px; margin-top: 2px; margin-bottom: 2px; border-collapse: collapse;">
    <tr style="text-align: center;">
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">L/A</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">L/A</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    <td style="padding: 2px; font-weight: bold;">x</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">ALT</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">ALT</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    <td style="padding: 2px; font-weight: bold;">x</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">PRO</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">PRO</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; width: 10%;"></td>
+    <td style="padding: 2px; width: 10%;"></td>
     
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['peso'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['cubicaje'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['peso'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
     <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 1, '.', '') }}</td>
 </tr>
 </table>

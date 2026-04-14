@@ -692,7 +692,19 @@
                 }
                 
                 this.listaPagos = [];
-                const porcentajeDefault = 100 / n;
+                
+                // Definir porcentajes por defecto según la cantidad de pagos solicitada
+                let porcentajes = [];
+                if (n === 1) {
+                    porcentajes = [100];
+                } else if (n === 2) {
+                    porcentajes = [80, 20];
+                } else if (n === 3) {
+                    porcentajes = [50, 40, 10];
+                } else {
+                    const pct = parseFloat((100 / n).toFixed(2));
+                    porcentajes = Array(n).fill(pct);
+                }
                 
                 for(let i=0; i<n; i++) {
                     let nombre = '';
@@ -703,7 +715,7 @@
                     
                     this.listaPagos.push({
                         nombre: nombre,
-                        porcentaje: parseFloat(porcentajeDefault.toFixed(2)),
+                        porcentaje: porcentajes[i],
                         monto: 0
                     });
                 }

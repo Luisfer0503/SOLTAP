@@ -68,15 +68,15 @@
                         <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                                <input type="text" name="Nombre" value="{{ old('Nombre', $prospecto->nombre) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" name="Nombre" value="{{ old('Nombre', $prospecto->nombre) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
-                                <input type="text" name="ApellidoPat" value="{{ old('ApellidoPat', $prospecto->apellido_paterno) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" name="ApellidoPat" value="{{ old('ApellidoPat', $prospecto->apellido_paterno) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
-                                <input type="text" name="ApellidoMat" value="{{ old('ApellidoMat', $prospecto->apellido_materno) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" name="ApellidoMat" value="{{ old('ApellidoMat', $prospecto->apellido_materno) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
@@ -93,7 +93,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Ocupación</label>
-                            <input type="text" name="Ocupacion" value="{{ old('Ocupacion', $prospecto->ocupacion) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. Arquitecto, Empresario...">
+                            <input type="text" name="Ocupacion" value="{{ old('Ocupacion', $prospecto->ocupacion) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase" placeholder="Ej. Arquitecto, Empresario...">
                         </div>
                         </div>
                     </div>
@@ -141,7 +141,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Municipio</label>
-                                <input type="text" name="Municipio" x-model="municipio" @change="generarMapsUrl()" value="{{ old('Municipio', $prospecto->municipio) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
+                                <input type="text" name="Municipio" x-model="municipio" @change="generarMapsUrl()" value="{{ old('Municipio', $prospecto->municipio) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
@@ -149,7 +149,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Calle</label>
-                                <input type="text" name="Calle" x-model="calle" @change="generarMapsUrl()" value="{{ old('Calle', $prospecto->calle) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
+                                <input type="text" name="Calle" x-model="calle" @change="generarMapsUrl()" value="{{ old('Calle', $prospecto->calle) }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase">
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Google Maps (URL o Coordenadas)</label>
@@ -177,7 +177,7 @@
                             <!-- Campo de dirección de entrega (solo si es diferente) -->
                             <div class="md:col-span-3" x-show="direccionDiferente === 'si'" x-transition>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Dirección de Entrega</label>
-                                <input type="text" name="DireccionEntrega" x-model="direccionEntrega" value="{{ old('DireccionEntrega', $prospecto->direccion_entrega) }}" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Ingresa la dirección de entrega diferente...">
+                            <input type="text" name="DireccionEntrega" x-model="direccionEntrega" value="{{ old('DireccionEntrega', $prospecto->direccion_entrega) }}" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase" placeholder="Ingresa la dirección de entrega diferente...">
                                 <p class="text-xs text-gray-500 mt-1">Completa este campo si la dirección de entrega es distinta a la ubicación del prospecto.</p>
                             </div>
                         </div>
@@ -204,7 +204,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proyecto</label>
                                 <div class="flex gap-2 items-center">
                                     <input type="text" x-model="prefijoProyecto" readonly class="flex-shrink-0 rounded-lg border-gray-300 bg-gray-100 border px-3 py-2 font-semibold text-gray-700 w-40" placeholder="Auto-generado">
-                                    <input type="text" name="NombreProyecto" x-model="partePersonalizada" value="{{ old('NombreProyecto', $prospecto->proyecto) }}" class="flex-1 rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Escribe aquí..." maxlength="50">
+                                <input type="text" name="NombreProyecto" x-model="partePersonalizada" value="{{ old('NombreProyecto', $prospecto->proyecto) }}" class="flex-1 rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase" placeholder="Escribe aquí..." maxlength="50">
                                 </div>
                                 <input type="hidden" name="NombreProyectoCompleto" x-model="nombreProyectoCompleto">
                                 <p class="text-xs text-gray-500 mt-1">La nomenclatura está protegida. Solo escribe en el segundo campo.</p>
@@ -279,7 +279,7 @@
 
                             <div class="md:col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
-                                <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Detalles del prospecto...">{{ old('Descripcion', $prospecto->descripcion) }}</textarea>
+                            <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase" placeholder="Detalles del prospecto...">{{ old('Descripcion', $prospecto->descripcion) }}</textarea>
                             </div>
                         </div>
                     </div>

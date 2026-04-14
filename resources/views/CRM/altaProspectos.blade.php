@@ -76,15 +76,15 @@
                         <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                                <input type="text" name="Nombre" value="{{ old('Nombre') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" name="Nombre" value="{{ old('Nombre') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Paterno</label>
-                                <input type="text" name="ApellidoPat" value="{{ old('ApellidoPat') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" name="ApellidoPat" value="{{ old('ApellidoPat') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido Materno</label>
-                                <input type="text" name="ApellidoMat" value="{{ old('ApellidoMat') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" name="ApellidoMat" value="{{ old('ApellidoMat') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase">
                             </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
@@ -101,7 +101,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Ocupación</label>
-                            <input type="text" name="Ocupacion" value="{{ old('Ocupacion') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. Arquitecto, Empresario...">
+                        <input type="text" name="Ocupacion" value="{{ old('Ocupacion') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 focus:ring-blue-500 focus:border-blue-500 uppercase" placeholder="Ej. Arquitecto, Empresario...">
                         </div>
                         </div>
                     </div>
@@ -151,7 +151,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Municipio</label>
-                                <input type="text" name="Municipio" x-model="municipio" @change="generarMapsUrl()" value="{{ old('Municipio') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
+                            <input type="text" name="Municipio" x-model="municipio" @change="generarMapsUrl()" value="{{ old('Municipio') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
@@ -159,7 +159,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Calle</label>
-                                <input type="text" name="Calle" x-model="calle" @change="generarMapsUrl()" value="{{ old('Calle') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2">
+                            <input type="text" name="Calle" x-model="calle" @change="generarMapsUrl()" value="{{ old('Calle') }}" required class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase">
                             </div>
                             <div class="md:col-span-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Google Maps (URL o Coordenadas)</label>
@@ -199,11 +199,11 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-600">Municipio</label>
-                                        <input type="text" x-model="direccionMunicipioEntrega" @input="generarMapsEntrega()" name="MunicipioEntrega" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2" placeholder="Municipio...">
+                                    <input type="text" x-model="direccionMunicipioEntrega" @input="generarMapsEntrega()" name="MunicipioEntrega" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 uppercase" placeholder="Municipio...">
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-600">Calle / Dirección</label>
-                                        <input type="text" x-model="direccionCalleEntrega" @input="generarMapsEntrega()" name="CalleEntrega" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2" placeholder="Calle, número...">
+                                    <input type="text" x-model="direccionCalleEntrega" @input="generarMapsEntrega()" name="CalleEntrega" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 uppercase" placeholder="Calle, número...">
                                     </div>
                                 </div>
                                 <input type="hidden" name="DireccionEntrega" x-model="direccionEntregaHidden">
@@ -233,7 +233,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proyecto</label>
                                 <div class="flex gap-2 items-center">
                                     <input type="text" x-model="prefijoProyecto" readonly class="flex-shrink-0 rounded-lg border-gray-300 bg-gray-100 border px-3 py-2 font-semibold text-gray-700 w-40" placeholder="Auto-generado">
-                                    <input type="text" name="NombreProyecto" x-model="partePersonalizada" value="{{ old('NombreProyecto') }}" class="flex-1 rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Escribe aquí..." maxlength="50">
+                                <input type="text" name="NombreProyecto" x-model="partePersonalizada" value="{{ old('NombreProyecto') }}" class="flex-1 rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase" placeholder="Escribe aquí..." maxlength="50">
                                 </div>
                                 <input type="hidden" name="NombreProyectoCompleto" x-model="nombreProyectoCompleto">
                                 <p class="text-xs text-gray-500 mt-1">La nomenclatura está protegida. Solo escribe en el segundo campo.</p>
@@ -308,7 +308,7 @@
 
                             <div class="md:col-span-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
-                                <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2" placeholder="Detalles iniciales del prospecto...">{{ old('Descripcion') }}</textarea>
+                            <textarea name="Descripcion" rows="3" class="w-full rounded-lg border-gray-300 bg-gray-50 border px-3 py-2 uppercase" placeholder="Detalles iniciales del prospecto...">{{ old('Descripcion') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -892,7 +892,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proyecto</label>
                                     <div class="flex gap-2">
                                         <input type="text" readonly x-model="prefijoProyectoCliente" class="w-40 rounded-lg border-gray-300 bg-gray-100 border px-3 py-2 font-semibold">
-                                        <input type="text" x-model="partePersonalizadaCliente" @input="actualizarParteProyectoCliente()" class="flex-1 rounded-lg border-gray-300 bg-white border px-3 py-2" placeholder="Parte personalizada...">
+                                    <input type="text" x-model="partePersonalizadaCliente" @input="actualizarParteProyectoCliente()" class="flex-1 rounded-lg border-gray-300 bg-white border px-3 py-2 uppercase" placeholder="Parte personalizada...">
                                     </div>
                                     <input type="hidden" name="nombre_proyecto" x-model="nombreProyectoCompletoCliente">
                                 </div>
@@ -921,11 +921,11 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs text-gray-600">Municipio</label>
-                                            <input type="text" x-model="direccionMunicipioCliente" @input="generarMapsDesdeModal()" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2" placeholder="Municipio...">
+                                        <input type="text" x-model="direccionMunicipioCliente" @input="generarMapsDesdeModal()" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 uppercase" placeholder="Municipio...">
                                         </div>
                                         <div>
                                             <label class="block text-xs text-gray-600">Calle / Dirección</label>
-                                            <input type="text" x-model="direccionCalleCliente" @input="generarMapsDesdeModal()" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2" placeholder="Calle, número...">
+                                        <input type="text" x-model="direccionCalleCliente" @input="generarMapsDesdeModal()" class="w-full rounded-lg border-gray-300 bg-white border px-3 py-2 uppercase" placeholder="Calle, número...">
                                         </div>
                                     </div>
                                     <input type="hidden" name="direccion_entrega" x-model="direccionEntregaCliente">

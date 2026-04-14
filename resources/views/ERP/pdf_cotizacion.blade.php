@@ -79,6 +79,10 @@ font-size:9px;
 vertical-align:top;
 }
 
+.tabla td table td {
+border:none;
+}
+
 .img{
 width:105px;
 height:105px;
@@ -197,29 +201,29 @@ ESTIMADO CLIENTE, A CONTINUACIÓN LE PRESENTAMOS LA COTIZACIÓN DE LOS PRODUCTOS
 
 <br>
 
-<table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
+<table style="width: 100%; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
     <tr style="text-align: center;">
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">L/A</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">L/A</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    <td style="padding: 2px; font-weight: bold;">x</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">ALT</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">ALT</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+    <td style="padding: 2px; font-weight: bold;">x</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">PRO</td>
-    <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
+    <td style="padding: 2px; font-weight: bold;">PRO</td>
+    <td style="padding: 2px;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
     
-    <td style="padding: 2px; border-right: 1px solid #ccc; width: 10%;"></td>
+    <td style="padding: 2px; width: 10%;"></td>
     
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['peso'], 1, '.', '') }}</td>
-    <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['cubicaje'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['cubicaje'] * $item['cantidad'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
+    <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['peso'], 1, '.', '') }}</td>
+    <td style="padding: 2px; color:#1b3fbf;">-</td>
     <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)$item['peso'] * $item['cantidad'], 1, '.', '') }}</td>
 </tr>
 </table>
@@ -361,6 +365,26 @@ A CONTINUACIÓN DESCRIBIMOS LAS CONDICIONES DE COMPRA Y GARANTÍA DE NUESTROS PR
 
 </div>
 
+<!-- SALTO DE PÁGINA PARA TÉRMINOS Y CONDICIONES -->
+<div style="page-break-before: always;"></div>
+
+<div style="width: 100%; text-align: center; margin-top: 0px; margin-bottom: 10px;">
+    <img src="{{ public_path('archivos/logo.png') }}" style="width: 140px; margin-bottom: 5px;">
+    <h2 style="font-size: 14px; font-weight: bold; color: #1b3fbf; margin: 0; text-transform: uppercase;">Términos y Condiciones</h2>
+</div>
+
+<div style="width: 100%; margin-top: 10px;">
+    @if(isset($terminos) && count($terminos) > 0)
+        @foreach($terminos as $termino)
+            <div style="margin-bottom: 8px;">
+                <h3 style="font-size: 9px; font-weight: bold; margin-bottom: 2px; color: #1b3fbf; text-transform: uppercase;">{{ $termino->nombre ?? '' }}</h3>
+                <div style="font-size: 7.5px; text-align: justify; line-height: 1.2; color: #333;">
+                    {!! nl2br(e($termino->contenido ?? '')) !!}
+                </div>
+            </div>
+        @endforeach
+    @endif
+</div>
 
 
 <div class="page-footer">

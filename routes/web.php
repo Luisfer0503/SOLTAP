@@ -95,6 +95,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reporteEstatusProyecto', [ERPController::class, 'reporteEstatusProyecto'])->name('reporteEstatusProyecto');
     Route::get('/erp/proyecto-interacciones/{id}', [ERPController::class, 'obtenerHistorialInteracciones']);
     Route::post('/erp/generar-acta-entrega', [\App\Http\Controllers\ERPController::class, 'generarActaEntregaPdf'])->name('generarActaEntregaPdf');
+    Route::get('/erp/terminos', [App\Http\Controllers\ERPController::class, 'editarTerminos'])->name('terminos.index');
+    Route::post('/erp/terminos', [App\Http\Controllers\ERPController::class, 'guardarTerminos'])->name('terminos.guardar');
+     Route::get('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'editarTerminosSolferino'])->name('terminos_solferino.index');
+    Route::post('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'guardarTerminosSolferino'])->name('terminos_solferino.guardar');
     
 
     Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');

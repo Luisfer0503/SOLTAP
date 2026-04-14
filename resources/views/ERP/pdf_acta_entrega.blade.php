@@ -44,6 +44,10 @@ body {
     vertical-align: top;
 }
 
+.tabla td table td {
+    border: none;
+}
+
 .signature-box {
     margin-top: 30px;
     font-size: 11px;
@@ -96,29 +100,29 @@ body {
                 <td style="text-align:center; vertical-align: middle;">{{ $item['cantidad'] }}</td>
                 <td>
                     <b>{{ $item['nombre'] }}</b><br>
-                    <table style="width: 100%; border: 1px solid #ccc; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
+                    <table style="width: 100%; font-size: 8px; margin-top: 5px; margin-bottom: 5px; border-collapse: collapse;">
                         <tr style="text-align: center;">
-                            <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">L/A</td>
-                            <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
+                            <td style="padding: 2px; font-weight: bold;">L/A</td>
+                            <td style="padding: 2px;">{{ 0 + number_format((float)$item['ancho'], 2, '.', '') }}</td>
                             
-                            <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+                            <td style="padding: 2px; font-weight: bold;">x</td>
                             
-                            <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">ALT</td>
-                            <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
+                            <td style="padding: 2px; font-weight: bold;">ALT</td>
+                            <td style="padding: 2px;">{{ 0 + number_format((float)$item['alto'], 2, '.', '') }}</td>
                             
-                            <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">x</td>
+                            <td style="padding: 2px; font-weight: bold;">x</td>
                             
-                            <td style="padding: 2px; border-right: 1px solid #ccc; font-weight: bold;">PRO</td>
-                            <td style="padding: 2px; border-right: 1px solid #ccc;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
+                            <td style="padding: 2px; font-weight: bold;">PRO</td>
+                            <td style="padding: 2px;">{{ 0 + number_format((float)$item['profundo'], 2, '.', '') }}</td>
                             
-                            <td style="padding: 2px; border-right: 1px solid #ccc; width: 10%;"></td>
+                            <td style="padding: 2px; width: 10%;"></td>
                             
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)($item['cubicaje'] ?? 0), 1, '.', '') }}</td>
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)($item['cubicaje'] ?? 0) * $item['cantidad'], 1, '.', '') }}</td>
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">{{ 0 + number_format((float)($item['peso'] ?? 0), 1, '.', '') }}</td>
-                            <td style="padding: 2px; color:#1b3fbf; border-right: 1px solid #ccc;">-</td>
+                            <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)($item['cubicaje'] ?? 0), 1, '.', '') }}</td>
+                            <td style="padding: 2px; color:#1b3fbf;">-</td>
+                            <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)($item['cubicaje'] ?? 0) * $item['cantidad'], 1, '.', '') }}</td>
+                            <td style="padding: 2px; color:#1b3fbf;">-</td>
+                            <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)($item['peso'] ?? 0), 1, '.', '') }}</td>
+                            <td style="padding: 2px; color:#1b3fbf;">-</td>
                             <td style="padding: 2px; color:#1b3fbf;">{{ 0 + number_format((float)($item['peso'] ?? 0) * $item['cantidad'], 1, '.', '') }}</td>
                         </tr>
                     </table>

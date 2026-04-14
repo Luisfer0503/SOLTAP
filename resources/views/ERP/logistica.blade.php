@@ -5,7 +5,7 @@
 @php
     $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
     $role = strtoupper($userRoleName);
-    $isVendedor = in_array($role, ['VENDEDOR/DISEÑADOR']);
+    $isVendedor = in_array($role, ['VENDEDOR/DISEÑADOR', 'ADMIN']);
     $isLogistica = in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'ADMIN']);
 @endphp
 
@@ -199,15 +199,30 @@
                                     <td class="px-6 py-4 text-sm text-gray-500" x-text="retorno.fecha_formateada"></td>
                                     <td class="px-6 py-4 text-center">
                                         <template x-if="!isLogistica">
-                                            <span class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800" x-text="retorno.estatus"></span>
+                                            <span class="px-2 py-1 text-xs font-bold rounded-full" 
+                                                  :class="{
+                                                      'bg-yellow-100 text-yellow-800': retorno.estatus === 'En Revisión',
+                                                      'bg-blue-100 text-blue-800': retorno.estatus === 'Autorizado',
+                                                      'bg-purple-100 text-purple-800': retorno.estatus === 'En camino',
+                                                      'bg-green-100 text-green-800': retorno.estatus === 'Entregado',
+                                                      'bg-red-100 text-red-800': retorno.estatus === 'Cancelado'
+                                                  }" x-text="retorno.estatus"></span>
                                         </template>
                                         <template x-if="isLogistica">
-                                            <select x-model="retorno.estatus" @change="actualizarEstatus(retorno)" class="text-xs font-bold border-gray-300 rounded-lg py-1 px-2 focus:ring-orange-500 focus:border-orange-500 bg-orange-50 text-orange-800">
-                                                <option value="En Revisión">En Revisión</option>
-                                                <option value="Autorizado">Autorizado</option>
-                                                <option value="En camino">En camino</option>
-                                                <option value="Entregado">Entregado</option>
-                                                <option value="Cancelado">Cancelado</option>
+                                            <select @change="actualizarEstatus(retorno, $event)" 
+                                                    :class="{
+                                                        'bg-yellow-50 text-yellow-800 border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500': retorno.estatus === 'En Revisión',
+                                                        'bg-blue-50 text-blue-800 border-blue-300 focus:ring-blue-500 focus:border-blue-500': retorno.estatus === 'Autorizado',
+                                                        'bg-purple-50 text-purple-800 border-purple-300 focus:ring-purple-500 focus:border-purple-500': retorno.estatus === 'En camino',
+                                                        'bg-green-50 text-green-800 border-green-300 focus:ring-green-500 focus:border-green-500': retorno.estatus === 'Entregado',
+                                                        'bg-red-50 text-red-800 border-red-300 focus:ring-red-500 focus:border-red-500': retorno.estatus === 'Cancelado'
+                                                    }"
+                                                    class="text-xs font-bold border rounded-lg py-1 px-2 transition-colors">
+                                                <option value="En Revisión" :selected="retorno.estatus === 'En Revisión'">En Revisión</option>
+                                                <option value="Autorizado" :selected="retorno.estatus === 'Autorizado'">Autorizado</option>
+                                                <option value="En camino" :selected="retorno.estatus === 'En camino'">En camino</option>
+                                                <option value="Entregado" :selected="retorno.estatus === 'Entregado'">Entregado</option>
+                                                <option value="Cancelado" :selected="retorno.estatus === 'Cancelado'">Cancelado</option>
                                             </select>
                                         </template>
                                     </td>
@@ -354,20 +369,34 @@
                 } finally { this.guardandoRetorno = false; }
             },
 
-            async actualizarEstatus(retorno) {
+            async actualizarEstatus(retorno, event) {
+                const nuevoEstatus = event.target.value;
+                const estatusAnterior = retorno.estatus;
+
+                if (!confirm(`¿Seguro quieres cambiar el estatus a: ${nuevoEstatus}?`)) {
+                    event.target.value = estatusAnterior;
+                    return;
+                }
+
+                retorno.estatus = nuevoEstatus;
+
                 try {
                     const response = await fetch('{{ route("guardarRetorno") }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ id: retorno.id, estatus: retorno.estatus, proyecto_id: retorno.proyecto_id })
+                        body: JSON.stringify({ id: retorno.id, estatus: nuevoEstatus, proyecto_id: retorno.proyecto_id })
                     });
                     const data = await response.json();
                     
                     if (!response.ok || !data.success) {
                         alert('Error al actualizar el estatus: ' + (data.message || 'Desconocido'));
+                        retorno.estatus = estatusAnterior;
+                        event.target.value = estatusAnterior;
                     }
                 } catch (error) {
                     console.error(error); alert('Error de conexión');
+                    retorno.estatus = estatusAnterior;
+                    event.target.value = estatusAnterior;
                 }
             }
         }
