@@ -12,7 +12,7 @@
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-200">
         <div class="text-center mb-8">
             <div class="flex justify-center mb-6">
-                <img src="{{ asset('archivos/logosshctmm.png') }}" alt="Logo Casa Tapier" class="h-24 w-auto object-contain">
+                <img src="{{ asset('archivos/logoall.png') }}" alt="Logo Casa Tapier" class="h-24 w-auto object-contain">
             </div>
             <h2 class="text-2xl font-bold text-gray-800">Bienvenido</h2>
             <p class="text-gray-500 text-sm mt-1">Ingresa a tu cuenta para continuar</p>

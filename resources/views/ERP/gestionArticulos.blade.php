@@ -25,12 +25,28 @@
             <span class="mx-4 text-gray-300">|</span>
             <div class="flex items-center">
                 <span class="text-sm text-gray-500 mr-2">Proyecto:</span>
-                <select :value="proyecto_id" @change="confirmarCambioProyecto($event)" class="text-sm border-none bg-gray-50 rounded-lg focus:ring-0 font-bold text-blue-700 cursor-pointer">
-                    <option value="">Seleccione un proyecto</option>
-                    @foreach($proyectos as $p)
-                        <option value="{{ $p->id }}">{{ $p->nombre }}</option>
-                    @endforeach
-                </select>
+                <div class="relative" @click.away="showProyectosDropdown = false">
+                    <button @click="showProyectosDropdown = !showProyectosDropdown" class="text-sm border-none bg-gray-50 rounded-lg focus:ring-0 font-bold text-blue-700 cursor-pointer flex items-center w-64 justify-between">
+                        <span class="truncate" x-text="proyecto_id ? (proyectos.find(p => p.id == proyecto_id)?.nombre || 'Seleccione un proyecto') : 'Seleccione un proyecto'"></span>
+                        <i class="ph ph-caret-down ml-2"></i>
+                    </button>
+                    <div x-show="showProyectosDropdown" x-transition class="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-30">
+                        <div class="p-2">
+                            <input type="text" x-model="filtroProyecto" @click.stop placeholder="Buscar por nombre o cliente..." class="w-full text-sm border-gray-200 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="max-h-60 overflow-y-auto">
+                            <template x-for="p in proyectosFiltrados" :key="p.id">
+                                <a href="#" @click.prevent="const event = { target: { value: p.id } }; confirmarCambioProyecto(event); showProyectosDropdown = false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                                    <p class="font-bold truncate" x-text="p.nombre"></p>
+                                    <p class="text-xs text-gray-500" x-text="p.cliente_nombre || 'Sin cliente'"></p>
+                                </a>
+                            </template>
+                            <div x-show="proyectosFiltrados.length === 0" class="px-4 py-3 text-center text-xs text-gray-500 italic">
+                                No se encontraron proyectos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button @click="cargarArticulosProyecto(proyecto_id)" x-show="proyecto_id" class="ml-2 text-blue-600 hover:text-blue-800 text-xs font-bold underline">
                     <i class="ph ph-arrows-clockwise"></i> Recargar
                 </button>
@@ -922,6 +938,9 @@
             db_chapas: @json($chapas),
             db_proveedores: @json($proveedores),
             articulos_catalogo: @json($articulos),
+            proyectos: @json($proyectos),
+            filtroProyecto: '',
+            showProyectosDropdown: false,
             proyecto_id: '',
             cargando: false,
             form: {
@@ -1001,6 +1020,15 @@
                         return 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
                     }
                 });
+            },
+
+            get proyectosFiltrados() {
+                if (!this.filtroProyecto) return this.proyectos;
+                const search = this.filtroProyecto.toLowerCase();
+                return this.proyectos.filter(p => 
+                    (p.nombre && p.nombre.toLowerCase().includes(search)) || 
+                    (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(search))
+                );
             },
 
             get haySeleccionados() {

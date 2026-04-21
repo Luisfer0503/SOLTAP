@@ -80,6 +80,19 @@ body {
             <td>Diseño y Ventas | Logística</td>
             <td colspan="2" class="bg-gray"></td>
         </tr>
+        
+        <tr>
+            <td class="bg-gray"><b>SERVICIOS:</b></td>
+            <td colspan="3">
+                @php
+                    $servicios = [];
+                    if ($proyecto['requiere_instalacion']) $servicios[] = 'INSTALACIÓN';
+                    if ($proyecto['requiere_desemplaye']) $servicios[] = 'DESEMPLAYE';
+                    if ($proyecto['requiere_maniobraje']) $servicios[] = 'MANIOBRAJE';
+                @endphp
+                {{ count($servicios) > 0 ? implode(' / ', $servicios) : 'NINGUNO' }}
+            </td>
+        </tr>
     </table>
 
     <table class="tabla">
@@ -87,11 +100,8 @@ body {
             <tr>
                 <th width="5%">Cant.</th>
                 <th width="45%">Descripción del artículo (Dimensiones en cm. ↔↕↗)</th>
-                <th width="15%">Imagen</th>
-                <th width="5%">I<br><span style="font-size:7px; font-weight:normal;">(Instalación)</span></th>
-                <th width="5%">D<br><span style="font-size:7px; font-weight:normal;">(Desemplaye)</span></th>
-                <th width="5%">M<br><span style="font-size:7px; font-weight:normal;">(Maniobraje)</span></th>
-                <th width="20%">Comentarios</th>
+                <th width="20%">Imagen</th>
+                <th width="30%">Comentarios</th>
             </tr>
         </thead>
         <tbody>
@@ -146,9 +156,6 @@ body {
                         N/A
                     @endif
                 </td>
-                <td style="text-align:center; vertical-align: middle;">{{ $proyecto['requiere_instalacion'] ? 'Sí' : 'No' }}</td>
-                <td style="text-align:center; vertical-align: middle;">{{ $proyecto['requiere_desemplaye'] ? 'Sí' : 'No' }}</td>
-                <td style="text-align:center; vertical-align: middle;">{{ $proyecto['requiere_maniobraje'] ? 'Sí' : 'No' }}</td>
                 <td></td>
             </tr>
             @endforeach
@@ -170,6 +177,26 @@ body {
             <span style="font-size: 9px; color: #555;">Firma de la persona que entrega con satisfacción los productos.</span>
         </p>
     </div>
+<!-- SALTO DE PÁGINA PARA TÉRMINOS Y CONDICIONES -->
+<div style="page-break-before: always;"></div>
+
+<div style="width: 100%; text-align: center; margin-top: 0px; margin-bottom: 10px;">
+    <img src="{{ public_path('archivos/logo.png') }}" style="width: 140px; margin-bottom: 5px;">
+    <h2 style="font-size: 14px; font-weight: bold; color: #1b3fbf; margin: 0; text-transform: uppercase;">Términos y Condiciones</h2>
+</div>
+
+<div style="width: 100%; margin-top: 10px;">
+    @if(isset($terminos) && count($terminos) > 0)
+        @foreach($terminos as $termino)
+            <div style="margin-bottom: 8px;">
+                <h3 style="font-size: 9px; font-weight: bold; margin-bottom: 2px; color: #1b3fbf; text-transform: uppercase;">{{ $termino->nombre ?? '' }}</h3>
+                <div style="font-size: 7.5px; text-align: justify; line-height: 1.2; color: #333;">
+                    {!! nl2br(e($termino->contenido ?? '')) !!}
+                </div>
+            </div>
+        @endforeach
+    @endif
+</div>
 
 </body>
 </html>

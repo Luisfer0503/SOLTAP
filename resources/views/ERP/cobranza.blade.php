@@ -190,6 +190,38 @@
             </template>
         </div>
     </div>
+
+    <!-- Modal Confirmación Abono -->
+    <div x-show="modalConfirmacion.open" class="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50" style="display: none;" x-cloak>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden" @click.stop>
+            <div class="p-4 border-b flex justify-between items-center shrink-0"
+                 :class="modalConfirmacion.tipo === 'warning' ? 'bg-yellow-50 border-yellow-200' : 'bg-purple-50 border-purple-200'">
+                <h3 class="text-lg font-bold"
+                    :class="modalConfirmacion.tipo === 'warning' ? 'text-yellow-800' : 'text-purple-800'">
+                    <i class="ph mr-2" :class="modalConfirmacion.tipo === 'warning' ? 'ph-warning text-yellow-600' : 'ph-question text-purple-600'"></i>
+                    <span x-text="modalConfirmacion.tipo === 'warning' ? 'Advertencia de Saldo a Favor' : 'Confirmar Abono'"></span>
+                </h3>
+                <button @click="responderConfirmacion(false)" class="text-gray-500 hover:text-gray-800"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 bg-white">
+                <p class="text-sm text-gray-700 mb-4" x-text="modalConfirmacion.mensajePrincipal"></p>
+                <div x-show="modalConfirmacion.detalles.length > 0" class="bg-yellow-50 p-3 rounded border border-yellow-200 mb-4">
+                    <template x-for="detalle in modalConfirmacion.detalles">
+                        <p class="text-sm font-bold text-yellow-800" x-text="detalle"></p>
+                    </template>
+                </div>
+                <p x-show="modalConfirmacion.tipo === 'warning'" class="text-sm font-bold text-gray-800 text-center">¿Desea continuar de todos modos?</p>
+            </div>
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
+                <button @click="responderConfirmacion(false)" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-bold transition">Cancelar</button>
+                <button @click="responderConfirmacion(true)"
+                        class="px-6 py-2 text-white rounded-lg font-bold transition shadow-sm flex items-center"
+                        :class="modalConfirmacion.tipo === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-purple-600 hover:bg-purple-700'">
+                    <i class="ph ph-check mr-2"></i> Continuar
+                </button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
@@ -205,6 +237,33 @@ function cobranzaApp() {
         isAdminCobranza: @json($isAdminCobranza),
         isDvMkt: @json($isDvMkt),
         isDvSolferino: @json($isDvSolferino),
+
+        modalConfirmacion: {
+            open: false,
+            tipo: 'info',
+            mensajePrincipal: '',
+            detalles: [],
+            resolve: null
+        },
+
+        async solicitarConfirmacion(tipo, mensajePrincipal, detalles = []) {
+            this.modalConfirmacion.tipo = tipo;
+            this.modalConfirmacion.mensajePrincipal = mensajePrincipal;
+            this.modalConfirmacion.detalles = detalles;
+            this.modalConfirmacion.open = true;
+
+            return new Promise((resolve) => {
+                this.modalConfirmacion.resolve = resolve;
+            });
+        },
+
+        responderConfirmacion(respuesta) {
+            this.modalConfirmacion.open = false;
+            if (this.modalConfirmacion.resolve) {
+                this.modalConfirmacion.resolve(respuesta);
+                this.modalConfirmacion.resolve = null;
+            }
+        },
 
         canCobrar(proyecto) {
             if (!proyecto) return false;
@@ -282,13 +341,21 @@ function cobranzaApp() {
 
             if (abono > saldoPendiente) {
                 const saldoFavor = abono - saldoPendiente;
-                if (!confirm(`Advertencia: Revisa los campos de Cobranza para asegurarte que tu cliente tiene saldo a favor si es que la cantidad registrada tendra saldo a favor por si existe algun error.\n\nMonto ingresado: ${this.money(abono)}\nSaldo a favor resultante: ${this.money(saldoFavor)}\n\n¿Desea continuar?`)) {
-                    return;
-                }
+                const confirmado = await this.solicitarConfirmacion(
+                    'warning',
+                    'Advertencia: Revisa los campos de Cobranza para asegurarte que tu cliente tiene saldo a favor o si la cantidad registrada generará un saldo a favor por algún error.',
+                    [
+                        `Monto ingresado: ${this.money(abono)}`,
+                        `Saldo a favor resultante: ${this.money(saldoFavor)}`
+                    ]
+                );
+                if (!confirmado) return;
             } else {
-                if (!confirm(`¿Está seguro de que desea registrar un abono por ${this.money(abono)}?`)) {
-                    return;
-                }
+                const confirmado = await this.solicitarConfirmacion(
+                    'info',
+                    `¿Está seguro de que desea registrar un abono por ${this.money(abono)}?`
+                );
+                if (!confirmado) return;
             }
 
             try {

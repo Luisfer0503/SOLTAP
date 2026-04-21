@@ -28,7 +28,14 @@ class ERPController extends Controller
                 return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
             }
 
-            $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
+            $proyectos = DB::table('Proyectos')
+                ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+                ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+                ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+                ->select('Proyectos.proyecto_id as id', 'Proyectos.nombre',
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre")
+                )
+                ->orderBy('Proyectos.proyecto_id', 'desc')->get();
             $categorias = DB::table('categorias_articulos')->select('categoria_id', 'nombre')->orderBy('nombre')->get();
             $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'categoria_id')->orderBy('nombre')->get();
             
@@ -49,7 +56,14 @@ class ERPController extends Controller
                 return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
             }
 
-            $proyectos = DB::table('Proyectos')->select('proyecto_id as id', 'nombre')->orderBy('proyecto_id', 'desc')->get();
+            $proyectos = DB::table('Proyectos')
+                ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+                ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+                ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+                ->select('Proyectos.proyecto_id as id', 'Proyectos.nombre',
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre")
+                )
+                ->orderBy('Proyectos.proyecto_id', 'desc')->get();
             $categorias = DB::table('categorias_articulos')->select('categoria_articulo_id', 'nombre')->orderBy('nombre')->get();
             $articulos = DB::table('articulos')->select('articulo_id', 'nombre', 'categoria_articulo')->orderBy('nombre')->get();
             
@@ -366,6 +380,7 @@ class ERPController extends Controller
                 DB::raw("COALESCE(P1.descuento, P2.descuento, 0) as descuento_porcentaje"),
                 'proyecto_detalles.rfc',
                 'proyecto_detalles.condiciones_pago',
+                DB::raw("COALESCE(proyecto_detalles.condiciones_acceso, '') as condiciones_acceso"),
                 DB::raw("(SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) as tiene_cotizacion"),
                 DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes"),
                 DB::raw("(SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) as tiene_pagos")
@@ -388,6 +403,7 @@ class ERPController extends Controller
             $validator = Validator::make($request->all(), [
                 'articulos' => 'required|array|min:1',
                 'articulos.*.precio_unitario' => 'required|numeric|min:0',
+                'articulos.*.adicional_unitario' => 'nullable|numeric|min:0',
                 'totales.envio' => 'required|numeric|min:0',
                 'totales.instalacion' => 'required|numeric|min:0',
                 'cotizacionId' => 'required|integer'
@@ -406,6 +422,8 @@ class ERPController extends Controller
             $articulos = $data['articulos'];
             $totales = $data['totales'];
             $cotizacionId = $data['cotizacionId'];
+            $tiempo_entrega = $data['tiempo_entrega'] ?? null;
+            $observaciones = $data['observaciones'] ?? null;
 
             // Registrar interacción de Creación de Cotización
             if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
@@ -426,12 +444,14 @@ class ERPController extends Controller
             $nombreProyecto = mb_strtoupper((string)($proyecto['nombre_proyecto'] ?? ''));
             if (str_starts_with($nombreProyecto, 'SH-')) {
                 $terminos = DB::table('terminos_solferino')->orderBy('termino_id', 'asc')->get();
+                $vistaPdf = 'ERP.pdf_cotizacion_solferino';
             } else {
                 $terminos = DB::table('terminos')->orderBy('termino_id', 'asc')->get();
+                $vistaPdf = 'ERP.pdf_cotizacion';
             }
 
             // 4. Generar PDF usando la vista
-            $pdf = Pdf::loadView('ERP.pdf_cotizacion', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'terminos'));
+            $pdf = Pdf::loadView($vistaPdf, compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'terminos', 'tiempo_entrega', 'observaciones'));
             
             // Retornar el PDF como descarga
             return $pdf->download('Cotizacion_' . $proyecto['nombre_proyecto'] . '.pdf');
@@ -487,10 +507,16 @@ class ERPController extends Controller
             
             $proyecto = (array)$proyectoData;
 
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'adicional_unitario')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                    $table->decimal('adicional_unitario', 10, 2)->default(0)->nullable();
+                });
+            }
+
             // 2. Obtener artículos guardados
             $articulos = DB::table('proyecto_articulos')
                 ->where('proyecto_id', $proyecto_id)
-                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'cubicaje', 'peso', 'imagen')
+                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'adicional_unitario', 'cubicaje', 'peso', 'imagen')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
@@ -517,7 +543,7 @@ class ERPController extends Controller
 
             foreach($articulos as $art){
                 $cantidad = (float)$art['cantidad'];
-                $totales['subtotal_articulos'] += $cantidad * $art['precio_unitario'];
+                $totales['subtotal_articulos'] += $cantidad * ((float)$art['precio_unitario'] + (float)($art['adicional_unitario'] ?? 0));
                 $totales['cubicaje'] += (float)$art['cubicaje'] * $cantidad;
                 $totales['peso'] += (float)$art['peso'] * $cantidad;
                 $totales['articulos'] += $cantidad;
@@ -715,6 +741,14 @@ class ERPController extends Controller
     {
         try {
             $proyecto_id = $request->input('proyecto_id');
+            $articulos_ids = $request->input('articulos_ids');
+
+            // Verificar y crear columna de control de impresión para el acta si no existe
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_acta')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                    $table->boolean('impreso_acta')->default(0);
+                });
+            }
 
             // 1. Obtener datos del proyecto
             $proyectoData = DB::table('Proyectos')
@@ -743,14 +777,32 @@ class ERPController extends Controller
             $proyecto = (array)$proyectoData;
 
             // 2. Obtener artículos
-            $articulos = DB::table('proyecto_articulos')
-                ->where('proyecto_id', $proyecto_id)
+            $queryArticulos = DB::table('proyecto_articulos')
+                ->where('proyecto_id', $proyecto_id);
+
+            if (!empty($articulos_ids) && is_array($articulos_ids)) {
+                $queryArticulos->whereIn('id', $articulos_ids);
+            }
+
+            $articulos = $queryArticulos
                 ->select('nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cubicaje', 'peso', 'cantidad', 'imagen')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
 
-            $pdf = Pdf::loadView('ERP.pdf_acta_entrega', compact('proyecto', 'articulos'))->setPaper('letter', 'landscape');
+            // Marcar los artículos como impresos
+            if (!empty($articulos_ids) && is_array($articulos_ids)) {
+                DB::table('proyecto_articulos')->whereIn('id', $articulos_ids)->update(['impreso_acta' => 1]);
+            }
+
+            $nombreProyecto = mb_strtoupper((string)($proyecto['nombre_proyecto'] ?? ''));
+            if (str_starts_with($nombreProyecto, 'SH-')) {
+                $terminos = DB::table('terminos_solferino')->orderBy('termino_id', 'asc')->get();
+            } else {
+                $terminos = DB::table('terminos')->orderBy('termino_id', 'asc')->get();
+            }
+
+            $pdf = Pdf::loadView('ERP.pdf_acta_entrega', compact('proyecto', 'articulos', 'terminos'))->setPaper('letter', 'landscape');
             return $pdf->download('Acta_Entrega_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -1310,11 +1362,21 @@ class ERPController extends Controller
                 });
             }
 
+            // Asegurar que la tabla soporte la columna 'adicional_unitario' si no existe
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'adicional_unitario')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                    $table->decimal('adicional_unitario', 10, 2)->default(0)->nullable();
+                });
+            }
+
             // 1. Guardar precio de cada artículo (acepta 0 si no se ha llenado)
             foreach ($articulos as $art) {
                 DB::table('proyecto_articulos')
                     ->where('id', $art['id'])
-                    ->update(['precio' => (float)($art['precio_unitario'] ?? 0)]);
+                    ->update([
+                        'precio' => (float)($art['precio_unitario'] ?? 0),
+                        'adicional_unitario' => (float)($art['adicional_unitario'] ?? 0)
+                    ]);
             }
 
             // 2. Guardar datos generales en cotizaciones
@@ -2042,6 +2104,18 @@ class ERPController extends Controller
               });
           }
 
+          if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'adicional_unitario')) {
+              \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                  $table->decimal('adicional_unitario', 10, 2)->default(0)->nullable();
+              });
+          }
+
+          if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_acta')) {
+              \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                  $table->boolean('impreso_acta')->default(0);
+              });
+          }
+
           $articulos = DB::table('proyecto_articulos')->where('proyecto_id', $id)->get();
           
           // Optimización: Cargar todos los materiales de estos artículos en una sola consulta
@@ -2357,5 +2431,69 @@ class ERPController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function lineaTiempoProyectos()
+    {
+        $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
+        $role = strtoupper($userRoleName);
+        
+        // Permisos de acceso
+        if (!in_array($role, ['ADMIN', 'DIRECCIÓN', 'DIRECCION', 'VENDEDOR/DISEÑADOR', 'COORD. PRODUCCIÓN/COMPRAS', 'COORD. PRODUCCION/COMPRAS', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'COORD. DV&MKT', 'COORD. DV SOLFERINO'])) {
+            return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
+        }
+
+        // 1. Obtener todas las interacciones para formar las columnas
+        $interacciones = DB::table('interacciones')->orderBy('interaccion_id', 'asc')->get()->filter(function($int) {
+            $id = $int->id ?? $int->interaccion_id;
+            return $id >= 1 && $id <= 13;
+        })->values();
+
+        // 2. Subconsulta: Obtener la fecha de la última interacción por proyecto
+        $latestInteractions = DB::table('proyecto_interacciones')
+            ->select('proyecto_id', DB::raw('MAX(created_at) as max_created_at'))
+            ->groupBy('proyecto_id');
+
+        // 3. Obtener los proyectos junto con los detalles de su última interacción
+        $proyectos = DB::table('Proyectos')
+            ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->joinSub($latestInteractions, 'latest_int', function ($join) {
+                $join->on('Proyectos.proyecto_id', '=', 'latest_int.proyecto_id');
+            })
+            ->join('proyecto_interacciones as pi', function ($join) {
+                $join->on('Proyectos.proyecto_id', '=', 'pi.proyecto_id')
+                     ->on('latest_int.max_created_at', '=', 'pi.created_at');
+            })
+            ->select(
+                'Proyectos.proyecto_id',
+                'Proyectos.nombre as nombre_proyecto',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                'pi.interaccion_id',
+                'pi.created_at as fecha_interaccion'
+            )
+            ->groupBy('Proyectos.proyecto_id', 'Proyectos.nombre', 'cliente_nombre', 'pi.interaccion_id', 'pi.created_at')
+            ->orderBy('pi.created_at', 'desc')
+            ->get();
+
+        // 4. Agrupar los proyectos en sus respectivas columnas de interacción
+        $proyectosPorInteraccion = [];
+        foreach ($interacciones as $int) {
+            $pk = $int->id ?? $int->interaccion_id;
+            $proyectosPorInteraccion[$pk] = [];
+        }
+
+        foreach ($proyectos as $p) {
+            $intId = $p->interaccion_id;
+            // Fallback por si la interaccion_id se guardó como nombre (string)
+            if (!isset($proyectosPorInteraccion[$intId])) {
+                $match = $interacciones->firstWhere('nombre', $intId);
+                if ($match) $intId = $match->id ?? $match->interaccion_id;
+            }
+            if (isset($proyectosPorInteraccion[$intId])) $proyectosPorInteraccion[$intId][] = $p;
+        }
+
+        return view('ERP.lineaTiempoProyectos', compact('interacciones', 'proyectosPorInteraccion'));
     }
 }

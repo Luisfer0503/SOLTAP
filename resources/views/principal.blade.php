@@ -66,6 +66,9 @@
             <a href="{{ route('inicio') }}" class="{{ request()->routeIs('inicio') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
                 <i class="ph ph-house text-lg mr-3"></i> Inicio
             </a>
+              <a href="{{ route('lineaTiempoProyectos') }}" class="{{ request()->routeIs('lineaTiempoProyectos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
+                <i class="ph ph-clock-counter-clockwise text-lg mr-3"></i> Linea de Tiempo de Proyectos
+            </a>
 
             @if($canAccessCRM)
             <a href="{{ route('altaProspectos') }}" class="{{ request()->routeIs('altaProspectos') ? 'flex items-center px-6 py-3 bg-blue-600 text-white border-l-4 border-blue-400' : 'flex items-center px-6 py-3 hover:bg-slate-700 hover:text-white transition' }}">
@@ -169,7 +172,7 @@
     <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black bg-opacity-50 md:hidden" style="z-index: 40;"></div>
 
     <!-- Contenido Principal -->
-    <div class="flex flex-col flex-1" :class="sidebarOpen && window.innerWidth >= 768 ? 'md:ml-64' : ''">
+    <div class="flex flex-col flex-1 overflow-hidden" :class="sidebarOpen && window.innerWidth >= 768 ? 'md:ml-64' : ''">
         <!-- Header con botón hamburguesa -->
         <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
             <button @click="sidebarOpen = !sidebarOpen" class="text-gray-700 hover:text-gray-900 transition">

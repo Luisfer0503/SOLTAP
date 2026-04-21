@@ -19,7 +19,7 @@
                 
                 <div class="h-16 px-6 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center">
                     <div class="flex items-center text-gray-500 font-bold tracking-widest uppercase">
-                        <img src="{{asset('archivos/logosshctmm.png')}}" alt="Logo Casa Tapier" class="h-28 w-auto mr-3 object-contain">
+                        <img src="{{asset('archivos/logoall.png')}}" alt="Logo Casa Tapier" class="h-28 w-auto mr-3 object-contain">
                     </div>
                 </div>
             </div>

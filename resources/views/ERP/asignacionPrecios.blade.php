@@ -91,7 +91,7 @@
                                         <i class="ph ph-factory mr-1"></i> Producción
                                     </button>
                                     
-                                    <button @click="imprimirActaPdf(p)" 
+                                    <button @click="abrirModalActa(p)" 
                                             class="px-3 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                                             title="Generar Acta de Entrega"
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
@@ -169,6 +169,7 @@
                                 <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Cant.</th>
                                 <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Dimensiones / Peso</th>
                                 <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Precio Unit.</th>
+                                <th x-show="isSHProject" class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Adicional Unit.</th>
                                 <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Total</th>
                             </tr>
                         </thead>
@@ -200,11 +201,30 @@
                                     <td class="px-4 py-3 text-right">
                                         <input type="number" x-model="item.precio_unitario" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
                                     </td>
-                                    <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * (item.precio_unitario || 0))"></td>
+                                    <td x-show="isSHProject" class="px-4 py-3 text-right">
+                                        <input type="number" x-model="item.adicional_unitario" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-24 text-right text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00">
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-gray-900" x-text="money(item.cantidad * ((parseFloat(item.precio_unitario) || 0) + (parseFloat(item.adicional_unitario) || 0)))"></td>
                                 </tr>
                             </template>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Nuevos campos -->
+                <div x-show="isSHProject" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6" style="display: none;">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Tiempo de Entrega</label>
+                        <input type="text" x-model="tiempo_entrega" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-full text-sm border-gray-300 rounded disabled:bg-gray-100" placeholder="Ej: 10 a 12 semanas...">
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Entrega (Condiciones de acceso)</label>
+                        <input type="text" x-model="proyecto.condiciones_acceso" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" class="w-full text-sm border-gray-300 rounded disabled:bg-gray-100" placeholder="Ej: Sin condiciones especiales...">
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 md:col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Observaciones</label>
+                        <textarea x-model="observaciones" @input="cotizacionAutorizada = false" :disabled="cotizacionBloqueada || cotizacionAutorizada" rows="2" class="w-full text-sm border-gray-300 rounded disabled:bg-gray-100" placeholder="Ej: Al aceptar esta cotización..."></textarea>
+                    </div>
                 </div>
 
                 <!-- Totales -->
@@ -451,6 +471,72 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Selección Artículos Acta de Entrega -->
+    <div x-show="mostrarModalActa" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;" x-transition>
+        <div class="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="bg-teal-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center"><i class="ph ph-clipboard-text mr-2"></i> Acta de Entrega - Seleccionar Artículos</h3>
+                <button @click="mostrarModalActa = false" class="text-teal-200 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-6 bg-gray-50 overflow-y-auto max-h-[70vh]">
+                <p class="text-sm text-gray-600 mb-4">Seleccione los artículos que desea incluir en el Acta de Entrega.</p>
+                
+                <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-center w-12">
+                                    <input type="checkbox" x-model="seleccionarTodosActa" @change="toggleSeleccionarTodosActa()" class="rounded text-teal-600 focus:ring-teal-500 cursor-pointer w-4 h-4">
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Artículo</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Cant.</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Estatus</th>
+                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <template x-for="(item, index) in articulosActa" :key="index">
+                                <tr :class="{'bg-gray-50': item.impreso && !item.desbloqueado}">
+                                    <td class="px-4 py-3 text-center">
+                                        <input type="checkbox" x-model="item.seleccionado" :disabled="item.impreso && !item.desbloqueado" class="rounded text-teal-600 focus:ring-teal-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-4 h-4">
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="text-sm font-bold text-gray-900" x-text="item.nombre"></div>
+                                        <div class="text-xs text-gray-500" x-text="item.id_articulo_produccion || 'Sin código'"></div>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-sm font-bold text-gray-800" x-text="item.cantidad"></td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span x-show="item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800"><i class="ph ph-check-circle mr-1"></i> Impreso</span>
+                                        <span x-show="!item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800"><i class="ph ph-clock mr-1"></i> Pendiente</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button x-show="item.impreso" @click="toggleDesbloqueoActa(item)" class="text-xs font-bold px-3 py-1 rounded transition shadow-sm" :class="item.desbloqueado ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                                            <i class="ph" :class="item.desbloqueado ? 'ph-lock-open' : 'ph-lock-key'"></i>
+                                            <span x-text="item.desbloqueado ? 'Bloquear' : 'Desbloquear'"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="articulosActa.length === 0">
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-500 text-sm italic">Cargando artículos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button @click="mostrarModalActa = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
+                <button @click="imprimirActaSeleccionadosPdf()" class="px-6 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-lg flex items-center disabled:opacity-50" :disabled="generandoActaPdf || articulosActa.filter(a => a.seleccionado).length === 0">
+                    <i class="ph ph-printer mr-2" x-show="!generandoActaPdf"></i>
+                    <i class="ph ph-spinner animate-spin mr-2" x-show="generandoActaPdf"></i>
+                    <span x-text="generandoActaPdf ? 'Generando PDF...' : 'Generar PDF (' + articulosActa.filter(a => a.seleccionado).length + ')'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <script>
@@ -470,6 +556,8 @@
             cotizacionBloqueada: false,
             cotizacionAutorizada: false,
             cotizacionActualId: null,
+            tiempo_entrega: '',
+            observaciones: '',
             
             // Variables para Modal Pagos
             mostrarModalPagos: false,
@@ -491,6 +579,12 @@
             generandoPdf: false,
             generandoActaPdf: false,
 
+            // Variables Acta de Entrega
+            mostrarModalActa: false,
+            proyectoActa: null,
+            articulosActa: [],
+            seleccionarTodosActa: true,
+
             get proyectosFiltrados() {
                 if (this.filtro === '') {
                     return this.proyectos;
@@ -501,6 +595,11 @@
                     const nombreCliente = p.cliente_nombre ? p.cliente_nombre.toLowerCase() : '';
                     return nombreProyecto.includes(busqueda) || nombreCliente.includes(busqueda);
                 });
+            },
+
+            get isSHProject() {
+                if (!this.proyecto || !this.proyecto.nombre_proyecto) return false;
+                return this.proyecto.nombre_proyecto.toUpperCase().startsWith('SH-');
             },
 
             async abrirCotizador(proyecto) {
@@ -516,6 +615,8 @@
                 this.cotizacionBloqueada = (proyecto.tiene_pagos > 0);
                 this.cotizacionAutorizada = false;
                 this.cotizacionActualId = null;
+                this.tiempo_entrega = ''; // Se mantiene para SH, no afecta a otros.
+                this.observaciones = 'Al aceptar esta cotización, está conforme y de acuerdo a los términos y condiciones proporcionados por el asesor de venta.';
                 this.mostrarModal = true;
                 
                 // Cargar artículos
@@ -524,7 +625,8 @@
                     const data = await response.json();
                     this.articulos = data.map(item => ({
                         ...item,
-                        precio_unitario: (item.precio !== null && item.precio !== '' && item.precio !== undefined) ? parseFloat(item.precio) : '' // Vacío si no hay precio
+                        precio_unitario: (item.precio !== null && item.precio !== '' && item.precio !== undefined) ? parseFloat(item.precio) : '', // Vacío si no hay precio
+                        adicional_unitario: (item.adicional_unitario !== null && item.adicional_unitario !== undefined) ? parseFloat(item.adicional_unitario) : 0 
                     }));
 
                     // Intentar cargar datos de cotización previa (Envío, Descuento)
@@ -582,7 +684,7 @@
             },
 
             get subtotalArticulos() {
-                return this.articulos.reduce((sum, item) => sum + (item.cantidad * (parseFloat(item.precio_unitario) || 0)), 0);
+                return this.articulos.reduce((sum, item) => sum + (item.cantidad * ((parseFloat(item.precio_unitario) || 0) + (parseFloat(item.adicional_unitario) || 0))), 0);
             },
 
             get subtotalGeneral() {
@@ -998,13 +1100,62 @@
                 }
             },
 
-            async imprimirActaPdf(proyecto) {
+            async abrirModalActa(proyecto) {
+                this.proyectoActa = proyecto;
+                this.articulosActa = [];
+                this.mostrarModalActa = true;
+                
+                try {
+                    const response = await fetch(`{{ url('/erp/articulos-proyecto') }}/${proyecto.proyecto_id}`);
+                    const data = await response.json();
+                    this.articulosActa = data.map(item => {
+                        const impreso = item.impreso_acta == 1;
+                        return {
+                            ...item,
+                            impreso: impreso,
+                            seleccionado: !impreso,
+                            desbloqueado: false
+                        };
+                    });
+                    this.seleccionarTodosActa = this.articulosActa.some(a => a.seleccionado);
+                } catch (error) {
+                    console.error(error);
+                    alert('Error cargando artículos para el acta.');
+                }
+            },
+
+            toggleSeleccionarTodosActa() {
+                this.articulosActa.forEach(a => {
+                    if (!(a.impreso && !a.desbloqueado)) {
+                        a.seleccionado = this.seleccionarTodosActa;
+                    }
+                });
+            },
+
+            toggleDesbloqueoActa(item) {
+                item.desbloqueado = !item.desbloqueado;
+                if (!item.desbloqueado) {
+                    item.seleccionado = false;
+                }
+            },
+
+            async imprimirActaSeleccionadosPdf() {
+                const seleccionados = this.articulosActa.filter(a => a.seleccionado).map(a => a.id);
+                if (seleccionados.length === 0) {
+                    alert('Debe seleccionar al menos un artículo para generar el acta.');
+                    return;
+                }
                 this.generandoActaPdf = true;
                 try {
+                    const data = {
+                        proyecto_id: this.proyectoActa.proyecto_id,
+                        articulos_ids: seleccionados
+                    };
+
                     const response = await fetch('{{ url("erp/generar-acta-entrega") }}', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ proyecto_id: proyecto.proyecto_id })
+                        body: JSON.stringify(data)
                     });
                     
                     if (response.ok) {
@@ -1012,11 +1163,20 @@
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        const nombreArchivo = proyecto.nombre_proyecto ? `Acta_Entrega_${proyecto.nombre_proyecto}.pdf` : 'Acta_Entrega.pdf';
+                        const nombreArchivo = this.proyectoActa.nombre_proyecto ? `Acta_Entrega_${this.proyectoActa.nombre_proyecto}.pdf` : 'Acta_Entrega.pdf';
                         a.download = nombreArchivo;
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
+                        
+                        this.articulosActa.forEach(a => {
+                            if (a.seleccionado) {
+                                a.impreso = true;
+                                a.desbloqueado = false;
+                                a.seleccionado = false;
+                            }
+                        });
+                        this.mostrarModalActa = false;
                     } else {
                         alert('Error al generar el acta de entrega.');
                     }
@@ -1055,7 +1215,9 @@
                         peso: this.totalPeso,
                         articulos: this.totalArticulos
                     },
-                    cotizacionId: this.cotizacionActualId
+                    cotizacionId: this.cotizacionActualId,
+                    tiempo_entrega: this.tiempo_entrega,
+                    observaciones: this.observaciones
                 };
 
                 // Enviar a backend para generar PDF

@@ -99,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/erp/terminos', [App\Http\Controllers\ERPController::class, 'guardarTerminos'])->name('terminos.guardar');
      Route::get('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'editarTerminosSolferino'])->name('terminos_solferino.index');
     Route::post('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'guardarTerminosSolferino'])->name('terminos_solferino.guardar');
+    Route::get('/erp/linea-tiempo', [ERPController::class, 'lineaTiempoProyectos'])->name('lineaTiempoProyectos');
     
 
     Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');
