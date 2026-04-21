@@ -33,6 +33,7 @@
                             <td class="p-2 flex gap-2">
                                 <button @click.prevent="abrirModal(cliente.id, cliente)" class="px-3 py-1 bg-blue-600 text-white rounded">Agregar Proyecto</button>
                                 <button @click.prevent="verProyectos(cliente.id, cliente)" class="px-3 py-1 bg-teal-600 text-white rounded">Ver Proyectos</button>
+                                <button @click.prevent="abrirModalSaldo(cliente.id, cliente)" class="px-3 py-1 bg-green-600 text-white rounded">Saldo a Favor</button>
                             </td>
                         </tr>
                     </template>
@@ -125,6 +126,47 @@
             </div>
         </div>
 
+        <!-- Modal Saldo a Favor -->
+        <div x-show="mostrarModalSaldo" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @click.self="cerrarModalSaldo()" style="display:none;">
+            <div class="bg-white rounded-lg w-11/12 max-w-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Agregar Saldo a Favor - <span x-text="clienteSeleccionadoNombre"></span></h3>
+                    <button @click="cerrarModalSaldo()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+
+                <template x-if="mensajeSaldo">
+                    <div class="mb-3 p-3 bg-green-100 text-green-700 rounded" x-text="mensajeSaldo"></div>
+                </template>
+                <template x-if="errorSaldo">
+                    <div class="mb-3 p-3 bg-red-100 text-red-700 rounded" x-text="errorSaldo"></div>
+                </template>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Monto de Saldo ($)</label>
+                    <input type="number" step="0.01" x-model="montoSaldo" class="w-full rounded border px-3 py-2" placeholder="0.00">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a Proyecto (Opcional)</label>
+                    <select x-model="proyectoSaldoId" class="w-full rounded border px-3 py-2">
+                        <option value="">-- Dejar como saldo global del cliente --</option>
+                        <template x-for="proy in proyectosCliente" :key="proy.proyecto_id">
+                            <option :value="proy.proyecto_id" x-text="proy.nombre"></option>
+                        </template>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Si no seleccionas un proyecto, el saldo quedará a favor del cliente en su cuenta para asignarse en Cobranza.</p>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-2">
+                    <button @click="cerrarModalSaldo()" class="px-4 py-2 rounded bg-gray-200">Cancelar</button>
+                    <button @click="guardarSaldo()" :disabled="cargandoSaldo" class="px-4 py-2 rounded bg-green-600 text-white disabled:opacity-50 flex items-center">
+                        <i class="ph ph-spinner animate-spin mr-2" x-show="cargandoSaldo"></i>
+                        <span x-text="cargandoSaldo ? 'Guardando...' : 'Guardar Saldo'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Ver Proyectos -->
         <div x-show="mostrarModalProyectos" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @click.self="cerrarModalProyectos()" style="display:none;">
             <div class="bg-white rounded-lg w-11/12 max-w-4xl p-6 max-h-[80vh] overflow-y-auto">
@@ -203,6 +245,13 @@ function clientesModule(){
         mapsUrl: '',
         mensaje: '',
         cargandoGuardar: false,
+        
+        mostrarModalSaldo: false,
+        montoSaldo: '',
+        proyectoSaldoId: '',
+        mensajeSaldo: '',
+        errorSaldo: '',
+        cargandoSaldo: false,
 
         abrirModal(id, cliente){
             this.clienteSeleccionadoId = id;
@@ -235,6 +284,63 @@ function clientesModule(){
         cerrarModalProyectos(){
             this.mostrarModalProyectos = false;
             this.proyectosCliente = [];
+        },
+
+        async abrirModalSaldo(id, cliente) {
+            this.clienteSeleccionadoId = id;
+            this.clienteSeleccionadoNombre = cliente.nombre_completo || '';
+            this.montoSaldo = '';
+            this.proyectoSaldoId = '';
+            this.mensajeSaldo = '';
+            this.errorSaldo = '';
+            this.proyectosCliente = [];
+            this.mostrarModalSaldo = true;
+
+            try {
+                const res = await fetch(`{{ url('crm/clientes') }}/${id}/proyectos`);
+                if(res.ok){
+                    this.proyectosCliente = await res.json();
+                }
+            } catch(e){ console.error(e); }
+        },
+
+        cerrarModalSaldo() {
+            this.mostrarModalSaldo = false;
+        },
+
+        async guardarSaldo() {
+            this.errorSaldo = '';
+            this.mensajeSaldo = '';
+            if (!this.montoSaldo || this.montoSaldo <= 0) {
+                this.errorSaldo = 'Ingresa un monto válido mayor a 0.';
+                return;
+            }
+            this.cargandoSaldo = true;
+            try {
+                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const fd = new FormData();
+                fd.append('cliente_id', this.clienteSeleccionadoId);
+                fd.append('monto', this.montoSaldo);
+                if (this.proyectoSaldoId) fd.append('proyecto_id', this.proyectoSaldoId);
+
+                const res = await fetch('{{ url("crm/guardar-saldo-favor") }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+                    body: fd
+                });
+                const json = await res.json();
+                if (json.success) {
+                    this.mensajeSaldo = json.mensaje;
+                    setTimeout(() => { this.cerrarModalSaldo(); }, 1500);
+                } else {
+                    this.errorSaldo = json.error || 'Error al guardar el saldo';
+                }
+            } catch (err) {
+                console.error(err);
+                this.errorSaldo = 'Error de conexión';
+            } finally {
+                this.cargandoSaldo = false;
+            }
         },
 
         generarPrefijoFromClient(cliente){

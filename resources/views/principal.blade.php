@@ -38,7 +38,7 @@
                     $canAccessERP = in_array($role, ['ADMIN', 'VENDEDOR/DISEÑADOR']);
                     $canAccessSeguimiento =  $canAccessCRM ||$canAccessERP || in_array($role, ['DIRECCIÓN', 'DIRECCION']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan) || in_array($role, ['COORD. LOGÍSTICA', 'COORD. LOGISTICA']) ;
                     $canAccessAsignacionPrecios = $canAccessERP || in_array($role, ['COORD. DV SOLFERINO', 'COORD. DV&MKT', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA']);
-                    $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION', 'VENDEDOR/DISEÑADOR']);
+                    $canAccessCobranza = in_array($role, ['ADMIN', 'COORD. DV&MKT', 'ADMINISTRACIÓN', 'ADMINISTRACION', 'DIRECCIÓN', 'DIRECCION', 'VENDEDOR/DISEÑADOR']);
                     $canAccessLogistica = in_array($role, ['ADMIN', 'COORD. LOGÍSTICA', 'COORD. LOGISTICA', 'VENDEDOR/DISEÑADOR']);
                     $canAccessEscaner = in_array($role, ['ADMIN']) || in_array($role, $rolesProduccionCoords) || in_array($role, $rolesProduccionScan);
                     

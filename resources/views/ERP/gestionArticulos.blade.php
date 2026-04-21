@@ -921,7 +921,7 @@
                 <div class="flex gap-3 pt-4">
                     <button type="button" @click="cerrarModalDuplicarBloque()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-50 transition">Cancelar</button>
                     <button type="button" @click="duplicarBloque()" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition flex items-center justify-center">
-                        <i class="ph ph-check mr-2"></i> Duplicar
+                        <i class="ph ph-check mr-2"></i> Duplicar 
                     </button>
                 </div>
             </div>

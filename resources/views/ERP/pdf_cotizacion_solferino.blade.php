@@ -249,6 +249,10 @@
                         </tr>
                         @endif
                         <tr>
+                            <td class="bg-gray bold">IVA ({{ $totales['iva_porcentaje'] ?? 16 }}%):</td>
+                            <td class="text-right">$ {{ number_format($totales['iva'] ?? 0, 2) }}</td>
+                        </tr>
+                        <tr>
                             <td class="bg-gray bold" style="font-size: 11px;">TOTAL:</td>
                             <td class="text-right bold" style="font-size: 11px;">$ {{ number_format($totales['total'], 2) }}</td>
                         </tr>

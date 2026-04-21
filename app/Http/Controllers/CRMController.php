@@ -482,6 +482,49 @@ class CRMController extends Controller
             }
       }
 
+      public function guardarSaldoFavor(Request $request)
+      {
+          $request->validate([
+              'cliente_id' => 'required|exists:Clientes,cliente_id',
+              'monto' => 'required|numeric|min:0.01',
+              'proyecto_id' => 'nullable|exists:Proyectos,proyecto_id'
+          ]);
+
+          try {
+              DB::beginTransaction();
+              $monto = (float) $request->monto;
+
+              if ($request->proyecto_id) {
+                  // Asignar directo al proyecto (cotización)
+                  $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+                  $nombreProyecto = mb_strtoupper((string)$proyecto->nombre);
+                  $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+                  $cotizacion = DB::table($tablaCotizaciones)->where('proyecto_id', $request->proyecto_id)->orderBy('cotizacion_id', 'desc')->first();
+
+                  if ($cotizacion) {
+                      DB::table($tablaCotizaciones)->where('cotizacion_id', $cotizacion->cotizacion_id)->increment('saldo_afavor', $monto);
+                  } else {
+                      return response()->json(['success' => false, 'error' => 'El proyecto no tiene cotizaciones generadas.']);
+                  }
+              } else {
+                  // NOTA: Se guarda el saldo global en la tabla Clientes ya que plan_pagos requiere una cotizacion_id.
+                  if (!\Illuminate\Support\Facades\Schema::hasColumn('Clientes', 'saldo_afavor')) {
+                      \Illuminate\Support\Facades\Schema::table('Clientes', function ($table) {
+                          $table->decimal('saldo_afavor', 10, 2)->default(0);
+                      });
+                  }
+                  DB::table('Clientes')->where('cliente_id', $request->cliente_id)->increment('saldo_afavor', $monto);
+              }
+
+              DB::commit();
+              return response()->json(['success' => true, 'mensaje' => 'Saldo a favor registrado exitosamente.']);
+          } catch (\Exception $e) {
+              DB::rollBack();
+              return response()->json(['success' => false, 'error' => $e->getMessage()]);
+          }
+      }
+
     public function clientes()
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;

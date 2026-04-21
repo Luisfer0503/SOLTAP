@@ -329,21 +329,27 @@
 
     <!-- Modal Configuración de Pagos (Remisión) -->
     <div x-show="mostrarModalPagos" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="display: none;" x-transition>
-        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
                 <h3 class="text-lg font-bold"><i class="ph ph-credit-card mr-2"></i> Plan de Pagos - Remisión</h3>
                 <button @click="mostrarModalPagos = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
             
-            <div class="p-6 bg-gray-50">
-                <div class="mb-4 flex justify-between items-center bg-white p-4 rounded border border-gray-200">
-                    <div>
-                        <p class="text-xs text-gray-500 uppercase font-bold">Total a Pagar</p>
-                        <p class="text-2xl font-bold text-blue-600" x-text="money(totalRemision)"></p>
+            <div class="p-6 bg-gray-50 flex-1 overflow-y-auto">
+                <div class="mb-4 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded border border-gray-200 gap-4">
+                    <div class="flex flex-wrap gap-8 w-full md:w-auto">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase font-bold" x-text="isSHProjectPagos ? 'Total a Pagar (Cliente)' : 'Total a Pagar'"></p>
+                            <p class="text-2xl font-bold text-gray-800" x-text="totalCotizacionOriginal ? money(totalCotizacionOriginal) : '---'"></p>
+                        </div>
+                        <div x-show="isSHProjectPagos" x-cloak>
+                            <p class="text-xs text-gray-500 uppercase font-bold">Total Pagar Tapier</p>
+                            <p class="text-2xl font-bold text-blue-600" x-text="money(articulosPagos.reduce((sum, art) => sum + (parseFloat(art.pago_tapier_monto) || 0), 0) + (parseFloat(instalacionTapierMonto) || 0))"></p>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 w-full md:w-auto justify-end">
                         <label class="text-sm font-bold text-gray-700">Cantidad de Pagos:</label>
-                        <input type="number" x-model="numeroPagos" @change="generarPagos()" min="1" max="10" class="w-20 text-center border-gray-300 rounded font-bold" :disabled="planBloqueado">
+                        <input type="number" x-model="numeroPagos" @change="generarPagos()" min="1" max="10" class="w-20 text-center border-gray-300 rounded font-bold" :disabled="planBloqueado || (isSHProjectPagos ? (articulosPagos.reduce((sum, art) => sum + (parseFloat(art.pago_tapier_monto) || 0), 0) <= 0) : totalRemision === null)">
                     </div>
                 </div>
 
@@ -356,6 +362,87 @@
                     <label for="condiciones_remision" class="block text-sm font-bold text-gray-700">Condiciones de Pago (Opcional)</label>
                     <textarea id="condiciones_remision" x-model="condicionesRemision" placeholder="Ej. Pago a 30 días, 50% anticipo..." class="mt-1 w-full text-sm border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" rows="2"></textarea>
                 </div>
+
+                <!-- Desglose de Pago Tapier -->
+                <div class="mb-8 border-b border-gray-200 pb-6" x-show="isSHProjectPagos" x-cloak>
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-md font-bold text-gray-800"><i class="ph ph-list-numbers mr-2"></i> Desglose de Pago Tapier por Artículo</h4>
+                        <div class="flex items-center gap-2 bg-white p-2 rounded border border-gray-200 shadow-sm">
+                            <label class="text-sm font-bold text-gray-700">Aplicar a todos:</label>
+                            <input type="number" x-model="porcentajeGlobalTapier" min="0" max="100" class="w-16 text-center text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500" placeholder="%">
+                            <span class="text-gray-500 font-bold">%</span>
+                            <button @click="aplicarPorcentajeGlobalTapier()" class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 transition shadow-sm">Aplicar</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">Imagen</th>
+                                    <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Artículo</th>
+                                    <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Precio Total</th>
+                                    <th class="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">% Pago Tapier</th>
+                                    <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">Monto Pago Tapier</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <template x-for="(art, index) in articulosPagos" :key="index">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-2 text-center">
+                                            <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden border border-gray-200 mx-auto">
+                                                <template x-if="art.imagen">
+                                                    <img :src="art.imagen" class="h-full w-full object-cover">
+                                                </template>
+                                                <template x-if="!art.imagen">
+                                                    <div class="h-full w-full flex items-center justify-center text-gray-400"><i class="ph ph-image"></i></div>
+                                                </template>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2 text-sm font-bold text-gray-800">
+                                            <span x-text="art.nombre"></span>
+                                            <div class="text-xs text-gray-500 font-normal" x-text="`Cant: ${art.cantidad}`"></div>
+                                        </td>
+                                        <td class="px-4 py-2 text-right text-sm text-gray-900 font-bold" x-text="money(art.total_calculado)"></td>
+                                        <td class="px-4 py-2 text-center">
+                                            <div class="flex items-center justify-center">
+                                                <input type="number" x-model="art.pago_tapier_porcentaje" @input="calcularMontoTapierArticulo(art)" class="w-16 text-center text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500">
+                                                <span class="ml-1 text-gray-500">%</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2 text-right text-sm font-bold text-blue-600" x-text="money(art.pago_tapier_monto)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot class="bg-gray-50 border-t border-gray-200">
+                                <tr x-show="instalacionTotal > 0">
+                                    <td colspan="2" class="px-4 py-2 text-sm font-bold text-gray-800 text-right">Instalación</td>
+                                    <td class="px-4 py-2 text-right text-sm text-gray-900 font-bold" x-text="money(instalacionTotal)"></td>
+                                    <td class="px-4 py-2 text-center">
+                                        <div class="flex items-center justify-center">
+                                            <input type="number" x-model="instalacionTapierPorcentaje" @input="calcularMontoTapierInstalacion()" class="w-16 text-center text-sm border-gray-300 rounded py-1 focus:ring-blue-500 focus:border-blue-500">
+                                            <span class="ml-1 text-gray-500">%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-2 text-right text-sm font-bold text-blue-600" x-text="money(instalacionTapierMonto)"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="px-4 py-3 text-right text-sm font-bold text-gray-700">Total Pago Tapier:</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-blue-700" x-text="money(articulosPagos.reduce((sum, art) => sum + (parseFloat(art.pago_tapier_monto) || 0), 0) + (parseFloat(instalacionTapierMonto) || 0))"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="px-4 py-3 text-right border-t border-gray-200">
+                                        <button @click="guardarTotalTapier()" class="px-4 py-2 bg-green-600 text-white rounded font-bold text-sm shadow hover:bg-green-700 transition">
+                                            <i class="ph ph-floppy-disk mr-1"></i> Guardar Monto para Plan de Pagos
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <h4 class="text-md font-bold text-gray-800 mb-4"><i class="ph ph-calendar mr-2"></i> Calendario de Pagos</h4>
 
                 <div x-show="planBloqueado" class="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded border border-yellow-200 text-sm font-bold flex items-center">
                     <i class="ph ph-lock-key mr-2 text-lg"></i> El plan de pagos está bloqueado porque ya existen abonos registrados.
@@ -396,8 +483,11 @@
 
             <div class="bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                 <button @click="mostrarModalPagos = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition">Cancelar</button>
-                <button @click="generarRemisionConPagos()" class="px-6 py-2 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 transition shadow-lg flex items-center">
-                    <i class="ph ph-file-pdf mr-2"></i> Generar Remisión
+                <button x-show="isSHProjectPagos" @click="generarRemisionConPagos('tapier')" class="px-6 py-2 bg-blue-800 text-white rounded-lg font-bold hover:bg-blue-900 transition shadow-lg flex items-center">
+                    <i class="ph ph-file-pdf mr-2"></i> Remisión Tapier
+                </button>
+                <button @click="generarRemisionConPagos('solferino')" class="px-6 py-2 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 transition shadow-lg flex items-center">
+                    <i class="ph ph-file-pdf mr-2"></i> <span x-text="isSHProjectPagos ? 'Remisión Solferino' : 'Generar Remisión'"></span>
                 </button>
             </div>
         </div>
@@ -561,7 +651,8 @@
             
             // Variables para Modal Pagos
             mostrarModalPagos: false,
-            totalRemision: 0,
+            totalRemision: null,
+            totalCotizacionOriginal: 0,
             numeroPagos: 2,
             listaPagos: [],
             proyectoPagos: null, // {id, nombre}
@@ -570,6 +661,12 @@
             condicionesRemision: '',
             autorizando: false,
             ajustando: false,
+            articulosPagos: [],
+            porcentajeGlobalTapier: 0,
+            
+            instalacionTotal: 0,
+            instalacionTapierPorcentaje: 0,
+            instalacionTapierMonto: 0,
             
             // Variables Producción
             mostrarModalProduccion: false,
@@ -600,6 +697,10 @@
             get isSHProject() {
                 if (!this.proyecto || !this.proyecto.nombre_proyecto) return false;
                 return this.proyecto.nombre_proyecto.toUpperCase().startsWith('SH-');
+            },
+            
+            get isSHProjectPagos() {
+                return this.proyectoPagos && this.proyectoPagos.nombre.toUpperCase().startsWith('SH-');
             },
 
             async abrirCotizador(proyecto) {
@@ -737,7 +838,33 @@
                 this.planBloqueado = (proyecto.tiene_pagos > 0);
                 this.rfcRemision = proyecto.rfc || '';
                 this.condicionesRemision = proyecto.condiciones_pago || '';
+                this.articulosPagos = [];
+                this.porcentajeGlobalTapier = 0;
                 
+                this.instalacionTotal = 0;
+                this.instalacionTapierPorcentaje = 0;
+                this.instalacionTapierMonto = 0;
+
+                // Cargar los artículos para el desglose de pago Tapier
+                try {
+                    const resArt = await fetch(`{{ url('/erp/articulos-proyecto') }}/${proyecto.proyecto_id}`);
+                    if (resArt.ok) {
+                        const arts = await resArt.json();
+                        this.articulosPagos = arts.map(a => {
+                            const precio = parseFloat(a.precio) || 0;
+                            const adicional = parseFloat(a.adicional_unitario) || 0;
+                            const cantidad = parseInt(a.cantidad) || 1;
+                            const total = (precio + adicional) * cantidad;
+                            return {
+                                ...a,
+                                total_calculado: total,
+                                pago_tapier_porcentaje: parseFloat(a.pago_tapier_porcentaje) || 0,
+                                pago_tapier_monto: parseFloat(a.pago_tapier_monto) || 0
+                            };
+                        });
+                    }
+                } catch(err) { console.error('Error cargando artículos para pagos Tapier:', err); }
+
                 // Obtener el total de la cotización guardada
                 try {
                     const response = await fetch(`{{ url('/erp/obtener-cotizacion') }}/${proyecto.proyecto_id}`);
@@ -745,11 +872,17 @@
                         const cotizacion = await response.json();
                         if (cotizacion && cotizacion.total) {
                             this.totalRemision = parseFloat(cotizacion.total);
+                            this.totalCotizacionOriginal = parseFloat(cotizacion.total);
+                            
+                            this.instalacionTotal = parseFloat(cotizacion.instalacion) || 0;
+                            this.instalacionTapierPorcentaje = parseFloat(cotizacion.instalacion_tapier_porcentaje) || 0;
+                            this.instalacionTapierMonto = parseFloat(cotizacion.instalacion_tapier_monto) || 0;
                             
                             // Intentar cargar plan de pagos existente
                             let planCargado = false;
                             try {
-                                const resPlan = await fetch(`{{ url('/erp/plan-pagos') }}/${cotizacion.cotizacion_id}`);
+                                const isSH = proyecto.nombre_proyecto.toUpperCase().startsWith('SH-');
+                                const resPlan = await fetch(`{{ url('/erp/plan-pagos') }}/${cotizacion.cotizacion_id}?is_sh=${isSH ? 1 : 0}`);
                                 if (resPlan.ok) {
                                     const plan = await resPlan.json();
                                     if (plan && plan.length > 0) {
@@ -762,13 +895,21 @@
                                         this.numeroPagos = plan.length;
                                         if (this.listaPagos.some(p => p.monto_pagado > 0)) this.planBloqueado = true;
                                         planCargado = true;
+                                        
+                                        this.totalRemision = this.listaPagos.reduce((sum, p) => sum + p.monto, 0);
                                     }
                                 }
                             } catch(err) { console.error(err); }
 
                             if (!planCargado) {
+                                const isSH = proyecto.nombre_proyecto.toUpperCase().startsWith('SH-');
+                                this.totalRemision = isSH ? null : this.totalCotizacionOriginal;
+
                                 this.numeroPagos = 2; // Resetear a default
-                                this.generarPagos(); // Generar lista inicial
+                                this.listaPagos = [];
+                                if (!isSH) {
+                                    this.generarPagos(); // Generar lista inicial
+                                }
                             }
                             this.mostrarModalPagos = true;
                         } else {
@@ -784,6 +925,7 @@
             },
 
             generarPagos() {
+                if (this.totalRemision === null) return;
                 const n = parseInt(this.numeroPagos);
                 if (n < 1) return;
                 
@@ -841,6 +983,39 @@
 
             get sumaPorcentajes() {
                 return this.listaPagos.reduce((acc, p) => acc + (parseFloat(p.porcentaje) || 0), 0);
+            },
+
+            aplicarPorcentajeGlobalTapier() {
+                const pct = parseFloat(this.porcentajeGlobalTapier) || 0;
+                this.articulosPagos.forEach(art => {
+                    art.pago_tapier_porcentaje = pct;
+                    art.pago_tapier_monto = (art.total_calculado * pct) / 100;
+                });
+                
+                this.instalacionTapierPorcentaje = pct;
+                this.instalacionTapierMonto = (this.instalacionTotal * pct) / 100;
+            },
+
+            calcularMontoTapierArticulo(art) {
+                const pct = parseFloat(art.pago_tapier_porcentaje) || 0;
+                art.pago_tapier_monto = (art.total_calculado * pct) / 100;
+            },
+            
+            calcularMontoTapierInstalacion() {
+                const pct = parseFloat(this.instalacionTapierPorcentaje) || 0;
+                this.instalacionTapierMonto = (this.instalacionTotal * pct) / 100;
+            },
+
+            guardarTotalTapier() {
+                const sumaTapierArticulos = this.articulosPagos.reduce((sum, art) => sum + (parseFloat(art.pago_tapier_monto) || 0), 0);
+                const sumaTapier = sumaTapierArticulos + (parseFloat(this.instalacionTapierMonto) || 0);
+                if (sumaTapier <= 0) {
+                    alert('El monto de Pago Tapier debe ser mayor a 0 para generar el plan de pagos.');
+                    return;
+                }
+                this.totalRemision = sumaTapier;
+                this.generarPagos();
+                alert('Monto actualizado en el Total a Pagar. Puede revisar el Calendario de Pagos.');
             },
 
             async guardarCotizacion(silent = false) {
@@ -953,12 +1128,41 @@
                 }
             },
 
-            async generarRemisionConPagos() {
-                try {
+                    async generarRemisionConPagos(tipo = 'solferino') {                
+                    try {
                     // Validar suma 100%
                     if (Math.abs(this.sumaPorcentajes - 100) > 0.1) {
                         alert('La suma de los porcentajes debe ser 100%. Actual: ' + this.sumaPorcentajes.toFixed(2) + '%');
                         return;
+                    }
+                     if (this.totalCotizacionOriginal === null || this.totalCotizacionOriginal <= 0) {
+                        alert('El total original de la cotización no es válido.');
+                        return;
+                    }
+
+                    let pagosParaEnviar = [];
+                    let sumaTapierArticulos = this.articulosPagos.reduce((sum, art) => sum + (parseFloat(art.pago_tapier_monto) || 0), 0);
+                    let sumaTapier = sumaTapierArticulos + (parseFloat(this.instalacionTapierMonto) || 0);
+
+                    if (sumaTapier <= 0 && this.isSHProjectPagos) {
+                        alert('Debe establecer los porcentajes/montos de Pago Tapier (mayor a 0) antes de generar esta remisión.');
+                        return;
+                    }
+
+                    let pagosTapier = this.listaPagos.map(p => ({
+                        ...p,
+                        monto: this.isSHProjectPagos ? ((sumaTapier * parseFloat(p.porcentaje)) / 100) : ((this.totalCotizacionOriginal * parseFloat(p.porcentaje)) / 100)
+                    }));
+
+                    let pagosSolferino = this.listaPagos.map(p => ({
+                        ...p,
+                        monto: (this.totalCotizacionOriginal * parseFloat(p.porcentaje)) / 100
+                    }));
+
+                    if (tipo === 'tapier') {
+                        pagosParaEnviar = pagosTapier;
+                    } else {
+                        pagosParaEnviar = pagosSolferino;
                     }
 
                     // Validar que tengamos datos del proyecto
@@ -968,9 +1172,14 @@
 
                     const data = {
                         proyecto_id: this.proyectoPagos.id,
-                        pagos: this.listaPagos,
+                        pagos: pagosParaEnviar,
+                        pagos_tapier: pagosTapier,
                         rfc: this.rfcRemision,
-                        condiciones: this.condicionesRemision
+                        condiciones: this.condicionesRemision,
+                        articulos_pagos: this.articulosPagos,
+                        instalacion_tapier_porcentaje: this.instalacionTapierPorcentaje,
+                        instalacion_tapier_monto: this.instalacionTapierMonto,
+                        tipo_remision: tipo
                     };
 
                     const response = await fetch('{{ route("generarRemisionPdf") }}', {
@@ -985,7 +1194,8 @@
                         const a = document.createElement('a');
                         a.href = url;
                         // Asegurar nombre de archivo
-                        const nombreArchivo = this.proyectoPagos.nombre ? `Remision_${this.proyectoPagos.nombre}.pdf` : 'Remision.pdf';
+                        const sufijo = tipo === 'tapier' ? '_Tapier' : '_Solferino';
+                        const nombreArchivo = this.proyectoPagos.nombre ? `Remision${sufijo}_${this.proyectoPagos.nombre}.pdf` : `Remision${sufijo}.pdf`;
                         a.download = nombreArchivo;
                         document.body.appendChild(a);
                         a.click();

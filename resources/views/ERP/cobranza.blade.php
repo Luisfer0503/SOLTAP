@@ -51,7 +51,7 @@
                                 <p class="text-xs text-gray-500" x-text="proyecto.cliente_nombre"></p>
                             </div>
                             <div class="text-right">
-                                <p class="font-bold text-sm text-purple-700" x-text="money(proyecto.total_cotizacion)"></p>
+                                <p class="font-bold text-sm text-purple-700" x-text="money(proyecto.total_plan)"></p>
                                 <p class="text-xs font-bold" :class="proyecto.saldo_pendiente > 0.01 ? 'text-red-600' : 'text-green-600'" x-text="proyecto.saldo_pendiente > 0.01 ? 'Pendiente' : 'Pagado'"></p>
                             </div>
                         </div>
@@ -107,6 +107,27 @@
                         </div>
                     </div>
 
+                    <!-- Saldo del Cliente Global -->
+                    <div x-show="(parseFloat(proyectoSeleccionado.cliente_saldo_afavor || 0) + parseFloat(proyectoSeleccionado.saldo_afavor || 0)) > 0" class="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-between" x-transition>
+                        <div>
+                            <h4 class="font-bold text-teal-800"><i class="ph ph-wallet mr-1"></i> Saldo a Favor Total del Cliente</h4>
+                            <p class="text-sm text-teal-700 mt-1">Este cliente tiene un total de <span class="font-bold" x-text="money(parseFloat(proyectoSeleccionado.cliente_saldo_afavor || 0) + parseFloat(proyectoSeleccionado.saldo_afavor || 0))"></span> a su favor.</p>
+                            <div class="mt-2 text-xs text-teal-700 bg-teal-100/50 p-2 rounded border border-teal-100 inline-block shadow-sm">
+                                <span class="font-bold">Desglose:</span> 
+                                <span class="ml-2">Cuenta Global: <span class="font-bold" x-text="money(proyectoSeleccionado.cliente_saldo_afavor || 0)"></span></span>
+                                <span class="mx-2">|</span>
+                                <span>Este Proyecto: <span class="font-bold" x-text="money(proyectoSeleccionado.saldo_afavor || 0)"></span></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2" x-show="parseFloat(proyectoSeleccionado.cliente_saldo_afavor || 0) > 0">
+                            <div class="relative">
+                                <span class="absolute left-2 top-2 text-gray-500 text-sm">$</span>
+                                <input type="number" step="0.01" x-model="montoUsarSaldo" class="w-32 pl-6 pr-2 py-1.5 text-sm border-gray-300 rounded focus:ring-teal-500 focus:border-teal-500" placeholder="Monto">
+                            </div>
+                            <button @click="usarSaldoCliente()" class="px-4 py-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 font-bold text-sm shadow-sm transition">Aplicar al Proyecto</button>
+                        </div>
+                    </div>
+
                     <!-- Resumen de Pagos -->
                     <div class="grid grid-cols-4 gap-4 mb-8">
                         <div class="bg-white p-4 rounded-lg border shadow-sm">
@@ -121,9 +142,16 @@
                             <p class="text-xs text-gray-500 uppercase font-bold">Saldo Pendiente</p>
                             <p class="text-2xl font-bold text-red-600" x-text="money(proyectoSeleccionado.saldo_pendiente || 0)"></p>
                         </div>
-                        <div class="bg-white p-4 rounded-lg border shadow-sm">
+                        <div class="bg-white p-4 rounded-lg border shadow-sm relative group">
                             <p class="text-xs text-gray-500 uppercase font-bold">Saldo a Favor</p>
                             <p class="text-2xl font-bold text-blue-600" x-text="money(proyectoSeleccionado.saldo_afavor || 0)"></p>
+                            
+                            <button x-show="(proyectoSeleccionado.saldo_afavor || 0) > 0" 
+                                    @click="regresarSaldoACliente()" 
+                                    class="absolute top-2 right-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md hidden group-hover:flex items-center transition shadow-sm" 
+                                    title="Mover este saldo a la cuenta global del cliente para usarlo en otros proyectos">
+                                <i class="ph ph-arrows-left-right mr-1"></i> <span class="text-xs font-bold">Hacer Global</span>
+                            </button>
                         </div>
                     </div>
 
@@ -238,6 +266,8 @@ function cobranzaApp() {
         isDvMkt: @json($isDvMkt),
         isDvSolferino: @json($isDvSolferino),
 
+        montoUsarSaldo: '',
+
         modalConfirmacion: {
             open: false,
             tipo: 'info',
@@ -273,10 +303,10 @@ function cobranzaApp() {
             
             if (this.isAdmin) return true;
             
-            if (isCT) {
+            if (isCT || proyecto.tabla_cotizacion === 'cotizaciones') {
                 return this.isVendedor || this.isAdminCobranza || this.isDvMkt;
-            } else if (isSH) {
-                return this.isDvMkt;
+            } else if (isSH || proyecto.tabla_cotizacion === 'cotizaciones_solferino') {
+                return this.isDvSolferino || this.isDvMkt || this.isAdminCobranza;
             }
             return false;
         },
@@ -289,10 +319,10 @@ function cobranzaApp() {
             
             if (this.isAdmin) return true;
             
-            if (isCT) {
+            if (isCT || proyecto.tabla_cotizacion === 'cotizaciones') {
                 return this.isAdminCobranza || this.isDvMkt;
-            } else if (isSH) {
-                return this.isDvSolferino;
+            } else if (isSH || proyecto.tabla_cotizacion === 'cotizaciones_solferino') {
+                return this.isDvSolferino || this.isAdminCobranza;
             }
             return false;
         },
@@ -300,14 +330,106 @@ function cobranzaApp() {
         get proyectosFiltrados() {
             if (this.filtro === '') return this.proyectos;
             const busqueda = this.filtro.toLowerCase();
-            return this.proyectos.filter(p => 
-                p.nombre_proyecto.toLowerCase().includes(busqueda) ||
-                p.cliente_nombre.toLowerCase().includes(busqueda)
-            );
+            return this.proyectos.filter(p => {
+                const nombre = p.nombre_proyecto ? p.nombre_proyecto.toLowerCase() : '';
+                const cliente = p.cliente_nombre ? p.cliente_nombre.toLowerCase() : '';
+                return nombre.includes(busqueda) || cliente.includes(busqueda);
+            });
+        },
+
+        async usarSaldoCliente() {
+            const monto = parseFloat(this.montoUsarSaldo);
+            if (!monto || monto <= 0 || monto > parseFloat(this.proyectoSeleccionado.cliente_saldo_afavor)) {
+                alert('Monto inválido. Asegúrese de que sea mayor a 0 y no exceda el saldo disponible del cliente.');
+                return;
+            }
+
+            if (!confirm(`¿Desea transferir ${this.money(monto)} del saldo global del cliente a este proyecto?`)) return;
+
+            try {
+                const response = await fetch('{{ url("erp/usar-saldo-cliente") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: JSON.stringify({ 
+                        proyecto_id: this.proyectoSeleccionado.proyecto_id, 
+                        monto: monto,
+                        cotizacion_id: this.proyectoSeleccionado.cotizacion_id
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Saldo global aplicado exitosamente a los pagos del proyecto.');
+                    const nuevoSaldoGlobal = parseFloat(this.proyectoSeleccionado.cliente_saldo_afavor) - monto;
+                    this.proyectoSeleccionado.cliente_saldo_afavor = nuevoSaldoGlobal;
+                    
+                    if (result.plan) {
+                        this.planPagos = result.plan.map(p => ({...p, abono: ''}));
+                    }
+                    if (typeof result.saldo_afavor !== 'undefined') {
+                        this.proyectoSeleccionado.saldo_afavor = result.saldo_afavor;
+                    }
+
+                    this.actualizarResumenProyecto();
+                    
+                    // Propagar saldo actualizado a la lista lateral en tiempo real
+                    this.proyectos.forEach(p => {
+                        if (p.cliente_nombre === this.proyectoSeleccionado.cliente_nombre) {
+                            p.cliente_saldo_afavor = nuevoSaldoGlobal;
+                        }
+                    });
+                    this.proyectos = [...this.proyectos]; // Forzar reactividad visual
+                    this.montoUsarSaldo = '';
+                } else {
+                    alert('Error: ' + (result.error || 'Ocurrió un error.'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error de conexión.');
+            }
+        },
+
+        async regresarSaldoACliente() {
+            if (!confirm(`¿Desea transferir los ${this.money(this.proyectoSeleccionado.saldo_afavor)} de este proyecto al saldo global del cliente para poder usarlo en otros proyectos?`)) return;
+
+            try {
+                const response = await fetch('{{ url("erp/regresar-saldo-cliente") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: JSON.stringify({ 
+                        proyecto_id: this.proyectoSeleccionado.proyecto_id, 
+                        cotizacion_id: this.proyectoSeleccionado.cotizacion_id
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Saldo transferido exitosamente a la cuenta global del cliente.');
+                    
+                    const montoTransferido = parseFloat(result.monto_transferido);
+                    const nuevoSaldoGlobal = parseFloat(this.proyectoSeleccionado.cliente_saldo_afavor || 0) + montoTransferido;
+
+                    this.proyectoSeleccionado.cliente_saldo_afavor = nuevoSaldoGlobal;
+                    this.proyectoSeleccionado.saldo_afavor = 0;
+                    this.actualizarResumenProyecto();
+                    
+                    // Propagar a todos los proyectos del cliente en la lista
+                    this.proyectos.forEach(p => {
+                        if (p.cliente_nombre === this.proyectoSeleccionado.cliente_nombre) {
+                            p.cliente_saldo_afavor = nuevoSaldoGlobal;
+                        }
+                    });
+                    this.proyectos = [...this.proyectos]; // Forzar reactividad visual
+                } else {
+                    alert('Error: ' + (result.error || 'Ocurrió un error.'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error de conexión.');
+            }
         },
 
         async seleccionarProyecto(proyecto) {
             this.proyectoSeleccionado = proyecto;
+            this.montoUsarSaldo = '';
             this.cargando = true;
             this.planPagos = [];
 
@@ -318,7 +440,8 @@ function cobranzaApp() {
             }
 
             try {
-                const response = await fetch(`{{ url('/erp/plan-pagos') }}/${proyecto.cotizacion_id}`);
+                let isSH = (proyecto.empresa_nombre || proyecto.nombre_proyecto || '').toLowerCase().includes('solferino') || (proyecto.nombre_proyecto || '').toLowerCase().startsWith('sh-');
+                const response = await fetch(`{{ url('/erp/plan-pagos') }}/${proyecto.cotizacion_id}?tabla=${proyecto.tabla_cotizacion || ''}&is_sh=${isSH ? 1 : 0}`);
                 if (!response.ok) throw new Error('Error de red');
                 let plan = await response.json();
                 this.planPagos = plan.map(p => ({...p, abono: ''}));
@@ -332,11 +455,14 @@ function cobranzaApp() {
         },
 
         async registrarAbono(pago) {
-            if (!pago.abono || parseFloat(pago.abono) <= 0) {
+            // Permite monto 0 si hay saldo a favor disponible
+            const abono = parseFloat(pago.abono) || 0;
+            const saldoFavorProyecto = parseFloat(this.proyectoSeleccionado.saldo_afavor) || 0;
+
+            if (abono <= 0 && saldoFavorProyecto <= 0) {
                 alert('Por favor, ingrese un monto de abono válido.'); return;
             }
 
-            const abono = parseFloat(pago.abono);
             const saldoPendiente = parseFloat(this.proyectoSeleccionado.saldo_pendiente);
 
             if (abono > saldoPendiente) {
@@ -382,6 +508,17 @@ function cobranzaApp() {
         },
 
         async validarPago(pago) {
+            // Validación Frontend: Si es el último pago, verificar que el total pagado cubra el total del plan
+            if (this.planPagos.length > 0 && pago.id === this.planPagos[this.planPagos.length - 1].id) {
+                const totalAbonado = this.planPagos.reduce((sum, p) => sum + parseFloat(p.monto_pagado || 0), 0);
+                const totalPlan = parseFloat(this.proyectoSeleccionado.total_plan || 0);
+                
+                if (totalAbonado < totalPlan - 0.01) {
+                    alert('No se puede validar el último pago hasta que el proyecto esté pagado completamente (falta registrar abonos para cubrir el total del proyecto).');
+                    return;
+                }
+            }
+
             if (!confirm('¿Seguro que desea validar este pago? Esta acción no se puede deshacer.')) return;
 
             try {

@@ -359,6 +359,10 @@ class ERPController extends Controller
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
 
+        $hasTipoCotizacion = \Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion');
+        $tipoCotizacionesCond = $hasTipoCotizacion ? "AND (plan_pagos.tipo_cotizacion = 'cotizaciones' OR plan_pagos.tipo_cotizacion IS NULL)" : "";
+        $tipoSolferinoCond = $hasTipoCotizacion ? "AND plan_pagos.tipo_cotizacion = 'cotizaciones_solferino'" : "";
+
         $proyectos = DB::table('Proyectos')
             ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
             ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
@@ -381,9 +385,9 @@ class ERPController extends Controller
                 'proyecto_detalles.rfc',
                 'proyecto_detalles.condiciones_pago',
                 DB::raw("COALESCE(proyecto_detalles.condiciones_acceso, '') as condiciones_acceso"),
-                DB::raw("(SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) as tiene_cotizacion"),
+                DB::raw("((SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) + (SELECT COUNT(*) FROM cotizaciones_solferino WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND total > 0)) as tiene_cotizacion"),
                 DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes"),
-                DB::raw("(SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) as tiene_pagos")
+                DB::raw("((SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id $tipoCotizacionesCond WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) + (SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones_solferino ON plan_pagos.cotizacion_id = cotizaciones_solferino.cotizacion_id $tipoSolferinoCond WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0)) as tiene_pagos")
             )
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
@@ -516,13 +520,15 @@ class ERPController extends Controller
             // 2. Obtener artículos guardados
             $articulos = DB::table('proyecto_articulos')
                 ->where('proyecto_id', $proyecto_id)
-                ->select('articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'adicional_unitario', 'cubicaje', 'peso', 'imagen')
+                ->select('id', 'articulo_produccion_id as id_articulo_produccion', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cantidad', 'precio as precio_unitario', 'adicional_unitario', 'cubicaje', 'peso', 'imagen')
                 ->get()
                 ->map(function($item){ return (array)$item; })
                 ->toArray();
 
             // 3. Obtener totales guardados (última cotización)
-            $cotizacion = DB::table('cotizaciones')
+            $nombreProyecto = mb_strtoupper((string)($proyectoData->nombre_proyecto ?? ''));
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+            $cotizacion = DB::table($tablaCotizaciones)
                 ->where('proyecto_id', $proyecto_id)
                 ->orderBy('cotizacion_id', 'desc')
                 ->first();
@@ -560,23 +566,113 @@ class ERPController extends Controller
                 $cotizacionId = $cotizacion->cotizacion_id;
             }
 
+            // Obtener el nuevo Total a Pagar calculado desde el plan de pagos (Cobranza)
+            if (!empty($pagos)) {
+                $sumaPagos = 0;
+                foreach ($pagos as $p) {
+                    $sumaPagos += (float)$p['monto'];
+                }
+                if ($sumaPagos > 0) {
+                    $totales['total_remision'] = $sumaPagos;
+                }
+            }
+
+            // Guardar porcentajes y montos Tapier
+            $articulosPagos = $request->input('articulos_pagos', []);
+            $instalacionTapierPorcentaje = $request->input('instalacion_tapier_porcentaje', 0);
+            $instalacionTapierMonto = $request->input('instalacion_tapier_monto', 0);
+
+            if (!empty($articulosPagos)) {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'pago_tapier_porcentaje')) {
+                    \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                        $table->decimal('pago_tapier_porcentaje', 8, 2)->default(0)->nullable();
+                        $table->decimal('pago_tapier_monto', 10, 2)->default(0)->nullable();
+                    });
+                }
+                foreach ($articulosPagos as $artPago) {
+                    if (isset($artPago['id'])) {
+                        DB::table('proyecto_articulos')->where('id', $artPago['id'])->update([
+                            'pago_tapier_porcentaje' => $artPago['pago_tapier_porcentaje'] ?? 0,
+                            'pago_tapier_monto' => $artPago['pago_tapier_monto'] ?? 0,
+                        ]);
+                    }
+                }
+            }
+
+            if ($cotizacionId) {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn($tablaCotizaciones, 'instalacion_tapier_porcentaje')) {
+                    \Illuminate\Support\Facades\Schema::table($tablaCotizaciones, function ($table) {
+                        $table->decimal('instalacion_tapier_porcentaje', 8, 2)->default(0)->nullable();
+                        $table->decimal('instalacion_tapier_monto', 10, 2)->default(0)->nullable();
+                    });
+                }
+                DB::table($tablaCotizaciones)->where('cotizacion_id', $cotizacionId)->update([
+                    'instalacion_tapier_porcentaje' => $instalacionTapierPorcentaje,
+                    'instalacion_tapier_monto' => $instalacionTapierMonto,
+                ]);
+            }
+
+            $tipo_remision = $request->input('tipo_remision', 'solferino');
+
+            if ($tipo_remision === 'tapier') {
+                $tapierMontos = [];
+                foreach ($articulosPagos as $ap) {
+                    if (isset($ap['id'])) {
+                        $tapierMontos[$ap['id']] = $ap['pago_tapier_monto'] ?? 0;
+                    }
+                }
+
+                $totales['subtotal_articulos'] = 0;
+                foreach ($articulos as &$art) {
+                    $cantidad = (float)$art['cantidad'];
+                    $montoTapier = $tapierMontos[$art['id']] ?? 0;
+                    
+                    if ($cantidad > 0) {
+                        $art['precio_unitario'] = $montoTapier / $cantidad;
+                    } else {
+                        $art['precio_unitario'] = 0;
+                    }
+                    $art['adicional_unitario'] = 0;
+                    $totales['subtotal_articulos'] += $montoTapier;
+                }
+                unset($art);
+
+                $totales['envio'] = 0;
+                $totales['instalacion'] = $instalacionTapierMonto;
+                $totales['descuento'] = 0;
+                $totales['subtotal'] = $totales['subtotal_articulos'] + $totales['instalacion'];
+                $totales['iva'] = 0;
+                $totales['total'] = $totales['subtotal'];
+                $totales['total_remision'] = $totales['subtotal'];
+            }
+
+            $pagosTapier = $request->input('pagos_tapier', $pagos);
+
             // 4. Guardar Plan de Pagos en BD (Si existen)
-            if ($cotizacionId && !empty($pagos)) {
+            if ($cotizacionId && !empty($pagosTapier)) {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                    \Illuminate\Support\Facades\Schema::table('plan_pagos', function ($table) {
+                        $table->string('tipo_cotizacion')->default('cotizaciones');
+                    });
+                }
+
                 // Verificar si ya existen pagos realizados para no sobrescribir historial
                 $pagosRealizados = DB::table('plan_pagos')
                     ->where('cotizacion_id', $cotizacionId)
+                    ->where('tipo_cotizacion', $tablaCotizaciones)
                     ->where('monto_pagado', '>', 0)
                     ->exists();
 
                 if (!$pagosRealizados) {
                     // Limpiar pagos previos de esta cotización para evitar duplicados
-                    DB::table('plan_pagos')->where('cotizacion_id', $cotizacionId)->delete();
+                    DB::table('plan_pagos')->where('cotizacion_id', $cotizacionId)->where('tipo_cotizacion', $tablaCotizaciones)->delete();
 
-                    $totalPagosPlan = count($pagos);
+                    $totalPagosPlan = count($pagosTapier);
 
-                    foreach ($pagos as $index => $pago) {
+                    foreach ($pagosTapier as $index => $pago) {
                         DB::table('plan_pagos')->insert([
                             'cotizacion_id' => $cotizacionId,
+                            'tipo_cotizacion' => $tablaCotizaciones,
                             'nombre' => mb_strtoupper((string) $pago['nombre']),
                             'numero_pago' => $index + 1, // 1, 2, 3...
                             'total_pagos_plan' => $totalPagosPlan, // Total de divisiones (ej. 10)
@@ -606,7 +702,7 @@ class ERPController extends Controller
                 }
             }
 
-            $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos', 'rfc', 'condiciones'));
+            $pdf = Pdf::loadView('ERP.pdf_remision', compact('proyecto', 'articulos', 'totales', 'cotizacionId', 'pagos', 'rfc', 'condiciones', 'tipo_remision'));
             return $pdf->download('Remision_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -982,62 +1078,32 @@ class ERPController extends Controller
                 $table->boolean('validado')->default(0);
             });
         }
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+            \Illuminate\Support\Facades\Schema::table('plan_pagos', function ($table) {
+                $table->string('tipo_cotizacion')->default('cotizaciones');
+            });
+        }
 
-        // 1. Find the latest cotizacion_id for each project that has a payment plan.
-        $latestCotizacionesConPlan = DB::table('cotizaciones as c')
-            ->join('plan_pagos as pp', 'c.cotizacion_id', '=', 'pp.cotizacion_id')
-            ->select('c.proyecto_id', DB::raw('MAX(c.cotizacion_id) as cotizacion_id'))
-            ->groupBy('c.proyecto_id');
-
-        // 2. Get payment summaries for all payment plans
-        $paymentSummaries = DB::table('plan_pagos')
-            ->select(
-                'cotizacion_id',
-                DB::raw('SUM(CASE WHEN validado = 1 THEN monto_pagado ELSE 0 END) as total_pagado'),
-                DB::raw('SUM(monto) as total_plan')
-            )
-            ->groupBy('cotizacion_id');
-
-        // 3. Now, get the full project details using these cotizacion_ids and join summaries.
-        $query = DB::table('Proyectos as pr')
-            ->joinSub($latestCotizacionesConPlan, 'latest_c', function ($join) {
-                $join->on('pr.proyecto_id', '=', 'latest_c.proyecto_id');
-            })
-            ->join('cotizaciones', 'latest_c.cotizacion_id', '=', 'cotizaciones.cotizacion_id')
-            ->joinSub($paymentSummaries, 'summaries', function ($join) {
-                $join->on('cotizaciones.cotizacion_id', '=', 'summaries.cotizacion_id');
-            })
-            ->leftJoin('proyecto_detalles as pd', 'pr.proyecto_id', '=', 'pd.detalles_id')
-            ->leftJoin('empresas as emp', 'pd.empresa_id', '=', 'emp.empresa_id')
-            ->leftJoin('Clientes', 'pr.cliente_id', '=', 'Clientes.cliente_id')
-            ->leftJoin('Prospectos as P1', 'pr.prospecto_id', '=', 'P1.prospecto_id')
-            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
-            ->select(
-                'pr.proyecto_id',
-                'pr.nombre as nombre_proyecto',
-                'emp.nombre as empresa_nombre',
-                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
-                'cotizaciones.total as total_cotizacion',
-                'cotizaciones.cotizacion_id',
-                'cotizaciones.saldo_afavor',
-                'summaries.total_pagado',
-                'summaries.total_plan'
-            )
-            ->orderBy('pr.proyecto_id', 'desc');
+        $queryCT = $this->buildCobranzaQuery('cotizaciones');
+        $querySH = $this->buildCobranzaQuery('cotizaciones_solferino');
 
         if (in_array($role, ['VENDEDOR/DISEÑADOR', 'ADMINISTRACIÓN', 'ADMINISTRACION'])) {
-            $query->where(function($q) {
+            $queryCT->where(function($q) {
                 $q->where('emp.nombre', 'LIKE', '%Casa Tapier%')
                   ->orWhere('pr.nombre', 'LIKE', 'CT-%');
             });
+            $querySH->whereRaw('1 = 0');
         } elseif ($role === 'COORD. DV SOLFERINO') {
-            $query->where(function($q) {
+            $queryCT->whereRaw('1 = 0');
+            $querySH->where(function($q) {
                 $q->where('emp.nombre', 'LIKE', '%Solferino%')
                   ->orWhere('pr.nombre', 'LIKE', 'SH-%');
             });
         }
 
-        $proyectos = $query->get();
+        $proyectosCT = $queryCT->get();
+        $proyectosSH = $querySH->get();
+        $proyectos = $proyectosCT->merge($proyectosSH)->sortByDesc('proyecto_id')->values();
 
         // 4. Calculate the pending balance
         foreach ($proyectos as $proyecto) {
@@ -1050,18 +1116,135 @@ class ERPController extends Controller
         return view('ERP.cobranza', compact('proyectos'));
     }
 
-    public function obtenerPlanPagos($cotizacion_id)
+    public function obtenerPlanPagos(Request $request, $cotizacion_id)
     {
         if (!$cotizacion_id || $cotizacion_id == 'undefined') {
             return response()->json([]);
         }
 
-        $plan = DB::table('plan_pagos')
-            ->where('cotizacion_id', $cotizacion_id)
-            ->orderBy('numero_pago', 'asc')
-            ->get();
+        $query = DB::table('plan_pagos')->where('cotizacion_id', $cotizacion_id);
+        
+        if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+            $tipo = $request->query('is_sh', 0) == 1 ? 'cotizaciones_solferino' : 'cotizaciones';
+            $query->where('tipo_cotizacion', $tipo);
+        }
+
+        $plan = $query->orderBy('numero_pago', 'asc')->get();
 
         return response()->json($plan);
+    }
+
+    public function usarSaldoCliente(Request $request)
+    {
+        $request->validate([
+            'proyecto_id' => 'required',
+            'monto' => 'required|numeric|min:0.01',
+            'cotizacion_id' => 'required'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+            $cliente = DB::table('Clientes')->where('cliente_id', $proyecto->cliente_id)->first();
+
+            if (!$cliente || $cliente->saldo_afavor < $request->monto) {
+                return response()->json(['success' => false, 'error' => 'Saldo insuficiente en la cuenta del cliente.']);
+            }
+
+            // Descontar del cliente
+            DB::table('Clientes')->where('cliente_id', $proyecto->cliente_id)->decrement('saldo_afavor', $request->monto);
+
+            $nombreProyecto = mb_strtoupper((string)$proyecto->nombre);
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            $remanente = (float) $request->monto;
+            $fechaPago = now();
+
+            // Obtener plan de pagos
+            $queryPlan = DB::table('plan_pagos')->where('cotizacion_id', $request->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                $queryPlan->where('tipo_cotizacion', $tablaCotizaciones);
+            }
+            $planCompleto = $queryPlan->orderBy('numero_pago', 'asc')->get();
+
+            // Distribuir el abono en cascada
+            foreach ($planCompleto as $pago) {
+                if ($remanente <= 0) break;
+
+                $montoPendiente = (float)$pago->monto - (float)$pago->monto_pagado;
+                if ($montoPendiente <= 0.001) continue;
+
+                $montoAplicar = min($remanente, $montoPendiente);
+                $nuevoPagado = (float)$pago->monto_pagado + $montoAplicar;
+                $remanente -= $montoAplicar;
+                $esPagadoTotalmente = abs($nuevoPagado - (float)$pago->monto) < 0.01;
+                
+                DB::table('plan_pagos')->where('id', $pago->id)->update([
+                    'monto_pagado' => $nuevoPagado,
+                    'estatus' => $esPagadoTotalmente ? 'pagado' : 'parcial',
+                    'validado' => 0,
+                    'fecha_pago_real' => $fechaPago,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Si sobra dinero tras liquidar, va al saldo a favor del proyecto
+            if ($remanente > 0) {
+                DB::table($tablaCotizaciones)->where('cotizacion_id', $request->cotizacion_id)->increment('saldo_afavor', $remanente);
+            }
+
+            // Obtener el plan actualizado para el frontend
+            $planActualizadoQuery = DB::table('plan_pagos')->where('cotizacion_id', $request->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) { $planActualizadoQuery->where('tipo_cotizacion', $tablaCotizaciones); }
+            $planActualizado = $planActualizadoQuery->orderBy('numero_pago', 'asc')->get();
+            $cotizacionActualizada = DB::table($tablaCotizaciones)->where('cotizacion_id', $request->cotizacion_id)->first();
+
+            DB::commit();
+            return response()->json(['success' => true, 'plan' => $planActualizado, 'saldo_afavor' => (float)($cotizacionActualizada->saldo_afavor ?? 0)]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    public function regresarSaldoACliente(Request $request)
+    {
+        $request->validate([
+            'proyecto_id' => 'required',
+            'cotizacion_id' => 'required'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+            if (!$proyecto || !$proyecto->cliente_id) {
+                return response()->json(['success' => false, 'error' => 'El proyecto no tiene un cliente asociado válido para hacer el saldo global.']);
+            }
+
+            $nombreProyecto = mb_strtoupper((string)$proyecto->nombre);
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            $cotizacion = DB::table($tablaCotizaciones)->where('cotizacion_id', $request->cotizacion_id)->first();
+            $saldo = (float) ($cotizacion->saldo_afavor ?? 0);
+
+            if ($saldo <= 0) {
+                return response()->json(['success' => false, 'error' => 'No hay saldo a favor en este proyecto para transferir.']);
+            }
+
+            // Descontar de la cotización específica
+            DB::table($tablaCotizaciones)->where('cotizacion_id', $request->cotizacion_id)->update(['saldo_afavor' => 0]);
+
+            // Sumar a la cuenta general del cliente
+            DB::table('Clientes')->where('cliente_id', $proyecto->cliente_id)->increment('saldo_afavor', $saldo);
+
+            DB::commit();
+            return response()->json(['success' => true, 'monto_transferido' => $saldo]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
 
     public function registrarPago(Request $request)
@@ -1074,10 +1257,31 @@ class ERPController extends Controller
                 return response()->json(['success' => false, 'message' => 'No tienes permisos para validar pagos.'], 403);
             }
 
-            DB::table('plan_pagos')->where('id', $request->pago_id)->update(['validado' => 1]);
-            
             $pagoInicial = DB::table('plan_pagos')->where('id', $request->pago_id)->first();
-            $cotizacion = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+            if (!$pagoInicial) {
+                return response()->json(['success' => false, 'message' => 'Pago no encontrado.'], 404);
+            }
+
+            $tablaCotizaciones = $pagoInicial->tipo_cotizacion ?? 'cotizaciones';
+            if ($tablaCotizaciones !== 'cotizaciones_solferino') { $tablaCotizaciones = 'cotizaciones'; }
+
+            // VALIDACIÓN: El último pago no puede validarse si no está completamente pagado
+            $ultimoPago = DB::table('plan_pagos')
+                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
+                ->where('tipo_cotizacion', $tablaCotizaciones)
+                ->orderBy('numero_pago', 'desc')
+                ->first();
+
+            if ($ultimoPago && $pagoInicial->id == $ultimoPago->id) {
+                $totales = DB::table('plan_pagos')->where('cotizacion_id', $pagoInicial->cotizacion_id)->where('tipo_cotizacion', $tablaCotizaciones)->selectRaw('SUM(monto) as total_plan, SUM(monto_pagado) as total_pagado')->first();
+                if ($totales->total_pagado < $totales->total_plan - 0.01) {
+                    return response()->json(['success' => false, 'message' => 'No se puede validar el último pago hasta que el proyecto esté pagado completamente.']);
+                }
+            }
+
+            DB::table('plan_pagos')->where('id', $request->pago_id)->update(['validado' => 1]);
+            $cotizacion = DB::table($tablaCotizaciones)->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+
             if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones') && isset($cotizacion->proyecto_id)) {
                 $interaccion = DB::table('interacciones')->where('nombre', 'VALIDACIÓN DE PAGO')->first();
                 $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'VALIDACIÓN DE PAGO') : 'VALIDACIÓN DE PAGO';
@@ -1092,17 +1296,18 @@ class ERPController extends Controller
                 ]);
             }
 
-            $planActualizado = DB::table('plan_pagos')
-                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
-                ->orderBy('numero_pago', 'asc')
-                ->get();
+            $planActualizadoQuery = DB::table('plan_pagos')->where('cotizacion_id', $pagoInicial->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                $planActualizadoQuery->where('tipo_cotizacion', $tablaCotizaciones);
+            }
+            $planActualizado = $planActualizadoQuery->orderBy('numero_pago', 'asc')->get();
             
             return response()->json(['success' => true, 'message' => 'Pago validado correctamente.', 'plan' => $planActualizado]);
         }
 
         $validator = Validator::make($request->all(), [
             'pago_id' => 'required|exists:plan_pagos,id',
-            'monto_abono' => 'required|numeric|min:0.01',
+            'monto_abono' => 'required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -1122,20 +1327,26 @@ class ERPController extends Controller
                 return response()->json(['success' => false, 'message' => 'Pago no encontrado.'], 404);
             }
 
+            $tablaCotizaciones = $pagoInicial->tipo_cotizacion ?? 'cotizaciones';
+            if ($tablaCotizaciones !== 'cotizaciones_solferino') {
+                $tablaCotizaciones = 'cotizaciones';
+            }
+
             // 2. Usar cualquier saldo a favor existente
-            $cotizacion = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+            $cotizacion = DB::table($tablaCotizaciones)->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
             $saldoAfavorExistente = (float)($cotizacion->saldo_afavor ?? 0);
 
             if ($saldoAfavorExistente > 0) {
                 $montoAbono += $saldoAfavorExistente;
-                DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->update(['saldo_afavor' => 0]);
+                DB::table($tablaCotizaciones)->where('cotizacion_id', $pagoInicial->cotizacion_id)->update(['saldo_afavor' => 0]);
             }
 
             // 3. Obtener todos los pagos del plan ordenados
-            $planCompleto = DB::table('plan_pagos')
-                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
-                ->orderBy('numero_pago', 'asc')
-                ->get();
+            $queryPlan = DB::table('plan_pagos')->where('cotizacion_id', $pagoInicial->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                $queryPlan->where('tipo_cotizacion', $tablaCotizaciones);
+            }
+            $planCompleto = $queryPlan->orderBy('numero_pago', 'asc')->get();
             
             $remanente = $montoAbono;
             $procesar = false;
@@ -1175,17 +1386,17 @@ class ERPController extends Controller
 
             // 5. Si aún sobra dinero (remanente), guardarlo como saldo a favor en la cotización
             if ($remanente > 0) {
-                DB::table('cotizaciones')
+                DB::table($tablaCotizaciones)
                     ->where('cotizacion_id', $pagoInicial->cotizacion_id)
                     ->update(['saldo_afavor' => $remanente]);
             }
 
             // Lógica para convertir Prospecto de CT a Cliente al realizar un pago
-            $datosProspecto = DB::table('cotizaciones')
-                ->join('Proyectos', 'cotizaciones.proyecto_id', '=', 'Proyectos.proyecto_id')
+            $datosProspecto = DB::table($tablaCotizaciones)
+                ->join('Proyectos', "$tablaCotizaciones.proyecto_id", '=', 'Proyectos.proyecto_id')
                 ->join('prospectos', 'Proyectos.prospecto_id', '=', 'prospectos.prospecto_id')
                 ->leftJoin('empresas', 'prospectos.empresa_id', '=', 'empresas.empresa_id')
-                ->where('cotizaciones.cotizacion_id', $pagoInicial->cotizacion_id)
+                ->where("$tablaCotizaciones.cotizacion_id", $pagoInicial->cotizacion_id)
                 ->select('Proyectos.proyecto_id', 'Proyectos.cliente_id', 'prospectos.prospecto_id', 'empresas.nombre as empresa_nombre')
                 ->first();
 
@@ -1234,12 +1445,13 @@ class ERPController extends Controller
             DB::commit();
 
             // Devolver el plan de pagos actualizado y el nuevo saldo a favor
-            $planActualizado = DB::table('plan_pagos')
-                ->where('cotizacion_id', $pagoInicial->cotizacion_id)
-                ->orderBy('numero_pago', 'asc')
-                ->get();
+            $planActualizadoQuery = DB::table('plan_pagos')->where('cotizacion_id', $pagoInicial->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                $planActualizadoQuery->where('tipo_cotizacion', $tablaCotizaciones);
+            }
+            $planActualizado = $planActualizadoQuery->orderBy('numero_pago', 'asc')->get();
             
-            $cotizacionActualizada = DB::table('cotizaciones')->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
+            $cotizacionActualizada = DB::table($tablaCotizaciones)->where('cotizacion_id', $pagoInicial->cotizacion_id)->first();
 
             return response()->json(['success' => true, 'message' => 'Pago registrado correctamente.', 'plan' => $planActualizado, 'saldo_afavor' => (float)($cotizacionActualizada->saldo_afavor ?? 0)]);
 
@@ -1348,16 +1560,19 @@ class ERPController extends Controller
                     ]);
             }
 
-            // Asegurar que la tabla soporte la columna 'autorizado'
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('cotizaciones', 'autorizado')) {
-                \Illuminate\Support\Facades\Schema::table('cotizaciones', function ($table) {
+            $nombreProyecto = mb_strtoupper((string)($proyecto['nombre_proyecto'] ?? ''));
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            // Asegurar que las tablas soporten la columna 'autorizado'
+            if (!\Illuminate\Support\Facades\Schema::hasColumn($tablaCotizaciones, 'autorizado')) {
+                \Illuminate\Support\Facades\Schema::table($tablaCotizaciones, function ($table) {
                     $table->boolean('autorizado')->default(0);
                 });
             }
 
-            // Asegurar que la tabla soporte la columna 'instalacion'
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('cotizaciones', 'instalacion')) {
-                \Illuminate\Support\Facades\Schema::table('cotizaciones', function ($table) {
+            // Asegurar que las tablas soporten la columna 'instalacion'
+            if (!\Illuminate\Support\Facades\Schema::hasColumn($tablaCotizaciones, 'instalacion')) {
+                \Illuminate\Support\Facades\Schema::table($tablaCotizaciones, function ($table) {
                     $table->decimal('instalacion', 10, 2)->default(0);
                 });
             }
@@ -1380,7 +1595,7 @@ class ERPController extends Controller
             }
 
             // 2. Guardar datos generales en cotizaciones
-            $cotizacionId = DB::table('cotizaciones')->insertGetId([
+            $cotizacionId = DB::table($tablaCotizaciones)->insertGetId([
                 'proyecto_id' => $proyecto['proyecto_id'],
                 'subtotal' => $totales['subtotal'] ?? 0,
                 'envio' => (float)($totales['envio'] ?? 0),
@@ -1401,7 +1616,11 @@ class ERPController extends Controller
 
     public function obtenerCotizacion($proyecto_id)
     {
-        $cotizacion = DB::table('cotizaciones')
+        $proyecto = DB::table('Proyectos')->where('proyecto_id', $proyecto_id)->first();
+        $nombreProyecto = $proyecto ? mb_strtoupper((string)$proyecto->nombre) : '';
+        $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+        $cotizacion = DB::table($tablaCotizaciones)
             ->where('proyecto_id', $proyecto_id)
             ->orderBy('cotizacion_id', 'desc')
             ->first();
@@ -1421,15 +1640,19 @@ class ERPController extends Controller
                 return response()->json(['success' => false, 'message' => 'No tienes permisos para realizar esta acción.'], 403);
             }
 
-            // Asegurar que la tabla soporte la columna 'autorizado'
-            if (!\Illuminate\Support\Facades\Schema::hasColumn('cotizaciones', 'autorizado')) {
-                \Illuminate\Support\Facades\Schema::table('cotizaciones', function ($table) {
+            $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+            $nombreProyecto = $proyecto ? mb_strtoupper((string)$proyecto->nombre) : '';
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            // Asegurar que la tabla seleccionada soporte la columna 'autorizado'
+            if (!\Illuminate\Support\Facades\Schema::hasColumn($tablaCotizaciones, 'autorizado')) {
+                \Illuminate\Support\Facades\Schema::table($tablaCotizaciones, function ($table) {
                     $table->boolean('autorizado')->default(0);
                 });
             }
 
             // Autorizar la última cotización guardada de este proyecto
-            DB::table('cotizaciones')
+            DB::table($tablaCotizaciones)
                 ->where('proyecto_id', $request->proyecto_id)
                 ->orderBy('cotizacion_id', 'desc')
                 ->limit(1)
@@ -1463,7 +1686,11 @@ class ERPController extends Controller
 
         try {
             // Desbloquear (quitar autorización) a la última cotización
-            DB::table('cotizaciones')
+            $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+            $nombreProyecto = $proyecto ? mb_strtoupper((string)$proyecto->nombre) : '';
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            DB::table($tablaCotizaciones)
                 ->where('proyecto_id', $request->proyecto_id)
                 ->orderBy('cotizacion_id', 'desc')
                 ->limit(1)
@@ -2495,5 +2722,56 @@ class ERPController extends Controller
         }
 
         return view('ERP.lineaTiempoProyectos', compact('interacciones', 'proyectosPorInteraccion'));
+    }
+
+    private function buildCobranzaQuery($tablaCotizaciones)
+    {
+        $latestCotizacionesConPlan = DB::table("$tablaCotizaciones as c")
+            ->join('plan_pagos as pp', function ($join) use ($tablaCotizaciones) {
+                $join->on('c.cotizacion_id', '=', 'pp.cotizacion_id');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                    $join->where('pp.tipo_cotizacion', '=', $tablaCotizaciones);
+                }
+            })
+            ->select('c.proyecto_id', DB::raw('MAX(c.cotizacion_id) as cotizacion_id'))
+            ->groupBy('c.proyecto_id');
+
+        $paymentSummaries = DB::table('plan_pagos');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+            $paymentSummaries->where('tipo_cotizacion', $tablaCotizaciones);
+        }
+        $paymentSummaries = $paymentSummaries->select(
+                'cotizacion_id',
+                DB::raw('SUM(CASE WHEN validado = 1 THEN monto_pagado ELSE 0 END) as total_pagado'),
+                DB::raw('SUM(monto) as total_plan')
+            )
+            ->groupBy('cotizacion_id');
+
+        return DB::table('Proyectos as pr')
+            ->joinSub($latestCotizacionesConPlan, 'latest_c', function ($join) {
+                $join->on('pr.proyecto_id', '=', 'latest_c.proyecto_id');
+            })
+            ->join("$tablaCotizaciones as cotizaciones", 'latest_c.cotizacion_id', '=', 'cotizaciones.cotizacion_id')
+            ->joinSub($paymentSummaries, 'summaries', function ($join) {
+                $join->on('cotizaciones.cotizacion_id', '=', 'summaries.cotizacion_id');
+            })
+            ->leftJoin('proyecto_detalles as pd', 'pr.proyecto_id', '=', 'pd.detalles_id')
+            ->leftJoin('empresas as emp', 'pd.empresa_id', '=', 'emp.empresa_id')
+            ->leftJoin('Clientes', 'pr.cliente_id', '=', 'Clientes.cliente_id')
+            ->leftJoin('Prospectos as P1', 'pr.prospecto_id', '=', 'P1.prospecto_id')
+            ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
+            ->select(
+                'pr.proyecto_id',
+                'pr.nombre as nombre_proyecto',
+                'emp.nombre as empresa_nombre',
+                DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno, P1.apellido_materno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno, P2.apellido_materno), '')) as cliente_nombre"),
+                'Clientes.saldo_afavor as cliente_saldo_afavor',
+                'cotizaciones.total as total_cotizacion',
+                'cotizaciones.cotizacion_id',
+                'cotizaciones.saldo_afavor',
+                'summaries.total_pagado',
+                'summaries.total_plan',
+                DB::raw("'$tablaCotizaciones' as tabla_cotizacion")
+            );
     }
 }

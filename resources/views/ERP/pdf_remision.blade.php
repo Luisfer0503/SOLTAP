@@ -135,10 +135,24 @@ font-size:10px;
 
 <body>
 
+@php
+    $isSH = str_starts_with(strtoupper($proyecto['nombre_proyecto'] ?? ''), 'SH-');
+    $tipoRem = $tipo_remision ?? 'solferino';
+    
+    if ($tipoRem === 'tapier') {
+        $titulo = 'REMISIÓN INTERNA DE VENTA CASA TAPIER';
+        $logo = 'logo.png';
+    } elseif ($isSH) {
+        $titulo = 'REMISIÓN DE VENTA SOLFERINO HOME';
+        $logo = 'logosolferino.png';
+    } else {
+        $titulo = 'REMISIÓN DE VENTA CASA TAPIER';
+        $logo = 'logo.png';
+    }
+@endphp
+
 <div class="header">
-
-<h1>REMISION DE VENTA CASA TAPIER</h1>
-
+    <h1>{{ $titulo }}</h1>
 </div>
 
 <table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">
@@ -148,7 +162,7 @@ font-size:10px;
 
         <!-- 55% Logo (Columna Desc.) -->
         <td width="55%" align="center" style="vertical-align: middle;">
-            <img src="{{ public_path('archivos/logo.png') }}" style="width:180px;">
+            <img src="{{ public_path('archivos/' . $logo) }}" style="width:180px;">
         </td>
 
         <!-- 40% Datos (Columna Precio + Total) -->
@@ -362,7 +376,7 @@ ARTÍCULOS COTIZADOS
 
 <tr>
 <td class="total">TOTAL A PAGAR:</td>
-<td align="right" style="color:#1b3fbf;"><b>$ {{ number_format($totales['total'],2) }}</b></td>
+<td align="right" style="color:#1b3fbf;"><b>$ {{ number_format($totales['total_remision'] ?? $totales['total'], 2) }}</b></td>
 </tr>
 
 </table>
@@ -384,13 +398,13 @@ aceptando la "Opción de pago", así como las condiciones y garantías dadas a c
 <table style="width:100%; margin-top:2cm; border-collapse:collapse;">
     <tr>
         <td width="40%" align="center" style="padding-bottom: 5px;">
-            <img src="{{ public_path('archivos/logo.png') }}" style="width:160px;">
+            <img src="{{ public_path('archivos/' . $logo) }}" style="width:160px;">
         </td>
         <td width="20%"></td>
         <td width="40%"></td>
     </tr>
     <tr>
-        <td width="40%" align="center" style="border-top:1px solid #ccc; padding-top: 5px;">CASA TAPIER S.A. DE C.V.</td>
+        <td width="40%" align="center" style="border-top:1px solid #ccc; padding-top: 5px;">{{ ($tipoRem === 'solferino' && $isSH) ? 'SOLFERINO HOME' : 'CASA TAPIER S.A. DE C.V.' }}</td>
         <td width="20%"></td>
         <td width="40%" align="center" style="border-top:1px solid #ccc; padding-top: 5px;">Nombre Completo y Firma del Cliente</td>
     </tr>

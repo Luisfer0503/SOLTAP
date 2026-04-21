@@ -100,6 +100,10 @@ Route::middleware(['auth'])->group(function () {
      Route::get('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'editarTerminosSolferino'])->name('terminos_solferino.index');
     Route::post('/erp/terminos-solferino', [App\Http\Controllers\ERPController::class, 'guardarTerminosSolferino'])->name('terminos_solferino.guardar');
     Route::get('/erp/linea-tiempo', [ERPController::class, 'lineaTiempoProyectos'])->name('lineaTiempoProyectos');
+    Route::post('/crm/guardar-saldo-favor', [CRMController::class, 'guardarSaldoFavor']);
+    Route::post('/erp/usar-saldo-cliente', [ERPController::class, 'usarSaldoCliente']);
+    Route::post('/erp/regresar-saldo-cliente', [ERPController::class, 'regresarSaldoACliente']);
+  
     
 
     Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');
