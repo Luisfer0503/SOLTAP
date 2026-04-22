@@ -1,18 +1,21 @@
 FROM php:8.2-cli
 
-# Instalar extensiones necesarias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    unzip \
     git \
-    && docker-php-ext-install bcmath
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install zip bcmath
 
-# Instalar composer
+# Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
+
 COPY . .
 
-RUN composer install
+RUN composer install --no-dev --optimize-autoloader
+
+EXPOSE 8000
 
 CMD php artisan serve --host=0.0.0.0 --port=8000
