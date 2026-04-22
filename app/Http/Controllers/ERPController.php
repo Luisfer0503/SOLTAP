@@ -28,12 +28,17 @@ class ERPController extends Controller
                 return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
             }
 
+            $hasTipoCotizacion = \Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion');
+            $tipoCotizacionesCond = $hasTipoCotizacion ? "AND (plan_pagos.tipo_cotizacion = 'cotizaciones' OR plan_pagos.tipo_cotizacion IS NULL)" : "";
+            $tipoSolferinoCond = $hasTipoCotizacion ? "AND plan_pagos.tipo_cotizacion = 'cotizaciones_solferino'" : "";
+
             $proyectos = DB::table('Proyectos')
                 ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
                 ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
                 ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
                 ->select('Proyectos.proyecto_id as id', 'Proyectos.nombre',
-                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre")
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre"),
+                    DB::raw("((SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id $tipoCotizacionesCond WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) + (SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones_solferino ON plan_pagos.cotizacion_id = cotizaciones_solferino.cotizacion_id $tipoSolferinoCond WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0)) as tiene_pagos")
                 )
                 ->orderBy('Proyectos.proyecto_id', 'desc')->get();
             $categorias = DB::table('categorias_articulos')->select('categoria_id', 'nombre')->orderBy('nombre')->get();
@@ -56,12 +61,17 @@ class ERPController extends Controller
                 return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
             }
 
+            $hasTipoCotizacion = \Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion');
+            $tipoCotizacionesCond = $hasTipoCotizacion ? "AND (plan_pagos.tipo_cotizacion = 'cotizaciones' OR plan_pagos.tipo_cotizacion IS NULL)" : "";
+            $tipoSolferinoCond = $hasTipoCotizacion ? "AND plan_pagos.tipo_cotizacion = 'cotizaciones_solferino'" : "";
+
             $proyectos = DB::table('Proyectos')
                 ->leftJoin('Clientes', 'Proyectos.cliente_id', '=', 'Clientes.cliente_id')
                 ->leftJoin('Prospectos as P1', 'Proyectos.prospecto_id', '=', 'P1.prospecto_id')
                 ->leftJoin('Prospectos as P2', 'Clientes.prospecto_id', '=', 'P2.prospecto_id')
                 ->select('Proyectos.proyecto_id as id', 'Proyectos.nombre',
-                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre")
+                    DB::raw("COALESCE(NULLIF(CONCAT_WS(' ', P1.nombre, P1.apellido_paterno), ''), NULLIF(CONCAT_WS(' ', P2.nombre, P2.apellido_paterno), '')) as cliente_nombre"),
+                    DB::raw("((SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id $tipoCotizacionesCond WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) + (SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones_solferino ON plan_pagos.cotizacion_id = cotizaciones_solferino.cotizacion_id $tipoSolferinoCond WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0)) as tiene_pagos")
                 )
                 ->orderBy('Proyectos.proyecto_id', 'desc')->get();
             $categorias = DB::table('categorias_articulos')->select('categoria_articulo_id', 'nombre')->orderBy('nombre')->get();
@@ -359,6 +369,13 @@ class ERPController extends Controller
             return redirect()->route('inicio')->with('error', 'No tienes permiso para acceder a esta vista.');
         }
 
+        // Verificar y crear columna de partida_acta si no existe
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_detalles', 'partida_acta')) {
+            \Illuminate\Support\Facades\Schema::table('proyecto_detalles', function ($table) {
+                $table->string('partida_acta')->nullable();
+            });
+        }
+
         $hasTipoCotizacion = \Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion');
         $tipoCotizacionesCond = $hasTipoCotizacion ? "AND (plan_pagos.tipo_cotizacion = 'cotizaciones' OR plan_pagos.tipo_cotizacion IS NULL)" : "";
         $tipoSolferinoCond = $hasTipoCotizacion ? "AND plan_pagos.tipo_cotizacion = 'cotizaciones_solferino'" : "";
@@ -385,6 +402,7 @@ class ERPController extends Controller
                 'proyecto_detalles.rfc',
                 'proyecto_detalles.condiciones_pago',
                 DB::raw("COALESCE(proyecto_detalles.condiciones_acceso, '') as condiciones_acceso"),
+                'proyecto_detalles.partida_acta',
                 DB::raw("((SELECT COUNT(*) FROM cotizaciones WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND total > 0) + (SELECT COUNT(*) FROM cotizaciones_solferino WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND total > 0)) as tiene_cotizacion"),
                 DB::raw("(SELECT COUNT(*) FROM proyecto_articulos WHERE proyecto_articulos.proyecto_id = Proyectos.proyecto_id AND (precio <= 0 OR precio IS NULL)) as articulos_pendientes"),
                 DB::raw("((SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id $tipoCotizacionesCond WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) + (SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones_solferino ON plan_pagos.cotizacion_id = cotizaciones_solferino.cotizacion_id $tipoSolferinoCond WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0)) as tiene_pagos")
@@ -837,12 +855,34 @@ class ERPController extends Controller
     {
         try {
             $proyecto_id = $request->input('proyecto_id');
-            $articulos_ids = $request->input('articulos_ids');
+            $articulos_req = $request->input('articulos');
+            $partida = $request->input('partida');
+
+            if ($partida !== null) {
+                DB::table('proyecto_detalles')->updateOrInsert(
+                    ['detalles_id' => $proyecto_id],
+                    ['partida_acta' => $partida]
+                );
+            }
+            
+            $articulos_ids = [];
+            $comentarios_map = [];
+            if (!empty($articulos_req) && is_array($articulos_req)) {
+                foreach ($articulos_req as $req) {
+                    $articulos_ids[] = $req['id'];
+                    $comentarios_map[$req['id']] = $req['comentarios'] ?? '';
+                }
+            }
 
             // Verificar y crear columna de control de impresión para el acta si no existe
             if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'impreso_acta')) {
                 \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
                     $table->boolean('impreso_acta')->default(0);
+                });
+            }
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'comentarios_acta')) {
+                \Illuminate\Support\Facades\Schema::table('proyecto_articulos', function ($table) {
+                    $table->text('comentarios_acta')->nullable();
                 });
             }
 
@@ -881,14 +921,26 @@ class ERPController extends Controller
             }
 
             $articulos = $queryArticulos
-                ->select('nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cubicaje', 'peso', 'cantidad', 'imagen')
+                ->select('id', 'nombre', 'descripcion', 'alto', 'ancho', 'profundo', 'cubicaje', 'peso', 'cantidad', 'imagen')
                 ->get()
-                ->map(function($item){ return (array)$item; })
+                ->map(function($item) use ($comentarios_map) { 
+                    $arr = (array)$item; 
+                    $arr['comentarios_acta'] = $comentarios_map[$arr['id']] ?? '';
+                    return $arr; 
+                })
                 ->toArray();
 
-            // Marcar los artículos como impresos
-            if (!empty($articulos_ids) && is_array($articulos_ids)) {
-                DB::table('proyecto_articulos')->whereIn('id', $articulos_ids)->update(['impreso_acta' => 1]);
+            // Marcar los artículos como impresos y guardar comentarios en la Base de Datos
+            if (!empty($articulos_req) && is_array($articulos_req)) {
+                foreach ($articulos_req as $req) {
+                    $id = $req['id'] ?? null;
+                    if ($id) {
+                        DB::table('proyecto_articulos')->where('id', $id)->update([
+                            'impreso_acta' => 1,
+                            'comentarios_acta' => $req['comentarios'] ?? null
+                        ]);
+                    }
+                }
             }
 
             $nombreProyecto = mb_strtoupper((string)($proyecto['nombre_proyecto'] ?? ''));
@@ -898,7 +950,7 @@ class ERPController extends Controller
                 $terminos = DB::table('terminos')->orderBy('termino_id', 'asc')->get();
             }
 
-            $pdf = Pdf::loadView('ERP.pdf_acta_entrega', compact('proyecto', 'articulos', 'terminos'))->setPaper('letter', 'landscape');
+            $pdf = Pdf::loadView('ERP.pdf_acta_entrega', compact('proyecto', 'articulos', 'terminos', 'partida'))->setPaper('letter', 'portrait');
             return $pdf->download('Acta_Entrega_' . $proyecto['nombre_proyecto'] . '.pdf');
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -1716,6 +1768,69 @@ class ERPController extends Controller
         }
     }
 
+    public function desbloquearProyecto(Request $request)
+    {
+        $request->validate([
+            'proyecto_id' => 'required'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $proyecto = DB::table('Proyectos')->where('proyecto_id', $request->proyecto_id)->first();
+            if (!$proyecto) {
+                return response()->json(['success' => false, 'message' => 'Proyecto no encontrado.']);
+            }
+
+            $nombreProyecto = mb_strtoupper((string)$proyecto->nombre);
+            $tablaCotizaciones = str_starts_with($nombreProyecto, 'SH-') ? 'cotizaciones_solferino' : 'cotizaciones';
+
+            $cotizacion = DB::table($tablaCotizaciones)
+                ->where('proyecto_id', $request->proyecto_id)
+                ->orderBy('cotizacion_id', 'desc')
+                ->first();
+
+            if (!$cotizacion) {
+                return response()->json(['success' => false, 'message' => 'No hay cotización para este proyecto.']);
+            }
+
+            // 1. Sumar lo pagado en el plan de pagos
+            $pagos = DB::table('plan_pagos')->where('cotizacion_id', $cotizacion->cotizacion_id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion')) {
+                $pagos->where('tipo_cotizacion', $tablaCotizaciones);
+            }
+            $totalPagado = $pagos->sum('monto_pagado');
+
+            // 2. Si hay pagos, pasarlos al saldo a favor del cliente global
+            if ($totalPagado > 0) {
+                if ($proyecto->cliente_id) {
+                    DB::table('Clientes')->where('cliente_id', $proyecto->cliente_id)->increment('saldo_afavor', $totalPagado);
+                } else {
+                    // En caso de que no haya cliente_id, lo dejamos en la cotización
+                    DB::table($tablaCotizaciones)->where('cotizacion_id', $cotizacion->cotizacion_id)->increment('saldo_afavor', $totalPagado);
+                }
+            }
+
+            // 3. Eliminar el plan de pagos y quitar la autorización para permitir edición
+            $pagos->delete();
+            DB::table($tablaCotizaciones)->where('cotizacion_id', $cotizacion->cotizacion_id)->update(['autorizado' => 0]);
+
+            // 4. Registrar la interacción
+            if (\Illuminate\Support\Facades\Schema::hasTable('proyecto_interacciones')) {
+                $interaccion = DB::table('interacciones')->where('nombre', 'DESBLOQUEO DE PROYECTO')->first();
+                $interaccionId = $interaccion ? ($interaccion->id ?? $interaccion->interaccion_id ?? 'DESBLOQUEO DE PROYECTO') : 'DESBLOQUEO DE PROYECTO';
+                $comentario = 'Se desbloqueó el proyecto eliminando su plan de pagos.' . ($totalPagado > 0 ? " El monto abonado de $" . number_format($totalPagado, 2) . " pasó a ser saldo a favor." : "");
+                DB::table('proyecto_interacciones')->insert(['proyecto_id' => $request->proyecto_id, 'interaccion_id' => $interaccionId, 'user_id' => auth()->id(), 'comentarios' => $comentario, 'created_at' => now(), 'updated_at' => now()]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'transferido' => $totalPagado]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function logistica()
     {
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
@@ -1986,6 +2101,20 @@ class ERPController extends Controller
           try {
               $proyecto_id = $request->proyecto_id;
               $incoming_ids = []; // Para rastrear qué IDs se mantienen/actualizan
+
+              // Validar que el proyecto no esté bloqueado por pagos
+              $hasTipoCotizacion = \Illuminate\Support\Facades\Schema::hasColumn('plan_pagos', 'tipo_cotizacion');
+              $tipoCotizacionesCond = $hasTipoCotizacion ? "AND (plan_pagos.tipo_cotizacion = 'cotizaciones' OR plan_pagos.tipo_cotizacion IS NULL)" : "";
+              $tipoSolferinoCond = $hasTipoCotizacion ? "AND plan_pagos.tipo_cotizacion = 'cotizaciones_solferino'" : "";
+              
+              $tienePagos = DB::table('Proyectos')
+                  ->select(DB::raw("((SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones ON plan_pagos.cotizacion_id = cotizaciones.cotizacion_id $tipoCotizacionesCond WHERE cotizaciones.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0) + (SELECT COUNT(*) FROM plan_pagos JOIN cotizaciones_solferino ON plan_pagos.cotizacion_id = cotizaciones_solferino.cotizacion_id $tipoSolferinoCond WHERE cotizaciones_solferino.proyecto_id = Proyectos.proyecto_id AND plan_pagos.monto_pagado > 0)) as tiene_pagos"))
+                  ->where('proyecto_id', $proyecto_id)
+                  ->value('tiene_pagos');
+              
+              if ($tienePagos > 0) {
+                  throw new \Exception('La gestión de artículos está bloqueada porque el proyecto ya tiene abonos registrados.');
+              }
 
               // Verificar y crear columnas de dimensiones de división si no existen
               if (!\Illuminate\Support\Facades\Schema::hasColumn('proyecto_articulos', 'alto_division')) {

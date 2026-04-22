@@ -54,7 +54,7 @@
         </div>
         
         <div class="flex items-center space-x-3">
-            <button @click="guardarTodo" class="px-4 py-2 text-white rounded-lg shadow-sm flex items-center text-sm font-medium transition"
+            <button @click="guardarTodo" :disabled="proyectoBloqueado" class="px-4 py-2 text-white rounded-lg shadow-sm flex items-center text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="isDirty ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-800 hover:bg-blue-900'">
                 <i class="ph mr-2" :class="isDirty ? 'ph-warning animate-pulse' : 'ph-floppy-disk'"></i>
                 <span x-text="isDirty ? 'Guardar Cambios' : 'Guardado'"></span>
@@ -76,12 +76,18 @@
             </div>
 
             <div class="p-6" x-show="proyecto_id">
+                <div x-show="proyectoBloqueado" class="mb-6 p-4 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-200 text-sm font-bold flex items-center shadow-sm">
+                    <i class="ph ph-lock-key mr-2 text-xl"></i> 
+                    <span>La gestión de artículos está bloqueada porque este proyecto ya tiene abonos registrados.</span>
+                </div>
+
                 <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center">
                     <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs">1</span>
                     Datos Generales
                 </h3>
                 
                 <form @submit.prevent="agregarArticulo">
+                    <fieldset :disabled="proyectoBloqueado">
                     
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <div class="col-span-1">
@@ -321,6 +327,7 @@
                     <button type="submit" class="w-full py-3 bg-gray-900 text-white rounded-lg font-bold shadow-md hover:bg-black transition flex justify-center items-center">
                         <i class="ph ph-plus mr-2"></i> Agregar Mueble a Lista
                     </button>
+                    </fieldset>
 
                 </form>
             </div>
@@ -329,7 +336,7 @@
         <div class="w-3/5 bg-gray-100 p-8 overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-700">Listado de Artículos (<span x-text="articulos.length"></span>)</h3>
-                <button x-show="haySeleccionados" @click="abrirModalDuplicarBloque()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition flex items-center text-sm" x-cloak>
+                <button x-show="haySeleccionados && !proyectoBloqueado" @click="abrirModalDuplicarBloque()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition flex items-center text-sm" x-cloak>
                     <i class="ph ph-copy mr-2"></i> Duplicar Bloque
                 </button>
             </div>
@@ -339,7 +346,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-4 py-3 text-center w-12">
-                                <input type="checkbox" :checked="todosSeleccionados" @change="toggleSeleccionarTodo()" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer">
+                                <input type="checkbox" :checked="todosSeleccionados" @change="toggleSeleccionarTodo()" :disabled="proyectoBloqueado" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer disabled:opacity-50">
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Articulo</th>
                             <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Dimensiones</th>
@@ -351,7 +358,7 @@
                         <template x-for="(item, index) in articulos" :key="index">
                             <tr class="hover:bg-gray-50" :class="{'bg-purple-50': item.seleccionado}">
                                 <td class="px-4 py-3 text-center">
-                                    <input type="checkbox" x-model="item.seleccionado" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer">
+                                    <input type="checkbox" x-model="item.seleccionado" :disabled="proyectoBloqueado" class="rounded text-purple-600 focus:ring-purple-500 cursor-pointer disabled:opacity-50">
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center">
@@ -401,7 +408,7 @@
                                     </template>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-3">
+                                    <div class="flex items-center justify-end gap-3" x-show="!proyectoBloqueado">
                                         <button @click="duplicarArticulo(index)" class="text-purple-600 hover:text-purple-900 transition" title="Duplicar">
                                             <i class="ph ph-copy"></i>
                                         </button>
@@ -411,6 +418,9 @@
                                         <button @click="eliminarArticulo(index)" class="text-red-600 hover:text-red-900 transition" title="Eliminar">
                                             <i class="ph ph-trash"></i>
                                         </button>
+                                    </div>
+                                    <div x-show="proyectoBloqueado" class="text-gray-400">
+                                        <i class="ph ph-lock-key text-lg" title="Bloqueado por pagos"></i>
                                     </div>
                                 </td>
                             </tr>
@@ -644,7 +654,8 @@
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 my-8" @click.stop>
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex items-center justify-between sticky top-0">
                 <h2 class="text-lg font-bold text-white flex items-center">
-                    <i class="ph ph-pencil-simple mr-2"></i> Editar Artículo
+                    <i class="ph mr-2" :class="indexEdicion !== null ? 'ph-pencil-simple' : 'ph-copy'"></i> 
+                    <span x-text="indexEdicion !== null ? 'Editar Artículo' : 'Duplicar Artículo'"></span>
                 </h2>
                 <button type="button" @click="cerrarModalEdicion()" class="text-white hover:text-blue-100 text-xl">
                     <i class="ph ph-x"></i>
@@ -889,7 +900,7 @@
                             Cancelar
                         </button>
                         <button type="submit" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition flex justify-center items-center">
-                            <i class="ph ph-check mr-2"></i> Guardar Cambios
+                            <i class="ph ph-check mr-2"></i> <span x-text="indexEdicion !== null ? 'Guardar Cambios' : 'Guardar Duplicado'"></span>
                         </button>
                     </div>
 
@@ -1029,6 +1040,12 @@
                     (p.nombre && p.nombre.toLowerCase().includes(search)) || 
                     (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(search))
                 );
+            },
+
+            get proyectoBloqueado() {
+                if (!this.proyecto_id) return false;
+                const proj = this.proyectos.find(p => p.id == this.proyecto_id);
+                return proj ? proj.tiene_pagos > 0 : false;
             },
 
             get haySeleccionados() {
@@ -1575,6 +1592,8 @@
             },
 
             async guardarTodo(skipConfirm = false) {
+                if (skipConfirm instanceof Event) skipConfirm = false;
+
                 if (!this.proyecto_id) {
                     alert('Por favor selecciona un proyecto primero.');
                     return;

@@ -5,6 +5,7 @@
     @php
         $userRoleName = DB::table('roles')->where('id', auth()->user()->role)->value('nombre') ?? auth()->user()->role;
         $puedeAutorizar = in_array($userRoleName, ['ADMIN', 'COORD. DV&MKT', 'COORD. DV SOLFERINO', 'VENDEDOR/DISEÑADOR']);
+        $puedeDesbloquear = in_array(strtoupper($userRoleName), ['ADMIN', 'DIRECCIÓN', 'DIRECCION']);
     @endphp
 
     <style>
@@ -38,6 +39,13 @@
     <!-- Listado de Proyectos -->
     <div class="flex-1 overflow-y-auto p-8">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto cursor-grab active:cursor-grabbing"
+                 x-data="{ isDown: false, startX: 0, scrollLeft: 0 }"
+                 :class="{ 'select-none': isDown }"
+                 @mousedown="isDown = true; startX = $event.pageX - $el.offsetLeft; scrollLeft = $el.scrollLeft"
+                 @mouseleave="isDown = false"
+                 @mouseup="isDown = false"
+                 @mousemove="if(!isDown) return; $event.preventDefault(); const x = $event.pageX - $el.offsetLeft; const walk = (x - startX) * 1.5; $el.scrollLeft = scrollLeft - walk;">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -67,32 +75,39 @@
                             <td class="px-6 py-4 text-right">
                                 <div class="flex justify-end gap-2">
                                     <template x-if="p.tiene_pagos > 0">
-                                        <button @click="abrirCotizador(p)" class="px-3 py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition shadow-sm flex items-center" title="Cotización bloqueada por pagos existentes">
-                                            <i class="ph ph-lock-key mr-1"></i> Ver Cotización
-                                        </button>
+                                        <div class="flex gap-2">
+                                            <button @click="abrirCotizador(p)" class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded-md font-bold hover:bg-gray-600 transition shadow-sm flex items-center" title="Cotización bloqueada por pagos existentes">
+                                                <i class="ph ph-lock-key mr-1"></i> Ver Cotización
+                                            </button>
+                                            @if($puedeDesbloquear)
+                                            <button @click="desbloquearProyecto(p)" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md font-bold hover:bg-red-700 transition shadow-sm flex items-center" title="Eliminar plan de pagos y desbloquear proyecto">
+                                                <i class="ph ph-lock-open mr-1"></i> Desbloquear
+                                            </button>
+                                            @endif
+                                        </div>
                                     </template>
                                     <template x-if="p.tiene_pagos == 0">
-                                        <button @click="abrirCotizador(p)" class="px-3 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
+                                        <button @click="abrirCotizador(p)" class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition shadow-sm flex items-center" title="Cotizar">
                                             <i class="ph ph-calculator mr-1"></i> Cotizar
                                         </button>
                                     </template>
                                     
                                     <button @click="abrirModalPagos(p)" 
-                                            class="px-3 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            class="px-3 py-1.5 text-sm bg-gray-700 text-white rounded-md font-bold hover:bg-gray-800 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                                             :title="(p.tiene_cotizacion && p.articulos_pendientes == 0) ? 'Generar Remisión' : 'Complete la cotización primero (Precios y Totales)'"
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
                                         <i class="ph ph-file-text mr-1"></i> Remisión
                                     </button>
                                     
                                     <button @click="abrirModalProduccion(p)" 
-                                            class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md font-bold hover:bg-indigo-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                                             title="Generar PDF Producción (Selección)"
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
                                         <i class="ph ph-factory mr-1"></i> Producción
                                     </button>
                                     
                                     <button @click="abrirModalActa(p)" 
-                                            class="px-3 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-md font-bold hover:bg-teal-700 transition shadow-sm flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
                                             title="Generar Acta de Entrega"
                                             :disabled="!p.tiene_cotizacion || p.articulos_pendientes > 0">
                                         <i class="ph ph-clipboard-text mr-1"></i> Acta
@@ -110,6 +125,7 @@
                     </template>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
@@ -162,6 +178,7 @@
 
                 <!-- Tabla Artículos -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                    <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <tr>
@@ -209,6 +226,7 @@
                             </template>
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <!-- Nuevos campos -->
@@ -376,6 +394,7 @@
                     </div>
 
                     <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                        <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-100">
                                 <tr>
@@ -439,6 +458,7 @@
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
                     </div>
                 </div>
 
@@ -449,6 +469,7 @@
                 </div>
 
                 <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <tr>
@@ -472,6 +493,7 @@
                             </template>
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 
                 <div class="mt-2 text-right">
@@ -510,6 +532,7 @@
                 </div>
 
                 <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <tr>
@@ -548,6 +571,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
@@ -573,7 +597,13 @@
             <div class="p-6 bg-gray-50 overflow-y-auto max-h-[70vh]">
                 <p class="text-sm text-gray-600 mb-4">Seleccione los artículos que desea incluir en el Acta de Entrega.</p>
                 
+                <div class="mb-4 bg-white p-4 rounded border border-gray-200">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Partida</label>
+                    <input type="text" x-model="partidaActa" placeholder="Ej. Partida 1" class="w-full text-sm border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500">
+                </div>
+
                 <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <tr>
@@ -582,6 +612,7 @@
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Artículo</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Cant.</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Comentarios</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Estatus</th>
                                 <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Acción</th>
                             </tr>
@@ -597,6 +628,9 @@
                                         <div class="text-xs text-gray-500" x-text="item.id_articulo_produccion || 'Sin código'"></div>
                                     </td>
                                     <td class="px-4 py-3 text-center text-sm font-bold text-gray-800" x-text="item.cantidad"></td>
+                                    <td class="px-4 py-3">
+                                        <input type="text" x-model="item.comentarios_acta" :disabled="!item.seleccionado" class="w-full text-sm border-gray-300 rounded focus:ring-teal-500 focus:border-teal-500 disabled:bg-gray-100" placeholder="Comentarios...">
+                                    </td>
                                     <td class="px-4 py-3 text-center">
                                         <span x-show="item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800"><i class="ph ph-check-circle mr-1"></i> Impreso</span>
                                         <span x-show="!item.impreso" class="px-2 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800"><i class="ph ph-clock mr-1"></i> Pendiente</span>
@@ -610,10 +644,11 @@
                                 </tr>
                             </template>
                             <tr x-show="articulosActa.length === 0">
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-500 text-sm italic">Cargando artículos...</td>
+                                <td colspan="6" class="px-4 py-8 text-center text-gray-500 text-sm italic">Cargando artículos...</td>
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
@@ -681,6 +716,7 @@
             proyectoActa: null,
             articulosActa: [],
             seleccionarTodosActa: true,
+            partidaActa: '',
 
             get proyectosFiltrados() {
                 if (this.filtro === '') {
@@ -1128,6 +1164,36 @@
                 }
             },
 
+            async desbloquearProyecto(proyecto) {
+                if (!confirm(`¿Está seguro de desbloquear el proyecto "${proyecto.nombre_proyecto}"?\n\nEsto eliminará el plan de pagos actual de forma permanente. Si existen abonos registrados, el monto se transferirá íntegro al "Saldo a Favor" global del cliente para que pueda usarlo de nuevo en este u otro proyecto.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ url("erp/desbloquear-proyecto") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ proyecto_id: proyecto.proyecto_id })
+                    });
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        let msg = 'Proyecto desbloqueado correctamente.';
+                        if (result.transferido > 0) {
+                            msg += `\n\nSe han transferido ${this.money(result.transferido)} al saldo a favor global del cliente.`;
+                        }
+                        alert(msg);
+                        
+                        proyecto.tiene_pagos = 0;
+                    } else {
+                        alert('Error: ' + (result.message || 'No se pudo desbloquear el proyecto.'));
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Error de conexión al intentar desbloquear el proyecto.');
+                }
+            },
+
                     async generarRemisionConPagos(tipo = 'solferino') {                
                     try {
                     // Validar suma 100%
@@ -1312,6 +1378,7 @@
 
             async abrirModalActa(proyecto) {
                 this.proyectoActa = proyecto;
+                this.partidaActa = proyecto.partida_acta || '';
                 this.articulosActa = [];
                 this.mostrarModalActa = true;
                 
@@ -1324,7 +1391,8 @@
                             ...item,
                             impreso: impreso,
                             seleccionado: !impreso,
-                            desbloqueado: false
+                            desbloqueado: false,
+                            comentarios_acta: item.comentarios_acta || ''
                         };
                     });
                     this.seleccionarTodosActa = this.articulosActa.some(a => a.seleccionado);
@@ -1350,7 +1418,11 @@
             },
 
             async imprimirActaSeleccionadosPdf() {
-                const seleccionados = this.articulosActa.filter(a => a.seleccionado).map(a => a.id);
+                const seleccionados = this.articulosActa.filter(a => a.seleccionado).map(a => ({
+                    id: a.id,
+                    comentarios: a.comentarios_acta
+                }));
+                
                 if (seleccionados.length === 0) {
                     alert('Debe seleccionar al menos un artículo para generar el acta.');
                     return;
@@ -1359,7 +1431,8 @@
                 try {
                     const data = {
                         proyecto_id: this.proyectoActa.proyecto_id,
-                        articulos_ids: seleccionados
+                        articulos: seleccionados,
+                        partida: this.partidaActa
                     };
 
                     const response = await fetch('{{ url("erp/generar-acta-entrega") }}', {
@@ -1378,6 +1451,7 @@
                         document.body.appendChild(a);
                         a.click();
                         a.remove();
+                        this.proyectoActa.partida_acta = this.partidaActa;
                         
                         this.articulosActa.forEach(a => {
                             if (a.seleccionado) {

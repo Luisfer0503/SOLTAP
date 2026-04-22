@@ -103,7 +103,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/crm/guardar-saldo-favor', [CRMController::class, 'guardarSaldoFavor']);
     Route::post('/erp/usar-saldo-cliente', [ERPController::class, 'usarSaldoCliente']);
     Route::post('/erp/regresar-saldo-cliente', [ERPController::class, 'regresarSaldoACliente']);
-  
+    Route::post('/erp/desbloquear-proyecto', [\App\Http\Controllers\ERPController::class, 'desbloquearProyecto'])->name('desbloquearProyecto');
+    
     
 
     Route::get('/fallas', [ERPController::class, 'fallas'])->name('fallas');

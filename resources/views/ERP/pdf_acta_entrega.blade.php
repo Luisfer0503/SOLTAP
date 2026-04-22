@@ -5,7 +5,6 @@
 
 <style>
 @page {
-    size: landscape;
     margin: 1cm;
 }
 
@@ -59,8 +58,18 @@ body {
 </style>
 </head>
 <body>
-
-    <h2 style="text-align: center; margin: 0 0 10px 0; font-size: 16px;">ACTA DE ENTREGA</h2>
+    
+    <table style="width: 100%; border-collapse: collapse; border: none; margin-bottom: 10px;">
+        <tr>
+            <td style="width: 25%; border: none; padding: 0; text-align: left;">
+                <img src="{{ public_path('archivos/logo.png') }}" style="width: 150px;">
+            </td>
+            <td style="width: 50%; border: none; padding: 0; text-align: center; vertical-align: middle;">
+                <h2 style="margin: 0; font-size: 16px;">ACTA DE ENTREGA</h2>
+            </td>
+            <td style="width: 25%; border: none; padding: 0;"></td>
+        </tr>
+    </table>
 
     <table class="header-table">
         <tr>
@@ -77,20 +86,56 @@ body {
         </tr>
         <tr>
             <td class="bg-gray"><b>PARTIDA:</b></td>
-            <td>Diseño y Ventas | Logística</td>
-            <td colspan="2" class="bg-gray"></td>
+            <td>{{ $partida ?? ($proyecto['partida_acta'] ?? '') }}</td>
+            <td colspan="2" style="padding: 0; vertical-align: middle; border-bottom: none;">
+                <table style="width: 100%; border-collapse: collapse; border: none; margin: 0;">
+                    <tr>
+                        <td style="border: none; padding: 5px; text-align: center; width: 33.33%;">
+                            <table style="margin: 0 auto; border: none; border-collapse: collapse;">
+                                <tr>
+                                    <td style="border: none; padding: 0 5px 0 0; font-size: 12px;"><b>I</b></td>
+                                    <td style="border: none; padding: 0;">
+                                        <div style="width:14px; height:14px; border:1px solid #000; line-height: 14px; text-align: center; font-weight: bold; font-size: 11px;">
+                                            {!! $proyecto['requiere_instalacion'] ? '&#10003;' : '&nbsp;' !!}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="border: none; padding: 5px; text-align: center; width: 33.33%;">
+                            <table style="margin: 0 auto; border: none; border-collapse: collapse;">
+                                <tr>
+                                    <td style="border: none; padding: 0 5px 0 0; font-size: 12px;"><b>D</b></td>
+                                    <td style="border: none; padding: 0;">
+                                        <div style="width:14px; height:14px; border:1px solid #000; line-height: 14px; text-align: center; font-weight: bold; font-size: 11px;">
+                                            {!! $proyecto['requiere_desemplaye'] ? '&#10003;' : '&nbsp;' !!}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="border: none; padding: 5px; text-align: center; width: 33.33%;">
+                            <table style="margin: 0 auto; border: none; border-collapse: collapse;">
+                                <tr>
+                                    <td style="border: none; padding: 0 5px 0 0; font-size: 12px;"><b>M</b></td>
+                                    <td style="border: none; padding: 0;">
+                                        <div style="width:14px; height:14px; border:1px solid #000; line-height: 14px; text-align: center; font-weight: bold; font-size: 11px;">
+                                            {!! $proyecto['requiere_maniobraje'] ? '&#10003;' : '&nbsp;' !!}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
         </tr>
-        
+    </table>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
         <tr>
-            <td class="bg-gray"><b>SERVICIOS:</b></td>
-            <td colspan="3">
-                @php
-                    $servicios = [];
-                    if ($proyecto['requiere_instalacion']) $servicios[] = 'INSTALACIÓN';
-                    if ($proyecto['requiere_desemplaye']) $servicios[] = 'DESEMPLAYE';
-                    if ($proyecto['requiere_maniobraje']) $servicios[] = 'MANIOBRAJE';
-                @endphp
-                {{ count($servicios) > 0 ? implode(' / ', $servicios) : 'NINGUNO' }}
+            <td style="text-align: center; font-weight: bold; border: 1px solid #ccc; background: #e6e6e6; padding: 5px; font-size: 11px;">
+                Diseño y Ventas | Logística
             </td>
         </tr>
     </table>
@@ -98,10 +143,10 @@ body {
     <table class="tabla">
         <thead>
             <tr>
-                <th width="5%">Cant.</th>
-                <th width="45%">Descripción del artículo (Dimensiones en cm. ↔↕↗)</th>
-                <th width="20%">Imagen</th>
-                <th width="30%">Comentarios</th>
+                <th width="6%">Cant.</th>
+                <th width="50%">Descripción del artículo (Dimensiones en cm. ↔↕↗)</th>
+                <th width="15%">Imagen</th>
+                <th width="29%">Comentarios</th>
             </tr>
         </thead>
         <tbody>
@@ -156,7 +201,7 @@ body {
                         N/A
                     @endif
                 </td>
-                <td></td>
+                <td>{{ $item['comentarios_acta'] ?? '' }}</td>
             </tr>
             @endforeach
         </tbody>
