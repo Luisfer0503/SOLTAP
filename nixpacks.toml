@@ -1,9 +1,10 @@
 [phases.setup]
-nixPkgs = ['php82', 'php82Packages.composer']
+nixPkgs = ['php82', 'php82Packages.composer', 'php82Extensions.bcmath']
 
 [phases.build]
 dependsOn = ['setup']
-cmds = ['composer install --no-dev --optimize-autoloader']
+# Añadimos la bandera --ignore-platform-reqs por si falta alguna otra extensión menor
+cmds = ['composer install --no-dev --optimize-autoloader --ignore-platform-reqs']
 
 [phases.deploy]
 dependsOn = ['build']
