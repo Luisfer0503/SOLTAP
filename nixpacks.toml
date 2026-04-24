@@ -1,7 +1,10 @@
 [variables]
+    # Estas variables le dicen a Nixpacks qué extensiones habilitar en el php.ini
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
 [phases.setup]
+    # Instalamos los binarios del sistema. 
+    # php82Extensions.bcmath es el paquete real de Nix que contiene la librería.
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
@@ -12,6 +15,8 @@
     ]
 
 [phases.install]
+    # Forzamos a que esta fase espere a que setup termine correctamente
+    dependsOn = ["setup"]
     cmds = [
         "composer install --optimize-autoloader --no-scripts --no-interaction",
         "npm install"

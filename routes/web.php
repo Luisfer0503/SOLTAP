@@ -5,7 +5,7 @@ use App\Http\Controllers\CRMController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ERPController;
 use App\Http\Controllers\AuthController;
-
+// hola
 use App\Http\Controllers\InicioController;
 
 Route::get('/', function () {
