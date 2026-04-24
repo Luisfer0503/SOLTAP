@@ -1,9 +1,9 @@
+# Definimos las variables de entorno globales para PHP
 [variables]
-    # Definimos las extensiones para que Nixpacks las reconozca globalmente
-    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, mbstring, xml, curl"
+    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
+# FASE 1: Instalación de binarios y extensiones en el sistema operativo
 [phases.setup]
-    # Instalamos los binarios de PHP y las extensiones necesarias en el sistema
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
@@ -12,13 +12,15 @@
         "php82Packages.composer"
     ]
 
+# FASE 2: Instalación de dependencias de la aplicación
 [phases.install]
-    # Ahora que el sistema tiene bcmath, el install funcionará sin problemas
+    dependsOn = ["setup"]
     cmds = [
         "composer install --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
 
+# FASE 3: Compilación de assets (Vite/Mix)
 [phases.build]
-    # Agregamos la fase de build para los assets de Frontend si los usas
+    dependsOn = ["install"]
     cmds = ["npm run build"]
