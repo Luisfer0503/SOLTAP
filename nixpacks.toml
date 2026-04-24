@@ -1,9 +1,14 @@
 [variables]
-# La forma correcta de instalar extensiones PHP en Nixpacks (Railway)
-NIXPACKS_PHP_EXTENSIONS = "bcmath,pdo_mysql,zip"
+    # Lista completa necesaria para Laravel y tus paquetes (dragon-code/support)
+    NIXPACKS_PHP_EXTENSIONS = "bcmath,ctype,curl,dom,fileinfo,filter,hash,mbstring,openssl,pcre,pdo,pdo_mysql,redis,session,tokenizer,xml,zip"
+
+[phases.setup]
+    # Forzamos a que Nix instale los paquetes de PHP necesarios
+    nixPkgs = ["php82", "php82Extensions.bcmath", "php82Extensions.pdo_mysql"]
 
 [phases.install]
-cmds = [
-    'composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-reqs',
-    'npm install'
-]
+    # Eliminamos --ignore-platform-reqs para asegurar que el entorno sea estable
+    cmds = [
+        "composer install --optimize-autoloader --no-scripts --no-interaction",
+        "npm install"
+    ]
