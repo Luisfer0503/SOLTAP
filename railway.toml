@@ -1,9 +1,0 @@
-[build]
-builder = "nixpacks.toml"
-
-[deploy]
-restartPolicyType = "ON_FAILURE"
-
-# El "Release Command" se ejecuta antes de que la nueva versión reciba tráfico.
-# Es el lugar ideal para ejecutar las migraciones de tu Base de Datos y optimizar Laravel.
-releaseCommand = "php artisan migrate --force && php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache"
