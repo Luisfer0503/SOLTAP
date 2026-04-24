@@ -1,5 +1,5 @@
 [build]
-builder = "NIXPACKS"
+builder = "nixpacks.toml"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"

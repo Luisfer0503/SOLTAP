@@ -1,9 +1,9 @@
 [variables]
-    # Estas variables habilitan las extensiones en el entorno de ejecución (Runtime)
+    # Habilita las extensiones para el entorno de ejecución
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
 [phases.setup]
-    # Instalamos los paquetes necesarios en el sistema
+    # Instalamos los binarios necesarios en el sistema Nix
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
@@ -15,7 +15,7 @@
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
-        # EL CAMBIO CLAVE: Agregamos el flag --ignore-platform-req=ext-bcmath
+        # EL CAMBIO CLAVE: Forzamos a Composer a ignorar el requisito de bcmath
         "composer install --ignore-platform-req=ext-bcmath --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
