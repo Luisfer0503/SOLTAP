@@ -10,5 +10,10 @@ class enfoques extends Model
     protected $table = 'enfoques';
     protected $primaryKey = 'enfoque_id';
     protected $fillable = ['nombre', 'descripcion'];
-    public $timestamps = false; 
+    public $timestamps = false;
+
+    public function proyectos()
+    {
+        return $this->hasMany(proyectos::class, 'enfoque_id');
+    }
 }

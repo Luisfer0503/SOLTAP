@@ -4,8 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CRMController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ERPController;
-
 use App\Http\Controllers\AuthController;
+
+use App\Http\Controllers\InicioController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -13,7 +14,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     // Rutas del ERP
-    Route::get('inicio', [CRMController::class, 'inicio'])->name('inicio');
+    Route::get('inicio', [InicioController::class, 'index'])->name('inicio');
 
     // Vendedores
     Route::get('altaVendedores', [CRMController::class, 'altaVendedores'])->name('altaVendedores');
