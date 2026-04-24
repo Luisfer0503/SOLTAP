@@ -2,5 +2,8 @@
 # La forma correcta de instalar extensiones PHP en Nixpacks (Railway)
 NIXPACKS_PHP_EXTENSIONS = "bcmath,pdo_mysql,zip"
 
-[phases.build]
-cmds = ['composer install --no-dev --optimize-autoloader --ignore-platform-reqs']
+[phases.install]
+cmds = [
+    'composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-reqs',
+    'npm install'
+]
