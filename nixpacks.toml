@@ -1,9 +1,7 @@
 [variables]
-    # Habilita las extensiones para el entorno de ejecución
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
 [phases.setup]
-    # Instalamos los binarios necesarios en el sistema Nix
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
@@ -15,11 +13,7 @@
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
-        # EL CAMBIO CLAVE: Forzamos a Composer a ignorar el requisito de bcmath
+        # ESTA LÍNEA ES LA QUE ROMPE EL BUCLE DE ERROR:
         "composer install --ignore-platform-req=ext-bcmath --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
-
-[phases.build]
-    dependsOn = ["install"]
-    cmds = ["npm run build"]
