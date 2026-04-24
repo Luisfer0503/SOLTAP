@@ -1,11 +1,6 @@
-[phases.setup]
-nixPkgs = ['php82', 'php82Packages.composer', 'php82Extensions.bcmath']
+[variables]
+# La forma correcta de instalar extensiones PHP en Nixpacks (Railway)
+NIXPACKS_PHP_EXTENSIONS = "bcmath,pdo_mysql,zip"
 
 [phases.build]
-dependsOn = ['setup']
-# Añadimos la bandera --ignore-platform-reqs por si falta alguna otra extensión menor
 cmds = ['composer install --no-dev --optimize-autoloader --ignore-platform-reqs']
-
-[phases.deploy]
-dependsOn = ['build']
-cmds = ['php artisan optimize && php artisan serve --host 0.0.0.0 --port $PORT']
