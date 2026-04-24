@@ -1,12 +1,12 @@
 [variables]
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
-    NIXPACKS_PHP_VERSION = "8.2"
 
 [phases.setup]
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
         "php82Extensions.pdo_mysql",
+        "php82Extensions.zip",
         "php82Packages.composer",
         "nodejs_20"
     ]
@@ -14,7 +14,7 @@
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
-        # Ignoramos bcmath solo aquí para que el build NO falle
+        # El flag --ignore-platform-req es la clave para saltar el Error 2
         "composer install --ignore-platform-req=ext-bcmath --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
@@ -22,7 +22,3 @@
 [phases.build]
     dependsOn = ["install"]
     cmds = ["npm run build"]
-
-[start]
-    # Usamos el script que creamos para iniciar el contenedor
-    cmd = "sh start.sh"
