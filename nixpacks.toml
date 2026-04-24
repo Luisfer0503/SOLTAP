@@ -2,18 +2,23 @@
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
 [phases.setup]
-    nixPkgs = [
-        "php82",
-        "php82Extensions.bcmath",
-        "php82Extensions.pdo_mysql",
-        "php82Packages.composer",
-        "nodejs_20"
-    ]
+   nixPkgs = [
+    "php82",
+    "php82Extensions.bcmath",
+    "php82Extensions.pdo_mysql",
+    "php82Extensions.zip",
+    "php82Extensions.redis",
+    "php82Extensions.mbstring",
+    "php82Extensions.xml",
+    "php82Packages.composer",
+    "nodejs_20"
+]
 
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
         # ESTA LÍNEA ES LA QUE ROMPE EL BUCLE DE ERROR:
-        "composer install --ignore-platform-req=ext-bcmath --optimize-autoloader --no-scripts --no-interaction",
-        "npm install"
+        "echo 'extension=bcmath' > /usr/local/etc/php/conf.d/bcmath.ini",
+        "npm install",
+        "php -m | grep bcmath"
     ]
