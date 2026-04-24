@@ -1,14 +1,24 @@
 [variables]
-    # Lista completa necesaria para Laravel y tus paquetes (dragon-code/support)
-    NIXPACKS_PHP_EXTENSIONS = "bcmath,ctype,curl,dom,fileinfo,filter,hash,mbstring,openssl,pcre,pdo,pdo_mysql,redis,session,tokenizer,xml,zip"
+    # Definimos las extensiones para que Nixpacks las reconozca globalmente
+    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, mbstring, xml, curl"
 
 [phases.setup]
-    # Forzamos a que Nix instale los paquetes de PHP necesarios
-    nixPkgs = ["php82", "php82Extensions.bcmath", "php82Extensions.pdo_mysql"]
+    # Instalamos los binarios de PHP y las extensiones necesarias en el sistema
+    nixPkgs = [
+        "php82",
+        "php82Extensions.bcmath",
+        "php82Extensions.pdo_mysql",
+        "php82Extensions.zip",
+        "php82Packages.composer"
+    ]
 
 [phases.install]
-    # Eliminamos --ignore-platform-reqs para asegurar que el entorno sea estable
+    # Ahora que el sistema tiene bcmath, el install funcionará sin problemas
     cmds = [
         "composer install --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
+
+[phases.build]
+    # Agregamos la fase de build para los assets de Frontend si los usas
+    cmds = ["npm run build"]
