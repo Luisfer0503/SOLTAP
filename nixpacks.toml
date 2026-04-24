@@ -1,18 +1,16 @@
-# Definimos las variables de entorno globales para PHP
 [variables]
-    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
+    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml, openssl"
 
-# FASE 1: Instalación de binarios y extensiones en el sistema operativo
 [phases.setup]
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
         "php82Extensions.pdo_mysql",
         "php82Extensions.zip",
-        "php82Packages.composer"
+        "php82Packages.composer",
+        "nodejs_20"
     ]
 
-# FASE 2: Instalación de dependencias de la aplicación
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
@@ -20,7 +18,6 @@
         "npm install"
     ]
 
-# FASE 3: Compilación de assets (Vite/Mix)
 [phases.build]
     dependsOn = ["install"]
     cmds = ["npm run build"]
