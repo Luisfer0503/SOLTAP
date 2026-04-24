@@ -1,24 +1,12 @@
 [variables]
-    NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
-
-[phases.setup]
-   nixPkgs = [
-    "php82",
-    "php82Extensions.bcmath",
-    "php82Extensions.pdo_mysql",
-    "php82Extensions.zip",
-    "php82Extensions.redis",
-    "php82Extensions.mbstring",
-    "php82Extensions.xml",
-    "php82Packages.composer",
-    "nodejs_20"
-]
+NIXPACKS_PHP_EXTENSIONS = "bcmath pdo_mysql mbstring xml zip"
 
 [phases.install]
-    dependsOn = ["setup"]
-    cmds = [
-        # ESTA LÍNEA ES LA QUE ROMPE EL BUCLE DE ERROR:
-        "echo 'extension=bcmath' > /usr/local/etc/php/conf.d/bcmath.ini",
-        "npm install",
-        "php -m | grep bcmath"
-    ]
+cmds = [
+  "composer install --no-dev --optimize-autoloader --no-interaction",
+  "npm install",
+  "npm run build"
+]
+
+[start]
+cmd = "php artisan serve --host=0.0.0.0 --port=$PORT"
