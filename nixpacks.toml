@@ -1,12 +1,13 @@
 [variables]
+    # Estas variables habilitan las extensiones en el entorno de ejecución (Runtime)
     NIXPACKS_PHP_EXTENSIONS = "bcmath, pdo_mysql, zip, redis, mbstring, xml"
 
 [phases.setup]
+    # Instalamos los paquetes necesarios en el sistema
     nixPkgs = [
         "php82",
         "php82Extensions.bcmath",
         "php82Extensions.pdo_mysql",
-        "php82Extensions.zip",
         "php82Packages.composer",
         "nodejs_20"
     ]
@@ -14,7 +15,7 @@
 [phases.install]
     dependsOn = ["setup"]
     cmds = [
-        # El flag --ignore-platform-req es la clave para saltar el Error 2
+        # EL CAMBIO CLAVE: Agregamos el flag --ignore-platform-req=ext-bcmath
         "composer install --ignore-platform-req=ext-bcmath --optimize-autoloader --no-scripts --no-interaction",
         "npm install"
     ]
